@@ -1,0 +1,14 @@
+# Non-root USB access to the MUNBYN ITPP098P thermal printer.
+# Without this rule, the chota systemd service (User=ko) hits LIBUSB_ERROR_ACCESS
+# when trying to print, because USB device nodes default to root-only writes.
+#
+# 0483:5743 is the STMicro USB ID the MUNBYN reports — same as several other
+# 80mm thermal units that ship the same controller. Confirm with `lsusb` if
+# you're using a different printer.
+#
+# Install:
+#   sudo cp deploy/99-munbyn-printer.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger --attr-match=idVendor=0483
+#   sudo systemctl restart chota
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5743", MODE="0660", GROUP="plugdev"

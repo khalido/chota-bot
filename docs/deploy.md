@@ -24,6 +24,8 @@ The repo lives at `~/code/chota-bot` on both machines so paths in scripts are id
 
 ## First-time bootstrap (fresh box)
 
+Assumes Node is installed via fnm with `/usr/local/bin/node` symlinked to `~/.local/share/fnm/aliases/default/bin/node` (so systemd can find it). See `docs/printers.md` for libusb-dev install.
+
 ```bash
 # 1. Clone (in ~/code, mirroring the Mac layout)
 mkdir -p ~/code && cd ~/code
@@ -33,25 +35,48 @@ cd chota-bot
 # 2. Install Node deps
 npm ci
 
-# 3. Copy secrets from your Mac (one-time)
-#    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
-#    Then on the box, set KIOSK=true in .env (the morning-print job no-ops without it).
+# 3. Install agent-browser (the production HTML→screenshot print path needs it)
+npm install -g agent-browser
+agent-browser install                 # downloads Chromium (~150MB, one-time)
+sudo ln -sf ~/.local/share/fnm/aliases/default/bin/agent-browser /usr/local/bin/agent-browser
 
-# 4. Build
+# 4. Copy secrets from your Mac (one-time)
+#    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
+#    Then on the box, append PORT + KIOSK to .env (these aren't in your dev .env):
+printf '\nPORT=8000\nKIOSK="true"\n' >> .env
+
+# 5. udev rule — non-root USB access to the printer (without this: LIBUSB_ERROR_ACCESS)
+sudo cp deploy/99-munbyn-printer.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger --attr-match=idVendor=0483
+
+# 6. Build
 npm run build
 
-# 5. Install + enable the systemd unit
+# 7. Install + enable the systemd unit
 sudo cp deploy/chota.service /etc/systemd/system/chota.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now chota
 sudo systemctl status chota          # should be active (running)
 
-# 6. Verify
-curl -s http://localhost:8000/ | head -1     # should return HTML
-journalctl -u chota -f                       # tail server logs
+# 8. Verify
+curl -s http://localhost:8000/ | head -1               # should return HTML
+curl -s -X POST http://localhost:8000/api/print/test   # column ruler — should print
+journalctl -u chota -f                                 # tail server logs
 ```
 
-Caddy reverse-proxy + udev rules are listed at the bottom as optional hardening — not Phase 1 blockers.
+## When you upgrade Node (fnm)
+
+fnm scopes globals per Node version, so a `fnm default <new>` orphans them. The `/usr/local/bin/*` symlinks themselves keep working (they go through `aliases/default`, which fnm updates), but you have to reinstall the globals on the new version:
+
+```bash
+fnm install v26 && fnm default v26
+npm install -g agent-browser
+agent-browser install                 # only if the Chromium ABI changed
+sudo systemctl restart chota
+```
+
+Caddy reverse-proxy and mDNS are listed at the bottom as optional hardening — not Phase 1 blockers.
 
 ## Deploy ritual
 
@@ -121,5 +146,4 @@ tail -f data/logs/chota.log          # (when LogTape lands — see docs/logging.
 Not Phase 1 blockers — wire when the need shows up.
 
 - **Caddy reverse proxy** — `:80` → `:8000`, plus mDNS so `chota.local` resolves on the home LAN. Lives in `deploy/Caddyfile` once added.
-- **udev rule for the MUNBYN** — non-root USB access, so the systemd unit doesn't need `User=root`. Lives in `deploy/99-munbyn-printer.rules` once added (`sudo cp` + `udevadm control --reload`).
 - **mDNS** — `avahi-daemon` already broadcasts the hostname; nothing extra needed if the hostname is `chota`.
