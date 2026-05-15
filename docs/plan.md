@@ -158,6 +158,7 @@ End state: a kiosk you actually look at + a print menu with several formats + th
 - **Agent loop** lands — `runAgent()` wrapper per `docs/agent.md`, custom memory tool wrapping `data/memory/family.jsonl`. First agent job: closing line on the morning brief (until then it's a static "Have a good day, kids -- Chota" sign-off).
 - **More tools** — `drive`, `exa` (web search), NSW school terms / public holidays, council bin night, school canteen menu, Opal/school transport balance.
 - **`/clock` polish** — already have the literary clock dataset (`data/quotes/literary.json`, vendored from `~/code/pi-pico-clock` via `scripts/sync-quotes.mjs`, 24h `HH:MM` keys). Add Urdu/Pakistani shers as `lang: "ur-roman"` entries; add `data/quotes/family.md` for hand-edited family quotes; fallback chain: `literary[hhmm]` → `family.md` → Quotable API.
+- **Tomorrow lookahead on the morning print** — one extra line on the family brief: `tmrw: <events>`, density-tiered so it never overflows. 0–2 events: full titles. 3–5 events: acronym-extract multi-word titles (`Volleyball training` → `VBT`), truncate single-word ones to N chars where N is computed from the line budget. 6+ events: just `tmrw: 7 events` — at that density the abbreviations stop being distinguishable. Implementation: `compressEventTitle(title, maxChars)` + `tomorrowLine(events)` helpers in `print/sections.ts`, ~30 LOC + snapshot tests. Acronym extraction beats vowel-removal for readability on calendar event names (which tend to be `Person Activity` or `Activity Type`).
 
 ### Phase 3 — Voice + polish
 

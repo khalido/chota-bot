@@ -47,9 +47,29 @@ npm run build
 # LogTape's rotating sink. Quotes are committed in data/quotes/.
 mkdir -p data data/logs
 
+# Fresh-box DB init: if the sqlite file doesn't exist, generate the schema
+# from drizzle and apply it directly (drizzle-kit push needs a TTY). Subsequent
+# schema changes go through the `npx drizzle-kit push` step above. Requires
+# sqlite3 in PATH — see docs/deploy.md bootstrap.
+DB_PATH="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
+if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
+	echo "Fresh DB ($DB_PATH) → generating + applying schema"
+	npx drizzle-kit generate
+	cat drizzle/*.sql | sqlite3 "$DB_PATH"
+fi
+
 echo "Restarting chota.service…"
 sudo systemctl restart chota
-sleep 1
+sleep 2
+
+# Verify both that systemd considers it active AND that it's actually serving
+# HTTP — `is-active` only checks the process is running, not that the app booted
+# past its job-registration phase or bound the port.
 sudo systemctl is-active chota
+if ! curl -fsS -o /dev/null -m 5 http://localhost:8000/; then
+	echo "Service is active but HTTP check failed — investigate:" >&2
+	echo "  sudo journalctl -u chota -n 30 --no-pager" >&2
+	exit 1
+fi
 
 echo "Deployed $AFTER."

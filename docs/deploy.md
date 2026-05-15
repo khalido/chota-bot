@@ -24,7 +24,7 @@ The repo lives at `~/code/chota-bot` on both machines so paths in scripts are id
 
 ## First-time bootstrap (fresh box)
 
-Assumes Node is installed via fnm with `/usr/local/bin/node` symlinked to `~/.local/share/fnm/aliases/default/bin/node` (so systemd can find it). See `docs/printers.md` for libusb-dev install.
+Assumes Node is installed via fnm with `/usr/local/bin/node` symlinked to `~/.local/share/fnm/aliases/default/bin/node` (so systemd can find it). See `docs/printers.md` for libusb-dev install. Also needs `sqlite3` on PATH for the first-time DB init step (`sudo apt install sqlite3` on Debian/Mint).
 
 ```bash
 # 1. Clone (in ~/code, mirroring the Mac layout)
@@ -44,6 +44,10 @@ sudo ln -sf ~/.local/share/fnm/aliases/default/bin/agent-browser /usr/local/bin/
 #    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
 #    Then on the box, append PORT + KIOSK to .env (these aren't in your dev .env):
 printf '\nPORT=8000\nKIOSK="true"\n' >> .env
+#    Also sanity-check DATABASE_URL — sv create scaffolds it as `local.db` but
+#    .env.example uses `data/home.db`. Whichever you pick, the kiosk's .env and
+#    the path in deploy.sh's first-time DB init must match. Recommend:
+#      sed -i 's|^DATABASE_URL=.*|DATABASE_URL=data/home.db|' .env
 
 # 5. udev rule — non-root USB access to the printer (without this: LIBUSB_ERROR_ACCESS)
 sudo cp deploy/99-munbyn-printer.rules /etc/udev/rules.d/
@@ -67,12 +71,22 @@ journalctl -u chota -f                                 # tail server logs
 
 ## When you upgrade Node (fnm)
 
-fnm scopes globals per Node version, so a `fnm default <new>` orphans them. The `/usr/local/bin/*` symlinks themselves keep working (they go through `aliases/default`, which fnm updates), but you have to reinstall the globals on the new version:
+fnm scopes globals per Node version, so a `fnm default <new>` orphans them. The `/usr/local/bin/*` symlinks themselves keep working (they go through `aliases/default`, which fnm updates), but you have to reinstall the globals on the new version.
+
+[`fnm.py`](https://github.com/khalido/dotfiles) (in the `khalido/dotfiles` repo, cloned to `~/code/dotfiles` on the SP5) automates this — it installs latest LTS, sets it as default, and reinstalls every global you had:
+
+```bash
+ssh sp5 'uv run ~/code/dotfiles/fnm.py upgrade'
+ssh sp5 'agent-browser install'        # only if the Chromium ABI changed
+ssh sp5 'sudo systemctl restart chota'
+```
+
+Manual fallback if `fnm.py` ever breaks:
 
 ```bash
 fnm install v26 && fnm default v26
 npm install -g agent-browser
-agent-browser install                 # only if the Chromium ABI changed
+agent-browser install
 sudo systemctl restart chota
 ```
 
@@ -139,6 +153,14 @@ journalctl -u chota -f               # tail stdout/stderr
 journalctl -u chota --since '1h ago'
 
 tail -f data/logs/chota.log          # (when LogTape lands — see docs/logging.md)
+```
+
+**From the Mac** (Tailscale SSH makes any of these one command — no need to keep an SP5 terminal open):
+
+```bash
+ssh sp5 'sudo journalctl -u chota -f'      # live tail, Ctrl-C to exit
+ssh sp5 'sudo systemctl status chota'
+ssh sp5 'curl -s -X POST http://localhost:8000/api/print/test'   # printer smoke test
 ```
 
 ## Optional hardening
