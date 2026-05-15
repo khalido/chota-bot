@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<script>
+			// Set theme class before first paint to avoid FOUC.
+			// Sydney hour 6-17 = light, else dark. Refined later in +layout.svelte.
+			(function () {
+				try {
+					const h = new Date().toLocaleString('en-US', {
+						timeZone: 'Australia/Sydney',
+						hour: 'numeric',
+						hour12: false
+					});
+					if (parseInt(h, 10) < 6 || parseInt(h, 10) >= 18) {
+						document.documentElement.classList.add('dark');
+					}
+				} catch {}
+			})();
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

@@ -1,0 +1,39 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+# SQLite
+*.db
+
+# Data — runtime state, all gitignored except data/quotes/ (vendored from
+# clockquotes via scripts/sync-quotes.mjs — deterministic, fine to track).
+# New tool-specific subdirs (data/sentral/, data/morning/, etc.) are auto-
+# ignored by this rule; no need to add them one-by-one.
+/data/*
+!/data/quotes/
+
+# Per-family config (root, gitignored). chota.config.example.ts is committed.
+/chota.config.ts
+
+# Private notes (account IDs, project numbers, anything you'd rather not push)
+/docs/private.md
+/docs/private/

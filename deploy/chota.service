@@ -1,0 +1,51 @@
+[Unit]
+# systemd unit for the chota kiosk server.
+#
+# Bootstrap (once on a fresh box, see docs/deploy.md for the full rundown):
+#   sudo cp /home/ko/code/chota-bot/deploy/chota.service /etc/systemd/system/chota.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now chota
+#
+# After deploy/deploy.sh updates code + rebuilds, it `systemctl restart`s us.
+# This file lives in the repo so changes to it are versioned — but editing it
+# requires the cp + daemon-reload above to take effect.
+Description=Chota kiosk server (SvelteKit / adapter-node)
+# `network.target` (not network-online): we're a server, not a client — no need
+# for a routable address to start. Per systemd.io/NETWORK_ONLINE: "server
+# software should generally remain available even if a routable network
+# interface is not yet ready."
+After=network.target
+
+# Disable the default start rate limit (5 starts in 10s → permanently dead).
+# A bad deploy or a port-bind race shouldn't brick the service until someone
+# SSHes in to `systemctl reset-failed`. We'd rather it keeps trying forever.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ko
+WorkingDirectory=/home/ko/code/chota-bot
+
+# .env is the single source of truth for runtime config (PORT, ORIGIN, KIOSK,
+# all the API keys). It's gitignored and must be copied over manually — see
+# docs/deploy.md.
+EnvironmentFile=/home/ko/code/chota-bot/.env
+
+
+# adapter-node build output. `node build` boots SvelteKit on $PORT (default
+# 3000; we set PORT=8000 in .env to match the kiosk's Caddy proxy / mDNS).
+# /usr/local/bin/node is a symlink to fnm's default Node — see docs/deploy.md
+# bootstrap step. fnm-as-default still works for interactive shells; this just
+# makes node discoverable by systemd / non-interactive contexts.
+ExecStart=/usr/local/bin/node /home/ko/code/chota-bot/build
+
+Restart=on-failure
+RestartSec=5
+
+# Logs go to journald — `journalctl -u chota -f` to tail. (When LogTape lands,
+# our own structured logs will write to data/logs/chota.log alongside this.)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

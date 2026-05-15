@@ -1,0 +1,183 @@
+<script lang="ts">
+	import type { PrintSection } from '$lib/server/print/sections';
+	import {
+		Sun,
+		CloudSun,
+		Cloudy,
+		CloudDrizzle,
+		CloudRain,
+		CloudFog,
+		CloudLightning,
+		CloudSnow,
+		Wind,
+		Volleyball,
+		Bus as BusIcon
+	} from '@lucide/svelte';
+
+	let {
+		date,
+		sections,
+		closing,
+		/** Masthead badge: a single char → that letter as a monogram; otherwise the sparkle. */
+		mark
+	}: { date: string; sections: PrintSection[]; closing: string; mark?: string } = $props();
+
+	const pad2 = (n: number) => String(n).padStart(2, '0');
+	const monogram = $derived(mark && mark.trim().length === 1 ? mark.trim().toUpperCase() : null);
+
+	// Footnote ink: a dark grey so the bus/sports lines read as secondary without
+	// being so light that thermal dithering loses them.
+	const FOOTNOTE = '#4a4a4a';
+
+	// lucide-icon key (from `weatherGlyph`) → component. CloudSun is the fallback.
+	const WEATHER_ICONS: Record<string, typeof Sun> = {
+		sun: Sun,
+		'cloud-sun': CloudSun,
+		cloudy: Cloudy,
+		'cloud-drizzle': CloudDrizzle,
+		'cloud-rain': CloudRain,
+		'cloud-fog': CloudFog,
+		'cloud-lightning': CloudLightning,
+		'cloud-snow': CloudSnow,
+		wind: Wind
+	};
+	const weatherIcon = (key: string) => WEATHER_ICONS[key] ?? CloudSun;
+
+	const prettyWeather = (line: string, first: boolean) =>
+		(first ? line.replace(/^\[\s*(.+?)\s*\]\s*/, '$1  ') : line).replace(/^->\s/, '→ ');
+</script>
+
+{#snippet sectionHeader(n: number, title: string)}
+	<div class="flex items-center gap-3">
+		<h2 class="text-xl font-bold tracking-wide whitespace-nowrap">{title}</h2>
+		<div class="h-0 flex-1 border-b-2 border-dashed border-black"></div>
+		<span class="text-sm tabular-nums">{pad2(n)}</span>
+	</div>
+{/snippet}
+
+{#snippet footnote(Icon: typeof BusIcon, text: string)}
+	<div class="mt-1.5 flex items-center gap-1.5 text-[13px]" style:color={FOOTNOTE}>
+		<Icon size={16} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
+		<span>{text}</span>
+	</div>
+{/snippet}
+
+<!-- The receipt body. 576px = the 80mm thermal head; black ink on white only
+     (gray fills dither badly). Text is bumped up a notch from screen sizes —
+     thermal dot-matrix gets hard to read when it's small. `mx-auto` only
+     matters when shown under the dashboard nav; the screenshot path (`?bare=1`)
+     makes the viewport 576px. Typography is set once here (.plex / font-medium /
+     text-[17px]) so every section inherits it; only the per-section header
+     chrome is shared, via the snippet above — section *bodies* lay out freely. -->
+<div class="plex mx-auto w-[576px] bg-white px-6 py-6 text-[17px] leading-snug font-medium text-black">
+	<header class="flex items-end justify-between gap-4">
+		<h1 class="border-b-2 border-black pb-1.5 text-2xl font-bold tracking-tight">{date}</h1>
+		<svg width="58" height="58" viewBox="0 0 48 48" class="shrink-0" aria-hidden="true">
+			<rect x="2" y="2" width="44" height="44" rx="11" fill="black" />
+			<rect x="6.5" y="6.5" width="35" height="35" rx="7.5" fill="none" stroke="#fff" stroke-width="1.6" />
+			{#if monogram}
+				<text
+					x="24"
+					y="34"
+					text-anchor="middle"
+					fill="#fff"
+					font-family="'IBM Plex Mono', ui-monospace, monospace"
+					font-weight="800"
+					font-size="30">{monogram}</text
+				>
+			{:else}
+				<path d="M22 12 L25.2 20.8 L34 24 L25.2 27.2 L22 36 L18.8 27.2 L10 24 L18.8 20.8 Z" fill="#fff" />
+				<path d="M34 10 L35.4 13.6 L39 15 L35.4 16.4 L34 20 L32.6 16.4 L29 15 L32.6 13.6 Z" fill="#fff" />
+				<circle cx="13" cy="35" r="2.2" fill="#fff" />
+			{/if}
+		</svg>
+	</header>
+
+	{#each sections as s (s.n)}
+		<section class="mt-5">
+			{@render sectionHeader(s.n, s.title)}
+			<div class="mt-2">
+				{#if s.kind === 'weather'}
+					{@const Icon = weatherIcon(s.icon)}
+					<div class="flex items-center justify-between gap-4">
+						<div class="min-w-0 flex-1">
+							{#each s.lines as line, i (i)}
+								<p class="whitespace-pre-wrap {i === 0 ? 'text-lg' : ''}">{prettyWeather(line, i === 0)}</p>
+							{/each}
+						</div>
+						<Icon size={72} strokeWidth={2} class="shrink-0" aria-hidden="true" />
+					</div>
+				{:else if s.kind === 'lines'}
+					{#each s.lines as line (line)}
+						<p class="whitespace-pre-wrap">{line}</p>
+					{/each}
+				{:else if s.kind === 'events'}
+					<ul class="space-y-1.5">
+						{#each s.events as e, i (i)}
+							<li class="flex items-baseline gap-2">
+								<span class="flex-1">{e.summary}</span>
+								<span class="shrink-0 text-[13px] tabular-nums">{e.time}</span>
+								{#each e.people as p (p)}
+									<span class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase">{p}</span>
+								{/each}
+							</li>
+						{/each}
+					</ul>
+				{:else if s.kind === 'chores'}
+					<ul class="space-y-1.5">
+						{#each s.rows as r (r.person)}
+							<li class="flex items-baseline gap-3">
+								<span class="w-16 shrink-0 font-semibold">{r.person}</span>
+								<span class="flex-1">{r.chores}</span>
+							</li>
+						{/each}
+					</ul>
+				{:else if s.kind === 'ticktick'}
+					{#if s.shopping.length}
+						<p class="leading-relaxed"><span class="font-semibold">Shopping:</span> {s.shopping.join('  ·  ')}</p>
+					{/if}
+					{#if s.due.length}
+						<ul class="space-y-1.5 {s.shopping.length ? 'mt-3' : ''}">
+							{#each s.due as r, i (i)}
+								<li class="flex items-baseline gap-3">
+									<span class="w-20 shrink-0 font-semibold">{r.list}</span>
+									<span class="flex-1">{r.title}</span>
+									<span class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase">{r.when}</span>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				{:else if s.kind === 'schedule'}
+					<ul class="space-y-2">
+						{#each s.rows as r, i (i)}
+							<li class="flex items-center gap-3">
+								<div class="min-w-0 flex-1">
+									<div class="flex items-baseline gap-2">
+										<span class="min-w-0 flex-1 truncate font-semibold">{r.subject}</span>
+										<span class="shrink-0 text-[13px] tabular-nums">{r.time}</span>
+									</div>
+									{#if r.teacher || r.code}
+										<div class="text-[13px]">{[r.teacher ? `with ${r.teacher}` : '', r.code ? `(${r.code})` : ''].filter(Boolean).join(' ')}</div>
+									{/if}
+								</div>
+								{#if r.room}
+									<span class="shrink-0 rounded border border-black px-2 py-1 text-lg font-bold tracking-tight tabular-nums">{r.room}</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					{#if s.reminder}{@render footnote(Volleyball, s.reminder)}{/if}
+					{#if s.busLine}{@render footnote(BusIcon, s.busLine)}{/if}
+				{:else if s.kind === 'puzzle'}
+					<div class="border-2 border-black p-3 leading-relaxed">{s.q}</div>
+				{:else if s.kind === 'fact'}
+					<p class="leading-relaxed">{s.text}</p>
+				{/if}
+			</div>
+		</section>
+	{/each}
+
+	<div class="mt-7 border-t-2 border-dashed border-black pt-3 text-center font-semibold">
+		{closing.replace(' -- ', ' — ')}
+	</div>
+</div>

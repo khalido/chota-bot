@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode (Tailwind v4 syntax). The 'dark' class is toggled
+   on <html> by app.html (initial) + +layout.svelte (ongoing) based on the
+   Sydney hour. */
+@variant dark (&:where(.dark, .dark *));
+
+/* IBM Plex Mono (OFL), self-hosted from static/fonts. Used by the print
+   render path (canvas) and the /morning HTML route (.plex). Medium weight
+   for body so it survives the thermal head; Bold for headings. */
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-weight: 400;
+	font-style: normal;
+	src: url('/fonts/IBMPlexMono-Regular.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-weight: 500;
+	font-style: normal;
+	src: url('/fonts/IBMPlexMono-Medium.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-weight: 600;
+	font-style: normal;
+	src: url('/fonts/IBMPlexMono-SemiBold.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-weight: 700;
+	font-style: normal;
+	src: url('/fonts/IBMPlexMono-Bold.ttf') format('truetype');
+}
+
+.plex {
+	font-family: 'IBM Plex Mono', ui-monospace, monospace;
+	font-feature-settings: 'liga' 0;
+}
