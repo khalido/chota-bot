@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { version } from '$app/environment';
 	import { authClient } from '$lib/auth-client';
 	import type { PageData } from './$types';
 
@@ -173,63 +174,51 @@
 		<p class="text-sm text-slate-500 dark:text-neutral-500">Raw debug view. No auth gate yet.</p>
 	</header>
 
-	<!-- Google account connection -->
+	<!-- Compact info bar: build version + server time left, Google account right. -->
 	<section
-		class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
+		class="rounded-xl bg-white px-5 py-3 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
 	>
-		<h2 class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500">
-			Google account
-		</h2>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div class="font-mono text-xs text-slate-500 dark:text-neutral-500">
+				<span title="package version + git commit">{version}</span>
+				<span class="mx-1.5 text-slate-300 dark:text-neutral-700">·</span>
+				<span>{data.now}</span>
+			</div>
 
-		{#if $session.isPending}
-			<p class="mt-2 text-sm text-slate-500 dark:text-neutral-500">Loading session…</p>
-		{:else if $session.data}
-			<div class="mt-3 flex items-center gap-4">
-				{#if $session.data.user.image}
-					<img
-						src={$session.data.user.image}
-						alt={$session.data.user.name}
-						class="h-12 w-12 rounded-full ring-1 ring-slate-200 dark:ring-neutral-700"
-						referrerpolicy="no-referrer"
-					/>
-				{/if}
-				<div class="flex-1">
-					<p class="text-sm font-medium text-slate-700 dark:text-neutral-200">
-						{$session.data.user.name}
-					</p>
-					<p class="text-xs text-slate-500 dark:text-neutral-500">
-						{$session.data.user.email}
-					</p>
+			{#if $session.isPending}
+				<span class="text-xs text-slate-400 dark:text-neutral-600">session…</span>
+			{:else if $session.data}
+				<div class="flex items-center gap-2">
+					{#if $session.data.user.image}
+						<img
+							src={$session.data.user.image}
+							alt={$session.data.user.name}
+							class="h-6 w-6 rounded-full ring-1 ring-slate-200 dark:ring-neutral-700"
+							referrerpolicy="no-referrer"
+						/>
+					{/if}
+					<span
+						class="text-xs font-medium text-slate-600 dark:text-neutral-300"
+						title={$session.data.user.email}>{$session.data.user.name}</span
+					>
+					<button
+						type="button"
+						onclick={signOut}
+						class="text-xs text-slate-400 hover:text-slate-600 dark:text-neutral-600 dark:hover:text-neutral-300"
+					>
+						sign out
+					</button>
 				</div>
+			{:else}
 				<button
 					type="button"
-					onclick={signOut}
-					class="rounded-md bg-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-300 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+					onclick={signInGoogle}
+					class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
 				>
-					Sign out
+					Sign in with Google
 				</button>
-			</div>
-		{:else}
-			<p class="mt-2 text-sm text-slate-600 dark:text-neutral-400">
-				Not connected. Sign in to grant calendar read access.
-			</p>
-			<button
-				type="button"
-				onclick={signInGoogle}
-				class="mt-3 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-			>
-				Sign in with Google
-			</button>
-		{/if}
-	</section>
-
-	<section
-		class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
-	>
-		<h2 class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500">
-			Server now
-		</h2>
-		<p class="mt-2 font-mono text-sm text-slate-800 dark:text-neutral-200">{data.now}</p>
+			{/if}
+		</div>
 	</section>
 
 	<section
