@@ -59,13 +59,17 @@ function testSheet(): string {
 	].join('\n');
 }
 
-/** Returns the plain-text payload for `kind`, or null if unknown. `morning` ≡ `family`. */
-export async function composeText(kind: string): Promise<string | null> {
+/**
+ * Returns the plain-text payload for `kind`, or null if unknown. `morning` ≡
+ * `family`. `date` (YYYY-MM-DD) overrides the school-timetable day — lets you
+ * reprint a past day's schedule; omitted → today.
+ */
+export async function composeText(kind: string, date?: string): Promise<string | null> {
 	if (kind === 'test') return testSheet();
 	const who = recipientOf(kind);
 	if (!isRecipient(who)) return null;
 	const d = await gatherMorning();
-	const schedule = who === 'family' ? [] : await getSchedule(who);
+	const schedule = who === 'family' ? [] : await getSchedule(who, date);
 	return sectionsToText(d.date, recipientToSections(who, d, schedule), d.closing, recipientName(who));
 }
 
@@ -79,16 +83,16 @@ export async function composeText(kind: string): Promise<string | null> {
  */
 export type ComposedImage = { image: Buffer; fallback?: string };
 
-export async function composeImage(kind: string): Promise<ComposedImage | null> {
+export async function composeImage(kind: string, date?: string): Promise<ComposedImage | null> {
 	if (kind === 'test') return { image: await renderReceiptPng(testSheet(), {}) };
 	const who = recipientOf(kind);
 	if (!isRecipient(who)) return null;
 	try {
-		return { image: await briefToPng(who) };
+		return { image: await briefToPng(who, date) };
 	} catch (err) {
 		const reason = screenshotFailureReason(err);
 		logErr('print', `screenshot path failed for ${who} (${reason}); falling back to canvas:`, err);
-		const text = await composeText(kind);
+		const text = await composeText(kind, date);
 		return { image: await renderReceiptPng(text ?? '', { masthead: true }), fallback: reason };
 	}
 }
