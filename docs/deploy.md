@@ -76,9 +76,9 @@ fnm scopes globals per Node version, so a `fnm default <new>` orphans them. The 
 [`fnm.py`](https://github.com/khalido/dotfiles) (in the `khalido/dotfiles` repo, cloned to `~/code/dotfiles` on the SP5) automates this — it installs latest LTS, sets it as default, and reinstalls every global you had:
 
 ```bash
-ssh sp5 'uv run ~/code/dotfiles/fnm.py upgrade'
-ssh sp5 'agent-browser install'        # only if the Chromium ABI changed
-ssh sp5 'sudo systemctl restart chota'
+ssh chota 'uv run ~/code/dotfiles/fnm.py upgrade'
+ssh chota 'agent-browser install'        # only if the Chromium ABI changed
+ssh chota 'sudo systemctl restart chota'
 ```
 
 Manual fallback if `fnm.py` ever breaks:
@@ -97,10 +97,11 @@ Caddy reverse-proxy and mDNS are listed at the bottom as optional hardening — 
 From your Mac:
 
 ```bash
-ssh chota 'cd ~/code/chota-bot && bash deploy/deploy.sh'
+npm run deploy    # = ssh chota 'cd ~/code/chota-bot && bash deploy/deploy.sh'
+npm run logs      # = ssh chota 'sudo journalctl -u chota -f'
 ```
 
-The script is idempotent (re-running with no new commits is a no-op):
+(`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) The deploy script is idempotent (re-running with no new commits is a no-op):
 
 1. `git fetch` + `git pull --ff-only origin main` (fails loudly on a non-fast-forward — investigate, don't paper over)
 2. If `package-lock.json` changed → `npm ci`
@@ -158,9 +159,9 @@ tail -f data/logs/chota.log          # (when LogTape lands — see docs/logging.
 **From the Mac** (Tailscale SSH makes any of these one command — no need to keep an SP5 terminal open):
 
 ```bash
-ssh sp5 'sudo journalctl -u chota -f'      # live tail, Ctrl-C to exit
-ssh sp5 'sudo systemctl status chota'
-ssh sp5 'curl -s -X POST http://localhost:8000/api/print/test'   # printer smoke test
+ssh chota 'sudo journalctl -u chota -f'      # live tail, Ctrl-C to exit
+ssh chota 'sudo systemctl status chota'
+ssh chota 'curl -s -X POST http://localhost:8000/api/print/test'   # printer smoke test
 ```
 
 ## Optional hardening
