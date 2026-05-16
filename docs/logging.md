@@ -8,6 +8,7 @@ Status: **proposal**, not built. Today: a tiny `console.log` wrapper (`src/lib/s
 - **LLM cost goes in the log line as a field** (`cost_usd` on the `agent.turn` event) — no `cost_log` table; for real spend numbers we'd check OpenRouter / the AI Gateway dashboard.
 - **Use LogTape's built-ins as much as possible** — `getConsoleSink`, `getRotatingFileSink` (from `@logtape/file`), `nonBlocking` mode, `withContext`. Don't hand-roll rotation or buffering.
 - **Rotation is size-based** (LogTape's [rotating file sink](https://logtape.org/sinks/file#rotating-file-sink) rotates on `maxSize`, not on time). Set generous limits — disk is cheap — e.g. `maxSize: 8 MiB`, `maxFiles: 30` → up to ~240 MiB retained, which at Chota's volume is *months*, well past the "~30 days" we want.
+- **Cloud sink via OpenTelemetry → Axiom.** Alongside console + file, a third sink: LogTape's [OTel sink](https://logtape.org/sinks/otel) shipping to [Axiom](https://axiom.co) over OTLP. OTel keeps it vendor-neutral — the app emits standard OTLP, the backend is just an endpoint (swap Axiom for Grafana/Honeycomb without touching code). That vendor-neutrality *is* the reusable pattern: `LogTape → OTel sink` becomes the standard logging stack for other projects too, only the endpoint changes. Axiom is the pick for the backend — lowest friction, free tier far exceeds a kiosk's volume, accepts OTLP directly (no collector to run). **Best-effort + non-blocking**: if Axiom is unreachable the kiosk never notices — the file sink is the always-works path. Operational observability only, never in the data path (keeps the local-first ethos intact). The real payoff isn't a dashboard — it's **one alert**: morning-print `outcome: failed` or `renderer: canvas` → a push to the phone, so "the kids didn't get their print" reaches you.
 
 ## Severity levels
 
@@ -107,7 +108,7 @@ Legacy `log('scope', ...string)` callsites keep working via a thin compat shim (
 
 ## Open decisions
 
-1. **`__APP_VERSION__`** — inject via Vite `define` from package.json `version` (+ git SHA in CI). Trivial; do it with the LogTape swap.
+1. **App version in base context** — *done* — `version` from `$app/environment` already carries `<pkg version>+<git sha>` (set in `svelte.config.js > kit.version.name`). Just read it into the `event()` base context.
 2. **`@logtape/pretty` for dev?** — nice-to-have; the plain console sink is fine. Skip unless the dev output annoys us.
 3. **`withContext` for job runs** — could set `{ runId }` in context so any incidental log line inside a job inherits it. Marginal given we emit one wide event per job; decide when implementing.
 4. **`job_runs` table** — lands with the retry/catch-up task (`docs/jobs.md`), not separately; referenced here only as the source of `runId`.
