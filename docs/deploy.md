@@ -132,7 +132,7 @@ scp .env chota:~/code/chota-bot/.env
 ssh chota 'sudo systemctl restart chota'
 ```
 
-The Sentral cookies expire periodically — same drill, just edit `.env` and restart.
+Sentral session cookies expire periodically, but you don't have to do anything — `refreshTimetable` self-heals: when the cookie's dead it logs in via agent-browser using `SENTRAL_<NAME>_EMAIL` / `_PASSWORD` and re-caches the cookie. Only touch `.env` if a kid's NSW DoE password itself changes.
 
 ## Rollback
 
