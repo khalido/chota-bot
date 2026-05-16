@@ -34,15 +34,19 @@ function baseUrl(): string {
 
 let chain: Promise<unknown> = Promise.resolve();
 
-/** Screenshot `/print/<who>?bare=1` → PNG bytes. Throws if agent-browser is unusable. */
-export function briefToPng(who: string): Promise<Buffer> {
-	const run = chain.then(() => snapshot(who));
+/**
+ * Screenshot `/print/<who>?bare=1` → PNG bytes. Throws if agent-browser is
+ * unusable. `date` (YYYY-MM-DD) overrides the school-timetable day.
+ */
+export function briefToPng(who: string, date?: string): Promise<Buffer> {
+	const run = chain.then(() => snapshot(who, date));
 	chain = run.catch(() => {});
 	return run;
 }
 
-async function snapshot(who: string): Promise<Buffer> {
-	const url = `${baseUrl()}/print/${encodeURIComponent(who)}?bare=1`;
+async function snapshot(who: string, date?: string): Promise<Buffer> {
+	const dateParam = date ? `&date=${encodeURIComponent(date)}` : '';
+	const url = `${baseUrl()}/print/${encodeURIComponent(who)}?bare=1${dateParam}`;
 	const out = join(tmpdir(), `chota-brief-${who}-${process.pid}-${Date.now()}.png`);
 	const ab = (args: string[]) => exec('agent-browser', args, { timeout: CMD_TIMEOUT_MS });
 
