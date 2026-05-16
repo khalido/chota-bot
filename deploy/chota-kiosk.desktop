@@ -1,0 +1,18 @@
+[Desktop Entry]
+# Desktop-session autostart entry — launches the dashboard fullscreen on login.
+# This is NOT the server (that's chota.service / systemd). This just opens a
+# browser at the already-running server. Install on the kiosk box with:
+#   cp deploy/chota-kiosk.desktop ~/.config/autostart/
+# Then enable auto-login (Mint → Login Window → Users) so the session — and
+# therefore this entry — starts on power-on without a password.
+#
+# The `sleep 8` gives chota.service time to bind :8000 before Chrome loads;
+# the desktop session usually starts after the systemd service anyway, but the
+# wait avoids a connection-refused on a cold boot. --disable-session-crashed-bubble
+# suppresses the "Chrome didn't shut down properly" nag after an ungraceful
+# power-off (a kiosk gets those).
+Type=Application
+Name=Chota Kiosk
+Comment=Launch the Chota dashboard fullscreen
+Exec=bash -c 'sleep 8; exec google-chrome --kiosk --noerrdialogs --disable-session-crashed-bubble --disable-translate http://localhost:8000'
+X-GNOME-Autostart-enabled=true

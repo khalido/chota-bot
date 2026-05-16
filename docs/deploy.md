@@ -67,6 +67,12 @@ sudo systemctl status chota          # should be active (running)
 curl -s http://localhost:8000/ | head -1               # should return HTML
 curl -s -X POST http://localhost:8000/api/print/test   # column ruler — should print
 journalctl -u chota -f                                 # tail server logs
+
+# 9. Kiosk display — launch the dashboard fullscreen on session login
+cp deploy/chota-kiosk.desktop ~/.config/autostart/
+#    Then enable auto-login: Mint menu → Login Window → Users → Automatic login.
+#    Reboot — the dashboard should come up fullscreen on its own. The systemd
+#    service (step 7) is the server; this entry is just the browser pointed at it.
 ```
 
 ## When you upgrade Node (fnm)
