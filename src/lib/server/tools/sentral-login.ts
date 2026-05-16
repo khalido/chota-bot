@@ -72,10 +72,13 @@ export async function loginSentral(creds: SentralCredentials): Promise<string> {
 		await ab(['find', 'role', 'button', 'click', '--name', 'Student']);
 
 		// 2. Microsoft login: email → Next. `loginfmt` / `idSIButton9` are
-		//    long-stable Microsoft login element ids.
+		//    long-stable Microsoft login element ids. The settle between fill
+		//    and click matters: MS's React form needs a beat to commit the
+		//    typed email, or "Next" submits an empty form and silently no-ops.
 		await waitForUrl('login.microsoftonline.com');
 		await ab(['wait', '--text', 'Sign in']);
 		await ab(['fill', 'input[name=loginfmt]', creds.email]);
+		await ab(['wait', '2000']);
 		await ab(['click', '#idSIButton9']);
 
 		// 3. NSW DoE ADFS: password (+ keep signed in) → Sign in. The username
