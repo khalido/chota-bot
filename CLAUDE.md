@@ -14,7 +14,7 @@ npm run lint       # prettier + eslint
 npm run build      # adapter-node → build/index.js
 ```
 
-Deploy to the kiosk box is manual SSH-from-Mac — see [`docs/deploy.md`](docs/deploy.md).
+The live dashboard runs on the kiosk box at **`http://sp5.local/`** (home LAN) — a Caddy reverse-proxy service maps port 80 → the app on :8000, so there's no port to type. Deploy is manual SSH-from-Mac (`npm run deploy`) — see [`docs/deploy.md`](docs/deploy.md).
 
 ## First-time setup
 
