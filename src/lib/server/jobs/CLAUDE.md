@@ -81,6 +81,6 @@ Eventually one job here will be `run-user-jobs.ts` — every 5 min, read a `user
 ## Don't
 
 - Don't import jobs from outside this folder — they're side-effect modules
-- Don't `console.log` heavily inside `fn` — use `log('jobs', ...)` from `$lib/server/log`
+- Don't `console.log` inside `fn`, and don't hand-log the run — `defineJob`'s wrapper emits one `job.run` wide event per fire (return a summary string and it rides along). For an incidental line use `logger('jobs')` from `$lib/server/log`.
 - Don't re-throw inside `fn` — the wrapper records errors and the job continues on the next tick
 - Don't add a "framework" file here — `defineJob` lives in `$lib/server/scheduler`. This folder is jobs only.

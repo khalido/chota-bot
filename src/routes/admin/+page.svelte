@@ -22,6 +22,9 @@
 
 	let printing = $state<string | null>(null);
 	let printResult = $state<string | null>(null);
+	// Which family member the print buttons + debug links target.
+	// svelte-ignore state_referenced_locally
+	let printWho = $state(data.recipients[0] ?? '');
 
 	let pinging = $state(false);
 	let pingSummary = $state<string | null>(null);
@@ -42,7 +45,7 @@
 	}
 
 	// label is just for the busy-state UI; query is appended to the POST URL.
-	async function fireRealPrint(kind: 'morning' | 'test', label: string, query = '') {
+	async function fireRealPrint(kind: string, label: string, query = '') {
 		printing = label;
 		printResult = null;
 		try {
@@ -257,8 +260,8 @@
 			Print
 		</h2>
 
-		<div class="mt-3 flex flex-wrap gap-2">
-			{#snippet pbtn(text: string, kind: 'morning' | 'test', label: string, query: string)}
+		<div class="mt-3 flex flex-wrap items-center gap-2">
+			{#snippet pbtn(text: string, kind: string, label: string, query: string)}
 				<button
 					type="button"
 					onclick={() => fireRealPrint(kind, label, query)}
@@ -269,10 +272,18 @@
 				</button>
 			{/snippet}
 			{@render pbtn('Print test (rulers)', 'test', 'test', '')}
-			{@render pbtn('Print morning (text A)', 'morning', 'morning-a', '')}
-			{@render pbtn('Print morning (text B)', 'morning', 'morning-b', '?font=b')}
-			{@render pbtn('Print morning (text mixed)', 'morning', 'morning-mix', '?mix=1')}
-			{@render pbtn('Print morning (image)', 'morning', 'morning-img', '?mode=image')}
+			<select
+				bind:value={printWho}
+				class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+			>
+				{#each data.recipients as who (who)}
+					<option value={who}>{who}</option>
+				{/each}
+			</select>
+			{@render pbtn('text A', printWho, `${printWho}-a`, '')}
+			{@render pbtn('text B', printWho, `${printWho}-b`, '?font=b')}
+			{@render pbtn('text mixed', printWho, `${printWho}-mix`, '?mix=1')}
+			{@render pbtn('image', printWho, `${printWho}-img`, '?mode=image')}
 		</div>
 
 		{#if printResult}
@@ -289,18 +300,18 @@
 			<p>
 				<a
 					class="text-blue-600 underline dark:text-blue-400"
-					href={resolve('/api/print/[kind]', { kind: 'morning' })}
+					href={resolve('/api/print/[kind]', { kind: printWho })}
 					target="_blank"
-					rel="noopener">/api/print/morning</a
+					rel="noopener">/api/print/{printWho}</a
 				>
-				— plain-text preview (no print).
+				— plain-text preview of the selected person (no print).
 			</p>
 			<p>
 				<a
 					class="text-blue-600 underline dark:text-blue-400"
-					href="{resolve('/api/print/[kind]', { kind: 'morning' })}?format=png"
+					href="{resolve('/api/print/[kind]', { kind: printWho })}?format=png"
 					target="_blank"
-					rel="noopener">/api/print/morning?format=png</a
+					rel="noopener">/api/print/{printWho}?format=png</a
 				>
 				— rendered image preview (the production "designed print" path).
 			</p>

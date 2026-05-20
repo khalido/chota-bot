@@ -1,29 +1,36 @@
 import { error } from '@sveltejs/kit';
-import { gatherMorning } from '$lib/server/print/morning';
+import { gatherBrief } from '$lib/server/print/brief';
 import { recipientToSections, getRecipients } from '$lib/server/print/sections';
 import { getSchedule } from '$lib/server/tools/sentral';
+import { sydneyYMD } from '$lib/time';
 import type { PageServerLoad } from './$types';
 
 /**
- * One recipient's print brief. `/print/family` is the Daily Shout; `/print/<kid>`
- * is their slice (weather + school timetable + their chore + a puzzle). Use
- * `?bare=1` for the clean screenshot/print render (drops the dashboard nav).
+ * One family member's print brief — `/print/<who>` (everyone in chota.config.ts
+ * gets one). Household sections for all; a kid also gets their school timetable.
+ * Use `?bare=1` for the clean screenshot/print render (drops the dashboard nav).
  *
- * `?date=YYYY-MM-DD` overrides the school-timetable day (the rest of the brief
- * is always "now"). Lets you reprint a past day's schedule — the cached .ics
- * holds the whole timetable. Omitted → today.
+ * `?day=tomorrow` shifts the whole brief one day ahead — the evening print's
+ * "tomorrow" sheet (weather, school, events, chores, shopping; no puzzle/fact).
+ *
+ * `?date=YYYY-MM-DD` overrides just the school-timetable day. Lets you reprint
+ * a past day's schedule — the cached .ics holds the whole timetable. Omitted →
+ * tomorrow's date when `?day=tomorrow`, else today.
  */
 export const load: PageServerLoad = async ({ params, url }) => {
 	const who = params.who.toLowerCase();
 	if (!getRecipients().includes(who)) {
 		throw error(404, `Unknown print recipient: ${params.who}`);
 	}
-	const date = url.searchParams.get('date') ?? undefined;
-	const d = await gatherMorning();
-	const schedule = who === 'family' ? [] : await getSchedule(who, date);
+	const day = url.searchParams.get('day') === 'tomorrow' ? 'tomorrow' : 'today';
+	const date =
+		url.searchParams.get('date') ??
+		(day === 'tomorrow' ? sydneyYMD(new Date(Date.now() + 86_400_000)) : undefined);
+	const d = await gatherBrief({ day });
+	const schedule = await getSchedule(who, date);
 	return {
 		who,
-		mark: who === 'family' ? undefined : who[0].toUpperCase(),
+		mark: who[0].toUpperCase(),
 		date: d.date,
 		sections: recipientToSections(who, d, schedule),
 		closing: d.closing

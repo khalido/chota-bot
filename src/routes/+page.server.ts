@@ -1,4 +1,5 @@
-import { collectTripReports } from '$lib/server/print/morning';
+import { collectTripReports } from '$lib/server/print/brief';
+import { getRecipients } from '$lib/server/print/sections';
 import { quoteForTime } from '$lib/server/quotes';
 import { getChores } from '$lib/server/chores';
 import { getWeather, weatherSummary } from '$lib/server/tools/weather';
@@ -40,5 +41,5 @@ export const load: PageServerLoad = async () => {
 	const chores = getChores({ now });
 	const headline = weather ? weatherSummary(weather, config.home?.weather, now) : null;
 
-	return { trips, quote, chores, weather, headline, events, lists };
+	return { trips, quote, chores, weather, headline, events, lists, recipients: getRecipients() };
 };

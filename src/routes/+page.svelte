@@ -52,7 +52,7 @@
 		<Lists lists={data.lists} />
 
 		<div class="md:col-span-2 lg:col-span-3">
-			<PrintMorning />
+			<PrintMorning recipients={data.recipients} />
 		</div>
 	</div>
 </main>

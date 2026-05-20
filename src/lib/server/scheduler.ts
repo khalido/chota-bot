@@ -10,10 +10,11 @@
  */
 import { Cron } from 'croner';
 import { building } from '$app/environment';
-import { log, logErr } from '$lib/server/log';
+import { event, logger } from '$lib/server/log';
 
 const TIMEZONE = 'Australia/Sydney';
 const RING_SIZE = 20;
+const jobLog = logger('jobs');
 
 export interface JobRecord {
 	at: Date;
@@ -64,29 +65,42 @@ export function defineJob(name: string, pattern: string, fn: JobFn): Cron | unde
 			name,
 			timezone: TIMEZONE,
 			protect: (c) =>
-				log('jobs', `${name} blocked — previous still running since ${c.currentRun()?.toISOString()}`),
-			catch: (err) => logErr('jobs', `${name} caught:`, err)
+				jobLog.warning('job {job} blocked — previous still running since {since}', {
+					job: name,
+					since: c.currentRun()?.toISOString()
+				}),
+			catch: (err) =>
+				jobLog.error('job {job} caught error', {
+					job: name,
+					error: err instanceof Error ? err.message : String(err)
+				})
 		},
 		async () => {
 			const at = new Date();
 			const start = Date.now();
+			// One wide `job.run` event per fire — see docs/logging.md. `runId`
+			// joins here once the job_runs table lands (docs/jobs.md).
+			const ev = event('jobs', 'job {job} ran', { job: name });
 			try {
 				const summary = await fn();
-				const durationMs = Date.now() - start;
-				push(recent, { at, status: 'ok', durationMs });
-				const tail = typeof summary === 'string' && summary.length > 0 ? ` — ${summary}` : '';
-				log('jobs', `${name} ok in ${durationMs}ms${tail}`);
+				push(recent, { at, status: 'ok', durationMs: Date.now() - start });
+				ev.done({
+					summary: typeof summary === 'string' && summary.length > 0 ? summary : undefined
+				});
 			} catch (err) {
-				const durationMs = Date.now() - start;
 				const error = err instanceof Error ? err.message : String(err);
-				push(recent, { at, status: 'error', durationMs, error });
-				logErr('jobs', `${name} failed in ${durationMs}ms: ${error}`);
+				push(recent, { at, status: 'error', durationMs: Date.now() - start, error });
+				ev.fail(err);
 			}
 		}
 	);
 
 	JOBS.push({ name, pattern, cron, recent });
-	log('jobs', `registered ${name} "${pattern}", next at ${cron.nextRun()?.toISOString() ?? '?'}`);
+	jobLog.info('registered {job}: {pattern}, next at {next}', {
+		job: name,
+		pattern,
+		next: cron.nextRun()?.toISOString() ?? '?'
+	});
 	return cron;
 }
 
@@ -111,7 +125,7 @@ export function bootJobs(): Promise<void> {
 		try {
 			const modules = import.meta.glob('./jobs/*.ts');
 			await Promise.all(Object.values(modules).map((load) => load()));
-			log('jobs', `boot — ${JOBS.length} job(s) registered`);
+			jobLog.info('boot — {count} job(s) registered', { count: JOBS.length });
 		} finally {
 			bootInFlight = null;
 		}

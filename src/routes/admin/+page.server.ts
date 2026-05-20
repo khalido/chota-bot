@@ -1,4 +1,5 @@
-import { collectTripReports } from '$lib/server/print/morning';
+import { collectTripReports } from '$lib/server/print/brief';
+import { getRecipients } from '$lib/server/print/sections';
 import { quoteForTime } from '$lib/server/quotes';
 import { getConfig } from '$lib/server/config';
 import { getChores } from '$lib/server/chores';
@@ -48,6 +49,7 @@ export const load: PageServerLoad = async () => {
 		ticktickLists,
 		config: getConfig(),
 		chores: getChores({ now }),
+		recipients: getRecipients(),
 		now: now.toISOString()
 	};
 };

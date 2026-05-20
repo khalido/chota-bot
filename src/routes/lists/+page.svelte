@@ -81,6 +81,26 @@
 							{/each}
 						</ul>
 					{/if}
+
+					{#if l.done.length > 0}
+						<div class="mt-3 border-t border-slate-100 pt-3 dark:border-neutral-800">
+							<p
+								class="mb-1.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase dark:text-neutral-600"
+							>
+								Recently done
+							</p>
+							<ul class="space-y-1">
+								{#each l.done as t (t.id)}
+									<li
+										class="flex items-baseline justify-between gap-2 text-xs text-slate-400 dark:text-neutral-500"
+									>
+										<span class="truncate line-through">{t.title}</span>
+										<span class="shrink-0">{t.when}</span>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
 				</section>
 			{/each}
 		</div>

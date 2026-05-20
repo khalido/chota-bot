@@ -147,6 +147,11 @@
 							{/each}
 						</ul>
 					{/if}
+					{#if s.bought.length}
+						<p class="leading-relaxed {s.shopping.length || s.due.length ? 'mt-3' : ''}">
+							<span class="font-semibold">Recently bought:</span> {s.bought.join('  ·  ')}
+						</p>
+					{/if}
 				{:else if s.kind === 'schedule'}
 					<ul class="space-y-2">
 						{#each s.rows as r, i (i)}
