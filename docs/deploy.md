@@ -170,9 +170,45 @@ ssh chota 'sudo systemctl status chota'
 ssh chota 'curl -s -X POST http://localhost:8000/api/print/test'   # printer smoke test
 ```
 
+## Reverse proxy — portless URL
+
+The app listens on `:8000` (a non-privileged port). To reach the dashboard at
+`http://sp5.local/` with **no port** — the URL the family bookmarks — Caddy runs
+on `:80` and reverse-proxies to it. Caddy binds the privileged port via its own
+`CAP_NET_BIND_SERVICE`; the app itself never needs root.
+
+One-time install on the box — use the **official Caddy apt repo** (current +
+auto-updating via `apt upgrade`; the Ubuntu/Mint repo copy lags badly):
+
+```bash
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
+```
+
+The package installs + enables `caddy.service` (survives reboots, reads
+`/etc/caddy/Caddyfile`). Drop our config in and reload:
+
+```bash
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+`deploy/Caddyfile` is just `:80 { reverse_proxy localhost:8000 }` — LAN-only,
+plain HTTP (the bare `:80` disables Caddy's auto-HTTPS). It's independent of
+`chota.service`: if the app is down or restarting, Caddy simply 502s until it's
+back. The Caddyfile isn't touched by `deploy.sh` — re-copy + reload only when
+`deploy/Caddyfile` itself changes.
+
 ## Optional hardening
 
 Not Phase 1 blockers — wire when the need shows up.
 
-- **Caddy reverse proxy** — `:80` → `:8000`, plus mDNS so `chota.local` resolves on the home LAN. Lives in `deploy/Caddyfile` once added.
-- **mDNS** — `avahi-daemon` already broadcasts the hostname; nothing extra needed if the hostname is `chota`.
+- **mDNS** — `avahi-daemon` (enabled by default on Mint) advertises the box on
+  the LAN, so `sp5.local` resolves with no central DNS. Nothing to set up as
+  long as the hostname is `sp5`.
+- **Tailscale** — already on the box; reachable from any device on the tailnet
+  at `sp5.<tailnet>.ts.net`. `tailscale serve 8000` would add a portless HTTPS
+  URL over the tailnet if ever wanted.
