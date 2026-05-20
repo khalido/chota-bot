@@ -37,3 +37,7 @@ vite.config.ts.timestamp-*
 # Private notes (account IDs, project numbers, anything you'd rather not push)
 /docs/private.md
 /docs/private/
+
+# Claude Code skill artifacts — per-developer tooling, not part of the app
+/skills-lock.json
+/.agents/

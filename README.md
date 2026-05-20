@@ -1,37 +1,41 @@
-# Chota (does small things well)
+# Chota
 
-This project was triggered by a desire to reduce phone use. Every day, I would check my calendar agenda, the kid with a phone would do that AND their school agenda, the bus timings, weather, the kid without a phone would fire up a laptop to check hw and classes etc.
+*A wall kiosk + thermal printer that prints everyone in the family their own daily brief at breakfast — so nobody has to reach for a phone to find out what the day holds. ("Chota" means small; it does small things well.)*
 
-So it dawned on me (also inspired by [multiple hckrnews posts](https://hn.algolia.com/?q=thermal+printer)) that we all just need a manual, fast thing to look at fast which combines all the info. Which led to this project — every morning it collects data and prints out a daily brief for the family.
+It started with the morning scramble: everyone reaching for a screen to find out the same handful of things — what's on the calendar, the weather, when the bus goes, who's got sport. The kid with a phone checked all that *plus* their school timetable; the kid without one booted a laptop for it.
+
+A [steady drip of thermal-printer posts on Hacker News](https://hn.algolia.com/?q=thermal+printer) nudged the rest into place: what we actually needed was one fast, physical thing that pulls it all together. So now Chota does — it gathers the day's data and prints each person their own brief.
 
 ## why a receipt printer
 
-Fast, cheap, endless paper. And it's easy to put in your pocket! My print has a shopping list sync'd from our family [ticktick](https://ticktick.com/webapp/) list and it's easier to just use that than pull out my phone.
+Fast, cheap, endless paper — and you can fold a receipt into your pocket. Mine carries a shopping list synced from our family [TickTick](https://ticktick.com/), and reaching for that beats pulling out a phone.
 
 ## what it does today
 
-- **Morning print** — auto-fires daily - everyone gets their own calendar, chore, school timetable, ticktick list and a kid-tuned closing line.
-- **Tools wired in:** Google Weather, Transport NSW (next bus), Google Calendar (better-auth OAuth), TickTick, TMDB, NSW DoE Sentral school portal, NASA APOD.
-- **Dashboard surfaces:** clock, weather (current + 48h forecast + sparklines), shopping/lists, print previews, admin/debug.
-- **Scheduler:** runs jobs on a timer.
- 
+- **Two daily prints** — a morning brief at 06:45 and an evening *tomorrow* brief at 19:15, fired by a cron scheduler. Each family member gets their own sheet: weather, their school timetable, calendar, chores, the shopping list.
+- **Tools wired in** — Google Weather, Transport NSW (live bus times), Google Calendar (OAuth via better-auth), TickTick, NSW DoE Sentral (school portal), TMDB, NASA APOD.
+- **Live dashboard** — clock, weather (current + 48h forecast + sparklines), shopping/lists, per-person print previews, an admin/debug page, and a plain-text `/api/health` endpoint.
+
 ## stack
 
-SvelteKit (TS, Tailwind, adapter-node) · Drizzle + better-sqlite3 · Better-auth (Google OAuth) · Vitest · Vercel AI SDK + AI Gateway · node-thermal-printer + libusb · croner.
+SvelteKit (TS, Tailwind, adapter-node) · Drizzle + better-sqlite3 · better-auth (Google OAuth) · Vitest · LogTape · node-thermal-printer + libusb · croner. The agent loop (Phase 2) will run on the Vercel AI SDK.
 
-Some notes:
+## under the hood
 
-**Two render paths for the print.** Plain text (ESC/POS bytes, ASCII-only, the always-works fallback) and HTML→screenshot (renders the kiosk's own `/print/<who>` page, screenshots at 576px, sends as a raster image). Html to screenshot to print is a bit complex but this means you can tweak the printout any which way using css.
+**Two print render paths:**
 
-**Tools are plain TS functions** in one file each, exporting a small async function. The same function powers a route, a job, tests, and (later) tools for the agent loop. 
+- **Plain text** — ESC/POS bytes, ASCII-only. The always-works fallback.
+- **HTML → screenshot** — renders the kiosk's own `/print/<who>` page in a headless browser, screenshots it at the printer's 576px width, and prints that raster. More moving parts — but it means the printout is styled with ordinary CSS, so you can tweak it any which way.
+
+**Tools are plain TS functions** — one file each, exporting a small async function. The same function powers a route, a scheduled job, the tests, and (later) a tool for the agent loop.
 
 ## status
 
-**Phase 1 shipped** — morning print is live, fires every weekday, super useful already.
+**Phase 1 shipped** — the morning and evening prints are live, firing daily. Genuinely useful already.
 
 Next:
-- **Phase 2** — agent loop, more tools, kiosk polish.
-- **Phase 3** — voice (push-to-talk + Groq Whisper), Telegram chat surface.
+- **Phase 2** — an agent loop, more tools, kiosk polish.
+- **Phase 3** — voice (push-to-talk + Groq Whisper) and a Telegram chat surface.
 
 ## getting started
 
@@ -41,6 +45,4 @@ Next:
 
 ## security
 
-I am running tailscale to connect to the dashboard and expose a telegram webhook to the internet. The dashboard is running better-auth for Google calendar access and later on a PIN on first boot for the dashboard.
-
-**Local-trusted only.** `/admin` and `/api/*` aren't auth-gated yet — don't expose this app to the public internet. Use Tailscale for remote access.
+Remote access is over [Tailscale](https://tailscale.com/); the dashboard isn't meant for the public internet. `/admin` and `/api/*` aren't auth-gated yet, so it's **local-trusted only** — keep it on your LAN / tailnet. Google Calendar access goes through better-auth's OAuth; a dashboard PIN is on the list.
