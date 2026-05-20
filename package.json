@@ -51,6 +51,8 @@
 		"vitest": "^4.1.3"
 	},
 	"dependencies": {
+		"@logtape/file": "^2.0.9",
+		"@logtape/logtape": "^2.0.9",
 		"@lucide/svelte": "^1.14.0",
 		"@napi-rs/canvas": "^1.0.0",
 		"better-sqlite3": "^12.8.0",

@@ -58,11 +58,13 @@ export default defineChota({
 		// internal name → exact TickTick list name. Only lists mapped here are
 		// visible to the bot; private lists stay invisible. Adjust to your setup —
 		// these are the names the chota-bot reference family uses:
+		// Order matters — it's the order lists appear on /lists. Shopping leads:
+		// it's the most-churned list (items added + ticked off daily).
 		lists: {
+			shopping: 'Shopping', // everyday items / groceries — shown in full on the morning print
 			buying: 'Buying', // longer-term wishlist (shoes, gear, "someday" stuff)
 			read: 'Read', // books, articles, links to share with the family
 			watch: 'Watch', // TV, movies, YouTube — things to watch together
-			shopping: 'Shopping', // everyday items / groceries — shown in full on the morning print
 			notes: 'Notes' // general family notes
 		}
 	},

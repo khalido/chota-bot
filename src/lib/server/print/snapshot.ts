@@ -36,17 +36,23 @@ let chain: Promise<unknown> = Promise.resolve();
 
 /**
  * Screenshot `/print/<who>?bare=1` → PNG bytes. Throws if agent-browser is
- * unusable. `date` (YYYY-MM-DD) overrides the school-timetable day.
+ * unusable. `date` (YYYY-MM-DD) overrides the school-timetable day; `day:
+ * 'tomorrow'` renders the whole brief one day ahead (the evening print).
  */
-export function briefToPng(who: string, date?: string): Promise<Buffer> {
-	const run = chain.then(() => snapshot(who, date));
+export function briefToPng(
+	who: string,
+	date?: string,
+	day: 'today' | 'tomorrow' = 'today'
+): Promise<Buffer> {
+	const run = chain.then(() => snapshot(who, date, day));
 	chain = run.catch(() => {});
 	return run;
 }
 
-async function snapshot(who: string, date?: string): Promise<Buffer> {
+async function snapshot(who: string, date?: string, day: 'today' | 'tomorrow' = 'today'): Promise<Buffer> {
 	const dateParam = date ? `&date=${encodeURIComponent(date)}` : '';
-	const url = `${baseUrl()}/print/${encodeURIComponent(who)}?bare=1${dateParam}`;
+	const dayParam = day === 'tomorrow' ? '&day=tomorrow' : '';
+	const url = `${baseUrl()}/print/${encodeURIComponent(who)}?bare=1${dateParam}${dayParam}`;
 	const out = join(tmpdir(), `chota-brief-${who}-${process.pid}-${Date.now()}.png`);
 	const ab = (args: string[]) => exec('agent-browser', args, { timeout: CMD_TIMEOUT_MS });
 

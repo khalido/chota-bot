@@ -13,21 +13,30 @@ import type { RequestHandler } from './$types';
  * `?date=YYYY-MM-DD` (any verb) overrides the school-timetable day — reprint a
  * past day's schedule. The rest of the brief is always "now".
  *
- * Kinds: `test` (ruler sheet), `morning` (alias for `family`), and any recipient
- * returned by `getRecipients()` — `family` plus every kid with a Sentral cookie.
+ * `?day=tomorrow` (any verb) shifts the whole brief one day ahead — the evening
+ * print's "tomorrow" sheet.
+ *
+ * Kinds: `test` (the ruler sheet) and any recipient returned by `getRecipients()`
+ * — every family member in chota.config.ts.
  */
+
+/** `?day=tomorrow` → the evening "tomorrow" brief; anything else → today. */
+function dayParam(url: URL): 'today' | 'tomorrow' {
+	return url.searchParams.get('day') === 'tomorrow' ? 'tomorrow' : 'today';
+}
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const date = url.searchParams.get('date') ?? undefined;
+	const day = dayParam(url);
 	if (url.searchParams.get('format') === 'png') {
-		const composed = await composeImage(params.kind, date);
+		const composed = await composeImage(params.kind, date, day);
 		if (composed === null) throw error(404, `Unknown print kind: ${params.kind}`);
 		return new Response(new Uint8Array(composed.image), {
 			headers: { 'content-type': 'image/png', 'cache-control': 'no-store' }
 		});
 	}
 
-	const text = await composeText(params.kind, date);
+	const text = await composeText(params.kind, date, day);
 	if (text === null) throw error(404, `Unknown print kind: ${params.kind}`);
 	return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
 };
@@ -35,10 +44,11 @@ export const GET: RequestHandler = async ({ params, url }) => {
 export const POST: RequestHandler = async ({ params, url }) => {
 	const mode = url.searchParams.get('mode') === 'image' ? 'image' : 'text';
 	const date = url.searchParams.get('date') ?? undefined;
+	const day = dayParam(url);
 
 	// Build the payload first (a missing-kind 404 shouldn't look like a printer error).
-	const composed = mode === 'image' ? await composeImage(params.kind, date) : null;
-	const text = mode === 'image' ? null : await composeText(params.kind, date);
+	const composed = mode === 'image' ? await composeImage(params.kind, date, day) : null;
+	const text = mode === 'image' ? null : await composeText(params.kind, date, day);
 	if ((mode === 'image' && composed === null) || (mode === 'text' && text === null)) {
 		throw error(404, `Unknown print kind: ${params.kind}`);
 	}

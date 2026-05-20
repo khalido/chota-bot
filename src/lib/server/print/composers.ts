@@ -6,34 +6,39 @@
  * morning data, so there's one source of truth per recipient.
  *
  * Kinds:
- *   - `test`            — the ruler smoke-test sheet
- *   - `morning`/`family`— the family Daily Shout
- *   - `<kid>`           — a recipient brief (family sections + their school day)
+ *   - `test`     — the ruler smoke-test sheet
+ *   - `<person>` — one family member's brief (household sections + their
+ *                  school day if they're a kid with a Sentral timetable)
  */
-import { gatherMorning } from './morning';
+import { gatherBrief } from './brief';
 import { recipientToSections, sectionsToText, getRecipients } from './sections';
 import { getSchedule } from '$lib/server/tools/sentral';
 import { briefToPng } from './snapshot';
 import { renderReceiptPng } from './render';
 import { logErr } from '$lib/server/log';
+import { sydneyYMD } from '$lib/time';
 
-/** Printable URL kinds = the static specials + every recipient (one per kid + `family`). */
-export function getPrintKinds(): readonly string[] {
-	return ['morning', 'test', ...getRecipients()];
+/**
+ * The school-timetable day to render: an explicit `date` wins; otherwise
+ * tomorrow's date for the evening (`day: 'tomorrow'`) brief, else today.
+ */
+function scheduleDateFor(date: string | undefined, day: 'today' | 'tomorrow'): string | undefined {
+	if (date) return date;
+	return day === 'tomorrow' ? sydneyYMD(new Date(Date.now() + 86_400_000)) : undefined;
 }
 
-/** `morning` is an alias for the `family` brief; everything else maps to itself. */
-function recipientOf(kind: string): string {
-	return kind === 'morning' ? 'family' : kind;
+/** Printable URL kinds = the `test` sheet + every family member. */
+export function getPrintKinds(): readonly string[] {
+	return ['test', ...getRecipients()];
 }
 
 function isRecipient(who: string): boolean {
 	return getRecipients().includes(who);
 }
 
-/** Title-cased recipient name for the plain-text masthead, or undefined for the family brief. */
-function recipientName(who: string): string | undefined {
-	return who === 'family' ? undefined : who[0].toUpperCase() + who.slice(1);
+/** Title-cased recipient name for the masthead, e.g. `savi` → `Savi`. */
+function recipientName(who: string): string {
+	return who[0].toUpperCase() + who.slice(1);
 }
 
 /** Printer smoke test: a fresh timestamp + length samples + a column ruler. */
@@ -60,17 +65,23 @@ function testSheet(): string {
 }
 
 /**
- * Returns the plain-text payload for `kind`, or null if unknown. `morning` ≡
- * `family`. `date` (YYYY-MM-DD) overrides the school-timetable day — lets you
- * reprint a past day's schedule; omitted → today.
+ * Returns the plain-text payload for `kind`, or null if unknown. `date`
+ * (YYYY-MM-DD) overrides the school-timetable day — lets you reprint a past
+ * day's schedule; omitted → today. `day: 'tomorrow'` shifts the whole brief
+ * one day ahead (the evening print).
  */
-export async function composeText(kind: string, date?: string): Promise<string | null> {
+export async function composeText(
+	kind: string,
+	date?: string,
+	day: 'today' | 'tomorrow' = 'today'
+): Promise<string | null> {
 	if (kind === 'test') return testSheet();
-	const who = recipientOf(kind);
-	if (!isRecipient(who)) return null;
-	const d = await gatherMorning();
-	const schedule = who === 'family' ? [] : await getSchedule(who, date);
-	return sectionsToText(d.date, recipientToSections(who, d, schedule), d.closing, recipientName(who));
+	if (!isRecipient(kind)) return null;
+	const d = await gatherBrief({ day });
+	// getSchedule reads the cached .ics — empty for a non-kid, so their brief
+	// is just the household sections.
+	const schedule = await getSchedule(kind, scheduleDateFor(date, day));
+	return sectionsToText(d.date, recipientToSections(kind, d, schedule), d.closing, recipientName(kind));
 }
 
 /**
@@ -83,16 +94,19 @@ export async function composeText(kind: string, date?: string): Promise<string |
  */
 export type ComposedImage = { image: Buffer; fallback?: string };
 
-export async function composeImage(kind: string, date?: string): Promise<ComposedImage | null> {
+export async function composeImage(
+	kind: string,
+	date?: string,
+	day: 'today' | 'tomorrow' = 'today'
+): Promise<ComposedImage | null> {
 	if (kind === 'test') return { image: await renderReceiptPng(testSheet(), {}) };
-	const who = recipientOf(kind);
-	if (!isRecipient(who)) return null;
+	if (!isRecipient(kind)) return null;
 	try {
-		return { image: await briefToPng(who, date) };
+		return { image: await briefToPng(kind, date, day) };
 	} catch (err) {
 		const reason = screenshotFailureReason(err);
-		logErr('print', `screenshot path failed for ${who} (${reason}); falling back to canvas:`, err);
-		const text = await composeText(kind, date);
+		logErr('print', `screenshot path failed for ${kind} (${reason}); falling back to canvas:`, err);
+		const text = await composeText(kind, date, day);
 		return { image: await renderReceiptPng(text ?? '', { masthead: true }), fallback: reason };
 	}
 }

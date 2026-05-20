@@ -1,7 +1,7 @@
 import { TRANSPORT_NSW_API_KEY } from '$env/static/private';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
-import { sydneyTimeCompact, sydneyTimeOnDay } from '$lib/time';
+import { sydneyHHMM, sydneyTimeCompact, sydneyTimeOnDay, sydneyYMD } from '$lib/time';
 
 const ENDPOINT = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon';
 const FETCH_LIMIT = 30; // always fetch this many; slice in getBus per caller's limit
@@ -28,6 +28,12 @@ export interface GetBusOptions {
 	routes?: string[];
 	/** Max departures to return (default 5). */
 	limit?: number;
+	/**
+	 * Look up the *scheduled* timetable at this day/time instead of the live
+	 * "next from now" feed. Bypasses the cache entirely. Used by the evening
+	 * print for tomorrow morning's school buses.
+	 */
+	at?: Date;
 }
 
 // Cache by stop+routes (sorted). Stores up to FETCH_LIMIT departures; getBus
@@ -42,7 +48,10 @@ function cacheKey(stop: string, routes?: string[]): string {
 
 /** Read departures. Returns cache if hot, delegates to refresh on cold.
  *  Cached entries are re-filtered by `dueMins >= 0` so passed buses drop. */
-export async function getBus({ stop, routes, limit = 5 }: GetBusOptions): Promise<BusDeparture[]> {
+export async function getBus({ stop, routes, limit = 5, at }: GetBusOptions): Promise<BusDeparture[]> {
+	// A dated lookup bypasses the cache entirely — it's a scheduled-timetable
+	// query for another day, not the live "next from now" the cache holds.
+	if (at) return (await refreshBus({ stop, routes, at })).slice(0, limit);
 	const key = cacheKey(stop, routes);
 	const cached = cache.get(key);
 	if (cached) return reFilter(cached, limit);
@@ -51,13 +60,16 @@ export async function getBus({ stop, routes, limit = 5 }: GetBusOptions): Promis
 }
 
 /** Always fetch + replace cache. Called by the bus-refresh job + as the
- *  cold-start path of getBus. */
+ *  cold-start path of getBus. A dated `at` query fetches the scheduled
+ *  timetable and is *not* cached. */
 export async function refreshBus({
 	stop,
-	routes
+	routes,
+	at
 }: {
 	stop: string;
 	routes?: string[];
+	at?: Date;
 }): Promise<BusDeparture[]> {
 	if (!TRANSPORT_NSW_API_KEY) {
 		throw new Error('Set TRANSPORT_NSW_API_KEY in .env');
@@ -72,6 +84,13 @@ export async function refreshBus({
 		departureMonitorMacro: 'true',
 		TfNSWDM: 'true'
 	});
+	// A dated query asks TfNSW for the *planned* timetable at that day/time —
+	// the live feed only sees the next ~hour, so tomorrow's 8am bus is invisible
+	// tonight without this.
+	if (at) {
+		params.set('itdDate', sydneyYMD(at).replace(/-/g, ''));
+		params.set('itdTime', sydneyHHMM(at).replace(':', ''));
+	}
 
 	const res = await fetch(`${ENDPOINT}?${params}`, {
 		headers: { Authorization: `apikey ${TRANSPORT_NSW_API_KEY}` },
@@ -93,8 +112,9 @@ export async function refreshBus({
 		.filter((d) => !wanted || wanted.has(d.route))
 		.slice(0, FETCH_LIMIT);
 
-	cache.set(cacheKey(stop, routes), result);
-	log('bus', `${result.length} departures for stop ${stop}${wanted ? ` filtered to [${[...wanted].join(',')}]` : ''}`);
+	// Dated (scheduled) queries are one-offs — never let them poison the live cache.
+	if (!at) cache.set(cacheKey(stop, routes), result);
+	log('bus', `${result.length} departures for stop ${stop}${wanted ? ` filtered to [${[...wanted].join(',')}]` : ''}${at ? ` (scheduled @ ${sydneyHHMM(at)})` : ''}`);
 	return result;
 }
 
@@ -148,10 +168,18 @@ function mapEvent(e: TfNswStopEvent, now: number): BusDeparture {
  */
 export async function schoolRunLine(
 	opts: { stop: string; routes: string[]; targetTime: string },
-	now: Date = new Date()
+	now: Date = new Date(),
+	{ scheduled = false }: { scheduled?: boolean } = {}
 ): Promise<string | null> {
-	const all = await getBus({ stop: opts.stop, routes: opts.routes, limit: FETCH_LIMIT });
 	const target = sydneyTimeOnDay(opts.targetTime, now).getTime();
+	// A scheduled run (the evening print's "tomorrow") queries TfNSW's planned
+	// timetable from 30 min before the target, so the pre-target bus is included.
+	const all = await getBus({
+		stop: opts.stop,
+		routes: opts.routes,
+		limit: FETCH_LIMIT,
+		...(scheduled ? { at: new Date(target - 30 * 60_000) } : {})
+	});
 	const inWindow = all.filter(
 		(d) => d.estimatedAt.getTime() >= target - 25 * 60_000 && d.estimatedAt.getTime() <= target + 30 * 60_000
 	);

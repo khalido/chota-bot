@@ -15,6 +15,7 @@
 import { TICKTICK_API_KEY } from '$env/static/private';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
+import { sydneyTimeOnDay } from '$lib/time';
 
 const ENDPOINT = 'https://mcp.ticktick.com/';
 const PROTOCOL_VERSION = '2025-06-18';
@@ -52,7 +53,29 @@ export interface Task {
 export interface ProjectWithTasks {
 	project: Project;
 	tasks: Task[];
+	/**
+	 * Recently ticked-off tasks (completed within the last `DONE_LOOKBACK_DAYS`
+	 * days), newest first. Populated by `getFamilyLists`; `getProjectWithTasks`
+	 * and `getList` leave it undefined.
+	 */
+	done?: CompletedTask[];
 	columns: unknown[];
+}
+
+/** A ticked-off task — the `done` items that ride alongside a list. */
+export interface CompletedTask {
+	id: string;
+	title: string;
+	/** When it was ticked off. */
+	completedAt: Date;
+}
+
+/** A row from the `list_completed_tasks_by_date` MCP tool (only the fields we use). */
+interface RawCompletedTask {
+	id: string;
+	projectId: string;
+	title: string;
+	completedTime?: string;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -66,6 +89,8 @@ const CACHE_TTL_MS = 60_000;
 const STALE_OK_MS = 60 * 60_000;
 const projectsCache: { data: Project[]; at: number } = { data: [], at: 0 };
 const projectDataCache = new Map<string, { data: ProjectWithTasks; at: number }>();
+// One batched entry: completed tasks across all configured projects, grouped by projectId.
+const completedCache: { data: Map<string, CompletedTask[]>; at: number } = { data: new Map(), at: 0 };
 
 function fresh<T>(entry: { data: T; at: number } | undefined): T | null {
 	if (!entry || entry.at === 0 || Date.now() - entry.at > CACHE_TTL_MS) return null;
@@ -83,19 +108,74 @@ function staleOk<T>(entry: { data: T; at: number } | undefined): T | null {
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * One-shot fetch: every configured list with its undone tasks. Cached.
- * Use this from page-server-load functions instead of N separate calls.
+ * One-shot fetch: every configured list with its undone `tasks` and its
+ * recently-`done` items. Cached. Use this from page-server-load functions
+ * instead of N separate calls.
  */
 export async function getFamilyLists(): Promise<ProjectWithTasks[]> {
 	const projects = await listFamilyProjects();
-	return Promise.all(projects.map((p) => getProjectWithTasks(p.id)));
+	const [withTasks, doneByProject] = await Promise.all([
+		Promise.all(projects.map((p) => getProjectWithTasks(p.id))),
+		getCompletedByProject(projects.map((p) => p.id))
+	]);
+	return withTasks.map((pw) => ({ ...pw, done: doneByProject.get(pw.project.id) ?? [] }));
 }
 
 /** Force-refresh. Job calls this. */
 export async function refreshFamilyLists(): Promise<ProjectWithTasks[]> {
 	projectsCache.at = 0;
 	projectDataCache.clear();
+	completedCache.at = 0;
 	return getFamilyLists();
+}
+
+/**
+ * How far back a list's `done` items reach, in days. `1` = today + yesterday.
+ * Bump to 2/3 if the family wants a longer "recently ticked off" tail.
+ */
+const DONE_LOOKBACK_DAYS = 1;
+
+/**
+ * Completed tasks for `projectIds`, grouped by project, newest-completed first
+ * — from `DONE_LOOKBACK_DAYS` days ago (Sydney midnight) to now. One batched
+ * MCP call for every list. Cached 60s (1h stale-ok). `done` is a nice-to-have,
+ * so a failure with no stale degrades to an empty map — it never sinks the
+ * list fetch.
+ */
+async function getCompletedByProject(projectIds: string[]): Promise<Map<string, CompletedTask[]>> {
+	if (projectIds.length === 0) return new Map();
+	const cachedHit = fresh(completedCache);
+	if (cachedHit) return cachedHit;
+
+	const end = new Date();
+	const start = sydneyTimeOnDay('00:00', new Date(end.getTime() - DONE_LOOKBACK_DAYS * 86_400_000));
+	try {
+		const raw = await callTool<RawCompletedTask[]>(
+			'list_completed_tasks_by_date',
+			{ search: { projectIds, startDate: start.toISOString(), endDate: end.toISOString() } },
+			{ fromContent: true }
+		);
+		const byProject = new Map<string, CompletedTask[]>();
+		for (const t of raw) {
+			if (!t.completedTime) continue;
+			const task = { id: t.id, title: t.title, completedAt: new Date(t.completedTime) };
+			byProject.set(t.projectId, [...(byProject.get(t.projectId) ?? []), task]);
+		}
+		for (const tasks of byProject.values()) {
+			tasks.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
+		}
+		completedCache.data = byProject;
+		completedCache.at = Date.now();
+		return byProject;
+	} catch (err) {
+		const stale = staleOk(completedCache);
+		if (stale) {
+			log('ticktick', `list_completed_tasks_by_date failed (${errText(err)}) — serving stale`);
+			return stale;
+		}
+		log('ticktick', `list_completed_tasks_by_date failed (${errText(err)}) — no done items this round`);
+		return new Map();
+	}
 }
 
 /**
@@ -296,11 +376,12 @@ async function doInitialize() {
 
 async function callTool<T = unknown>(
 	name: string,
-	args: Record<string, unknown> = {}
+	args: Record<string, unknown> = {},
+	opts: { fromContent?: boolean } = {}
 ): Promise<T> {
 	await ensureInitialized();
 	try {
-		return await invokeTool<T>(name, args);
+		return await invokeTool<T>(name, args, opts.fromContent ?? false);
 	} catch (err) {
 		// If session expired, reset and retry once.
 		if (isSessionError(err)) {
@@ -308,13 +389,17 @@ async function callTool<T = unknown>(
 			sessionId = null;
 			initPromise = null;
 			await ensureInitialized();
-			return invokeTool<T>(name, args);
+			return invokeTool<T>(name, args, opts.fromContent ?? false);
 		}
 		throw err;
 	}
 }
 
-async function invokeTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
+async function invokeTool<T>(
+	name: string,
+	args: Record<string, unknown>,
+	fromContent: boolean
+): Promise<T> {
 	const result = (await rawCall('tools/call', { name, arguments: args })) as {
 		structuredContent?: T;
 		content?: { type: string; text: string }[];
@@ -323,6 +408,13 @@ async function invokeTool<T>(name: string, args: Record<string, unknown>): Promi
 	if (result.isError) {
 		const text = result.content?.[0]?.text ?? '(no detail)';
 		throw new Error(`TickTick tool ${name} error: ${text}`);
+	}
+	// Most tools answer in `structuredContent`; a few (e.g. the completed-tasks
+	// search) instead return one JSON object per `content` text block.
+	if (fromContent) {
+		return (result.content ?? [])
+			.filter((c) => c.type === 'text')
+			.map((c) => JSON.parse(c.text)) as T;
 	}
 	return result.structuredContent as T;
 }
