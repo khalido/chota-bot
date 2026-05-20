@@ -33,7 +33,6 @@ export interface RegisteredJob {
 // HMR-safe registry: shared via globalThis so a hot-reload of this module
 // can find and stop the previous Cron instances before re-registering.
 declare global {
-	// eslint-disable-next-line no-var
 	var __chotaJobs: RegisteredJob[] | undefined;
 }
 if (!globalThis.__chotaJobs) globalThis.__chotaJobs = [];
@@ -131,6 +130,17 @@ export function bootJobs(): Promise<void> {
 		}
 	})();
 	return bootInFlight;
+}
+
+/**
+ * Stop every registered job's Cron timer. Wire this to SIGTERM/SIGINT (see
+ * hooks.server.ts) — croner's timers otherwise keep Node's event loop alive
+ * after adapter-node has closed the HTTP server, so the process never exits on
+ * its own and systemd SIGKILLs it once the stop timeout elapses.
+ */
+export function stopJobs(): void {
+	for (const j of JOBS) j.cron.stop();
+	jobLog.info('jobs stopped — {count} job(s)', { count: JOBS.length });
 }
 
 function push(buf: JobRecord[], r: JobRecord) {
