@@ -4,14 +4,14 @@
 
 	let { lists }: { lists: ProjectWithTasks[] } = $props();
 
-	const RECENT = 3;
-
-	// TickTick returns tasks in their list order; just take the first N. When we
-	// add createdTime to the Task type (TickTick has it; we just don't expose
-	// it yet), we can sort newest-first here.
-	function recentTitles(tasks: { title: string }[]) {
-		return tasks.slice(0, RECENT).map((t) => t.title);
-	}
+	// Trimmed like the print brief: the shopping list in full, plus anything
+	// with a due date from the other lists. The rest (Watch, Buying, Notes…)
+	// stays a tap away on /lists.
+	const isShopping = (l: ProjectWithTasks) => l.project.name.toLowerCase().includes('shopping');
+	const shopping = $derived(lists.find(isShopping)?.tasks.map((t) => t.title) ?? []);
+	const due = $derived(
+		lists.filter((l) => !isShopping(l)).flatMap((l) => l.tasks.filter((t) => t.dueDate))
+	);
 </script>
 
 <a
@@ -22,29 +22,32 @@
 		Lists
 	</h2>
 
-	{#if lists.length === 0}
-		<p class="mt-3 text-sm text-slate-400 italic dark:text-neutral-500">
-			No lists configured.
-		</p>
+	{#if shopping.length === 0 && due.length === 0}
+		<p class="mt-3 text-sm text-slate-400 italic dark:text-neutral-500">Nothing on the lists.</p>
 	{:else}
-		<div class="mt-3 space-y-3">
-			{#each lists as l (l.project.id)}
-				<div>
-					<div class="flex items-baseline gap-2">
-						<span class="text-sm font-medium text-slate-700 dark:text-neutral-200">
-							{l.project.name}
-						</span>
-						<span class="text-xs text-slate-400 dark:text-neutral-500">
-							{l.tasks.length}
-						</span>
-					</div>
-					{#if l.tasks.length > 0}
-						<p class="mt-0.5 truncate text-xs text-slate-500 dark:text-neutral-500">
-							{recentTitles(l.tasks).join(' · ')}
-						</p>
-					{/if}
+		{#if shopping.length > 0}
+			<div class="mt-3">
+				<div
+					class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase dark:text-neutral-600"
+				>
+					Shopping
 				</div>
-			{/each}
-		</div>
+				<p class="mt-0.5 text-sm text-slate-600 dark:text-neutral-400">{shopping.join(' · ')}</p>
+			</div>
+		{/if}
+		{#if due.length > 0}
+			<div class="mt-3">
+				<div
+					class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase dark:text-neutral-600"
+				>
+					Due
+				</div>
+				<ul class="mt-0.5 space-y-0.5">
+					{#each due as t (t.id)}
+						<li class="text-sm text-slate-600 dark:text-neutral-400">{t.title}</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
 	{/if}
 </a>

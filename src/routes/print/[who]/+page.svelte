@@ -16,4 +16,10 @@
 	</style>
 </svelte:head>
 
-<BriefSheet date={data.date} mark={data.mark} sections={data.sections} closing={data.closing} />
+<BriefSheet
+	date={data.date}
+	mark={data.mark}
+	sections={data.sections}
+	closing={data.closing}
+	printedAt={data.printedAt}
+/>

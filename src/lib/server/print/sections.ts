@@ -11,22 +11,27 @@
  * gets their school timetable. Choosing what a recipient sees is just code
  * here — no JSON config / registry yet.
  */
-import type { BriefData } from './brief';
+import type { BriefData, FamilyTask } from './brief';
 import type { SchedulePeriod } from '$lib/server/tools/sentral';
 import { getConfig } from '$lib/server/config';
 import { parseEventPeople } from '$lib/server/people';
 import { sydneyTimeRange } from '$lib/time';
+import { scheduleSection, schoolBreakSection } from './school-section';
 
 type BodyByKind =
 	| { kind: 'lines'; lines: string[] }
 	| { kind: 'weather'; icon: string; lines: string[] }
-	| { kind: 'events'; events: { time: string; summary: string; people: string[] }[] }
+	| {
+			kind: 'events';
+			events: { time: string; summary: string; people: string[] }[];
+			/** The recipient's own "Family" list to-dos, listed under the events. */
+			tasks: { title: string; overdue: boolean }[];
+	  }
 	| { kind: 'chores'; rows: { person: string; chores: string }[] }
 	| {
-			/** The TickTick block: shopping list, anything due today/tomorrow, items bought today. */
-			kind: 'ticktick';
-			shopping: string[];
-			due: { list: string; title: string; when: string }[];
+			/** The shopping list (everyone), plus an evening recap of items bought today. */
+			kind: 'shopping';
+			items: string[];
 			/** Shopping items ticked off today — populated on the evening brief only. */
 			bought: string[];
 	  }
@@ -43,6 +48,8 @@ type BodyByKind =
 			}[];
 			/** A nudge under the rows, e.g. "Take sports stuff!" — shown when relevant. */
 			reminder?: string;
+			/** Upcoming NSW school dates (dev days, term ends) — footnotes after the rows. */
+			upcoming?: { label: string; when: string }[];
 			/** The school-run bus line, appended at the end ("501 at 7:42am, …"). */
 			busLine?: string;
 	  }
@@ -67,27 +74,40 @@ export function getRecipients(): readonly string[] {
 
 /** Drop nulls, assign 1-based section numbers. */
 function numberSections(bodies: (PrintSectionBody | null)[]): PrintSection[] {
-	return bodies.filter((b): b is PrintSectionBody => b !== null).map((b, i) => ({ ...b, n: i + 1 }));
+	return bodies
+		.filter((b): b is PrintSectionBody => b !== null)
+		.map((b, i) => ({ ...b, n: i + 1 }));
 }
 
 // ── per-section builders ────────────────────────────────────────────────────
 
 function weatherSection(d: BriefData): PrintSectionBody | null {
 	if (!d.weatherLines) return null;
-	return { title: 'WEATHER', kind: 'weather', icon: d.weatherIcon ?? 'cloud-sun', lines: d.weatherLines };
+	return {
+		title: 'WEATHER',
+		kind: 'weather',
+		icon: d.weatherIcon ?? 'cloud-sun',
+		lines: d.weatherLines
+	};
 }
 
-function todaySection(d: BriefData): PrintSectionBody | null {
-	if (!d.events.length) return null;
-	return {
-		title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY',
-		kind: 'events',
-		events: d.events.map((e) => ({
-			time: e.isAllDay ? 'all day' : sydneyTimeRange(e.start, e.end),
-			summary: e.summary,
-			people: parseEventPeople(e.summary, d.family)
-		}))
-	};
+/**
+ * One person's day: the shared calendar events, then that person's own "Family"
+ * list to-dos under them — overdue ones flagged and sorted first. null when the
+ * recipient has neither an event nor a task.
+ */
+function todaySection(d: BriefData, who: string): PrintSectionBody | null {
+	const events = d.events.map((e) => ({
+		time: e.isAllDay ? 'all day' : sydneyTimeRange(e.start, e.end),
+		summary: e.summary,
+		people: parseEventPeople(e.summary, d.family)
+	}));
+	const tasks = d.familyTasks
+		.filter((t) => t.people.some((p) => p.toLowerCase() === who.toLowerCase()))
+		.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
+		.map((t) => ({ title: t.title, overdue: t.when === 'overdue' }));
+	if (!events.length && !tasks.length) return null;
+	return { title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY', kind: 'events', events, tasks };
 }
 
 /** The whole-household chore rota — shown in full on every person's sheet. */
@@ -97,16 +117,37 @@ function choresSection(d: BriefData): PrintSectionBody | null {
 }
 
 /**
- * The TickTick block: the shopping list (the headline — the kids check what's
- * being bought and add to it), then anything across the other lists due today
- * or tomorrow. null when both are empty.
+ * Parents-only overview of the kids' "Family" list tasks for the day — one
+ * compressed row per kid (chores-style), then a "Family" row for unassigned
+ * tasks. Overdue tasks take a `!` prefix and sort first. A parent's own tasks
+ * are left out — they read those in their own TODAY section. null when nothing
+ * is assigned to a kid or unassigned.
  */
-function ticktickSection(d: BriefData): PrintSectionBody | null {
-	const shopping = d.shoppingItems.map(shortItem);
-	const due = d.dueSoon.flatMap((g) => g.items.map((it) => ({ list: g.list, title: it.title, when: it.when })));
+function familySection(d: BriefData): PrintSectionBody | null {
+	const label = (tasks: FamilyTask[]) =>
+		tasks
+			.slice()
+			.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
+			.map((t) => (t.when === 'overdue' ? `!${t.title}` : t.title))
+			.join(', ');
+	const rows: { person: string; chores: string }[] = [];
+	for (const kid of d.kids) {
+		const mine = d.familyTasks.filter((t) =>
+			t.people.some((p) => p.toLowerCase() === kid.toLowerCase())
+		);
+		if (mine.length) rows.push({ person: kid, chores: label(mine) });
+	}
+	const unassigned = d.familyTasks.filter((t) => t.people.length === 0);
+	if (unassigned.length) rows.push({ person: 'Family', chores: label(unassigned) });
+	return rows.length ? { title: 'FAMILY', kind: 'chores', rows } : null;
+}
+
+/** The shopping list — shown to everyone. The evening brief adds a "bought today" recap. */
+function shoppingSection(d: BriefData): PrintSectionBody | null {
+	const items = d.shoppingItems.map(shortItem);
 	const bought = (d.boughtRecently ?? []).map(shortItem);
-	if (!shopping.length && !due.length && !bought.length) return null;
-	return { title: 'TICKTICK', kind: 'ticktick', shopping, due, bought };
+	if (!items.length && !bought.length) return null;
+	return { title: 'SHOPPING', kind: 'shopping', items, bought };
 }
 
 /** Trim a trailing "(brand/note)" then cap length — "Hot Choc powder (Cadbury)" → "Hot Choc powder". */
@@ -115,82 +156,67 @@ function shortItem(s: string): string {
 	return stripped.length > 20 ? `${stripped.slice(0, 19).trimEnd()}…` : stripped;
 }
 
-/**
- * A kid's school day, with the school-run bus line tacked on the end. null on
- * weekends / no-school / fetch-failed (nothing to print).
- */
-function scheduleSection(periods: SchedulePeriod[], busLine?: string | null): PrintSectionBody | null {
-	if (!periods.length) return null;
-	const rows = periods.map((p) => ({
-		time: sydneyTimeRange(p.start, p.end),
-		subject: p.subject,
-		code: p.code,
-		room: p.room,
-		teacher: abbreviateTeacher(p.teacher),
-		period: p.period
-	}));
-	const reminder = rows.some((r) => /\bsport\b/i.test(r.subject)) ? 'Take sports stuff!' : undefined;
-	return {
-		title: 'SCHOOL',
-		kind: 'schedule',
-		rows,
-		...(reminder ? { reminder } : {}),
-		...(busLine ? { busLine } : {})
-	};
-}
-
-/** "Ms Example Teacher" → "Ms E. Teacher" (keep an honorific, abbreviate the first name). */
-function abbreviateTeacher(full?: string): string | undefined {
-	if (!full) return undefined;
-	const parts = full.trim().split(/\s+/);
-	if (parts.length < 2) return full;
-	const hasTitle = /^(mr|mrs|ms|miss|mx|dr)\.?$/i.test(parts[0]);
-	if (hasTitle) {
-		if (parts.length < 3) return full; // "Mr Smith" — nothing to abbreviate
-		return `${parts[0]} ${parts[1][0].toUpperCase()}. ${parts.slice(2).join(' ')}`;
-	}
-	return `${parts[0][0].toUpperCase()}. ${parts.slice(1).join(' ')}`;
-}
-
 function puzzleSection(d: BriefData): PrintSectionBody {
 	return { title: 'PUZZLE', kind: 'puzzle', q: d.puzzle.q };
+}
+
+/** A TV / comic-strip quote — a light note on the morning brief's fun tail. */
+function funQuoteSection(d: BriefData): PrintSectionBody | null {
+	if (!d.funQuote) return null;
+	const { quote, speaker, title } = d.funQuote;
+	const attribution = speaker ? `${speaker}, ${title}` : title;
+	return { title: 'QUOTE', kind: 'lines', lines: [...quote.split('\n'), `— ${attribution}`] };
 }
 
 /** A daily picture + fact (bootprint.space). Skipped when the lookup fails. */
 function factSection(d: BriefData): PrintSectionBody | null {
 	if (!d.fact) return null;
-	return { title: 'DID YOU KNOW', kind: 'fact', text: d.fact.text, ...(d.fact.image ? { image: d.fact.image } : {}) };
+	return {
+		title: 'DID YOU KNOW',
+		kind: 'fact',
+		text: d.fact.text,
+		...(d.fact.image ? { image: d.fact.image } : {})
+	};
 }
 
 // ── briefs ──────────────────────────────────────────────────────────────────
 
 /**
- * The puzzle + fact "fun" tail. The evening (tomorrow) brief drops them — it's
- * a get-ready-for-tomorrow sheet, so it stays to weather/school/events/chores/shopping.
+ * The puzzle + quote + fact "fun" tail. The evening (tomorrow) brief drops them
+ * — it's a get-ready-for-tomorrow sheet, so it stays to weather/school/events/chores/shopping.
  */
 function tailSections(d: BriefData): (PrintSectionBody | null)[] {
-	return d.day === 'tomorrow' ? [] : [puzzleSection(d), factSection(d)];
+	return d.day === 'tomorrow' ? [] : [puzzleSection(d), funQuoteSection(d), factSection(d)];
 }
 
 /**
- * One person's brief. Everyone gets weather + events + the whole-household
- * chores + the TickTick block; a kid additionally gets their school day (with
- * their bus line) right after weather — `scheduleSection` is null when
- * `schedule` is empty (a parent, a weekend, no school), so their brief is then
- * just the household one. The morning brief also gets a puzzle + fact; the
- * evening one drops them (`tailSections`).
+ * One person's brief. Everyone gets weather + their day (events + their own
+ * Family tasks) + the whole-household chores + the shopping list; a kid also
+ * gets their school day (with their bus line) right after weather, while a
+ * parent gets the parents-only FAMILY overview of the kids' tasks. The SCHOOL
+ * slot holds the timetable on a school day, or — during the holidays, for
+ * everyone — a countdown to school coming back. The morning brief also gets a
+ * puzzle + fact; the evening one drops them (`tailSections`).
  *
- * (Later, when each person has their own calendar/lists, the data fed in here
- * becomes per-recipient; for now the household sections are shared.)
+ * (Later, when each person has their own calendar, the events fed in here
+ * become per-recipient; for now the calendar + chores are shared.)
  */
-export function recipientToSections(who: string, d: BriefData, schedule: SchedulePeriod[] = []): PrintSection[] {
-	const busLine = d.schoolBus.find((b) => b.kids.some((k) => k.toLowerCase() === who.toLowerCase()))?.line ?? null;
+export function recipientToSections(
+	who: string,
+	d: BriefData,
+	schedule: SchedulePeriod[] = []
+): PrintSection[] {
+	const busLine =
+		d.schoolBus.find((b) => b.kids.some((k) => k.toLowerCase() === who.toLowerCase()))?.line ??
+		null;
+	const isParent = !d.kids.some((k) => k.toLowerCase() === who.toLowerCase());
 	return numberSections([
 		weatherSection(d),
-		scheduleSection(schedule, busLine),
-		todaySection(d),
+		scheduleSection(schedule, busLine, d.schoolWeek, d.schoolUpcoming) ?? schoolBreakSection(d),
+		todaySection(d, who),
 		choresSection(d),
-		ticktickSection(d),
+		isParent ? familySection(d) : null,
+		shoppingSection(d),
 		...tailSections(d)
 	]);
 }
@@ -204,7 +230,13 @@ const HEADER_COLS = 46;
  * Render `PrintSection[]` to the ASCII print payload: a `Date … Name` masthead
  * (the recipient's name right-aligned), numbered sections, then the closing line.
  */
-export function sectionsToText(date: string, sections: PrintSection[], closing: string, name: string): string {
+export function sectionsToText(
+	date: string,
+	sections: PrintSection[],
+	closing: string,
+	name: string,
+	printedAt: string
+): string {
 	const head =
 		date.length + name.length + 1 <= HEADER_COLS
 			? date.padEnd(HEADER_COLS - name.length) + name
@@ -222,21 +254,17 @@ export function sectionsToText(date: string, sections: PrintSection[], closing: 
 					const who = e.people.length ? `  (${e.people.join('+')})` : '';
 					lines.push(`${e.time.padEnd(11, ' ')}  ${e.summary}${who}`);
 				}
+				for (const t of s.tasks) {
+					lines.push(`${(t.overdue ? 'overdue' : 'to-do').padEnd(11, ' ')}  ${t.title}`);
+				}
 				break;
 			case 'chores':
 				for (const r of s.rows) lines.push(`${r.person}: ${r.chores}`);
 				break;
-			case 'ticktick':
-				if (s.shopping.length) {
-					lines.push('Shopping:');
-					lines.push(...wrapItems(s.shopping, 44, ''));
-				}
-				if (s.due.length) {
-					if (s.shopping.length) lines.push('');
-					for (const r of s.due) lines.push(`${r.list}: "${r.title}" (${r.when})`);
-				}
+			case 'shopping':
+				lines.push(...wrapItems(s.items, 44, ''));
 				if (s.bought.length) {
-					if (s.shopping.length || s.due.length) lines.push('');
+					if (s.items.length) lines.push('');
 					lines.push('Recently bought:');
 					lines.push(...wrapItems(s.bought, 44, ''));
 				}
@@ -244,10 +272,13 @@ export function sectionsToText(date: string, sections: PrintSection[], closing: 
 			case 'schedule':
 				for (const r of s.rows) {
 					lines.push(`${r.subject}  ${[r.time, r.room].filter(Boolean).join('  ')}`);
-					const sub = [r.teacher ? `with ${r.teacher}` : '', r.code ? `(${r.code})` : ''].filter(Boolean).join(' ');
+					const sub = [r.teacher ? `with ${r.teacher}` : '', r.code ? `(${r.code})` : '']
+						.filter(Boolean)
+						.join(' ');
 					if (sub) lines.push(`  ${sub}`);
 				}
 				if (s.reminder) lines.push(`  -> ${s.reminder}`);
+				for (const u of s.upcoming ?? []) lines.push(`  ${u.label} — ${u.when}`);
 				if (s.busLine) lines.push(`  ${s.busLine}`);
 				break;
 			case 'puzzle':
@@ -256,10 +287,18 @@ export function sectionsToText(date: string, sections: PrintSection[], closing: 
 			case 'fact':
 				lines.push(s.text);
 				break;
+			default: {
+				// Exhaustiveness guard — adding a section kind without a case here
+				// (or in <BriefSheet>) is a compile error, not a silent blank.
+				const unhandled: never = s;
+				throw new Error(`sectionsToText: unhandled section ${JSON.stringify(unhandled)}`);
+			}
 		}
 		lines.push('');
 	}
 	lines.push(closing);
+	lines.push('');
+	lines.push(`printed ${printedAt}`);
 	return lines.join('\n');
 }
 

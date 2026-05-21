@@ -1,6 +1,7 @@
 import { collectTripReports } from '$lib/server/print/brief';
 import { getRecipients } from '$lib/server/print/sections';
 import { quoteForTime } from '$lib/server/quotes';
+import { randomFunQuote } from '$lib/server/funquotes';
 import { getChores } from '$lib/server/chores';
 import { getWeather, weatherSummary } from '$lib/server/tools/weather';
 import { getCalendar, type CalendarEvent } from '$lib/server/tools/calendar';
@@ -38,8 +39,19 @@ export const load: PageServerLoad = async () => {
 	}));
 
 	const quote = quoteForTime(now);
+	const funQuote = randomFunQuote();
 	const chores = getChores({ now });
 	const headline = weather ? weatherSummary(weather, config.home?.weather, now) : null;
 
-	return { trips, quote, chores, weather, headline, events, lists, recipients: getRecipients() };
+	return {
+		trips,
+		quote,
+		funQuote,
+		chores,
+		weather,
+		headline,
+		events,
+		lists,
+		recipients: getRecipients()
+	};
 };

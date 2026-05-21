@@ -1,48 +1,78 @@
 # Chota
 
-*A wall kiosk + thermal printer that prints everyone in the family their own daily brief at breakfast — so nobody has to reach for a phone to find out what the day holds. ("Chota" means small; it does small things well.)*
+*A wall kiosk + thermal printer that prints everyone in the family their own daily brief. Inspired by [thermal-printer posts on Hacker News](https://hn.algolia.com/?q=thermal+printer).* 
 
-It started with the morning scramble: everyone reaching for a screen to find out the same handful of things — what's on the calendar, the weather, when the bus goes, who's got sport. The kid with a phone checked all that *plus* their school timetable; the kid without one booted a laptop for it.
+Why: I realized we reached app overload - we wanted fewer devices at breakfast - but the modern work + school systems practically demand you to look at multiple apps before school/work. How do you ask a kid to put down their phone when they need to check 2 different school apps to figure out their timetable, a third for events, a fourth for bus and optionally a fifth for weather.
 
-A [steady drip of thermal-printer posts on Hacker News](https://hn.algolia.com/?q=thermal+printer) nudged the rest into place: what we actually needed was one fast, physical thing that pulls it all together. So now Chota does — it gathers the day's data and prints each person their own brief.
+I've been building agents for work which use tools to connect to all the things and do the boring bits - so why not for home? The photo of the initial brief explains this better than all the text below. The actual printouts are changing fast as I get user feedback, the below is already out of date (like most docs in the real world [until you setup proactive agentic workflows that is](https://youtu.be/eSP7PLTXNy8?si=sLe14ADCPyXy5hJO)!).
 
-## why a receipt printer
+## what it does
 
-Fast, cheap, endless paper — and you can fold a receipt into your pocket. Mine carries a shopping list synced from our family [TickTick](https://ticktick.com/), and reaching for that beats pulling out a phone.
+- **daily prints** — a morning brief (06:45, today) and an evening one (19:15, tomorrow's), fired by a cron scheduler.
+- **Live dashboard** — quote clock, useful family info
+- **Tools wired in** — more to come:
 
-## what it does today
+| Tool | What it does |
+|---|---|
+| **Google Weather** | current conditions + 48h forecast |
+| **Transport NSW** | live bus times for the school run |
+| **Google Calendar** | the family calendar (read-only, OAuth) |
+| **TickTick** | shopping list + family to-do lists |
+| **NSW DoE Sentral** | school timetable w/ classes |
+| **NSW school calendar** | term dates, holidays + development days |
+| **TMDB** | film & TV info |
+| **NASA APOD** | NASA's astronomy photo of the day |
 
-- **Two daily prints** — a morning brief at 06:45 and an evening *tomorrow* brief at 19:15, fired by a cron scheduler. Each family member gets their own sheet: weather, their school timetable, calendar, chores, the shopping list.
-- **Tools wired in** — Google Weather, Transport NSW (live bus times), Google Calendar (OAuth via better-auth), TickTick, NSW DoE Sentral (school portal), TMDB, NASA APOD.
-- **Live dashboard** — clock, weather (current + 48h forecast + sparklines), shopping/lists, per-person print previews, an admin/debug page, and a plain-text `/api/health` endpoint.
+## hardware
 
-## stack
+- **Printer** — [MUNBYN](https://pos.munbyn.com/munbyn-direct-thermal-printer-wholesale/receipt-printer/) [ITPP098P 80mm thermal printer](https://au.munbyn.com/products/munbyn-80mm-usb-receipt-printer) with [node-thermal-printer](https://github.com/Klemen1337/node-thermal-printer).
+- **Paper** — 80mm rolls, BPA and BPS free (thanks, HN, for that tip)
+- **computer** — a Surface Pro 5, long dead, revived with Linux Mint
+  - it's amazing how old PCs can be so slow on Windows (tried a fresh Windows reinstall first) and how fast Linux is on the same hardware.
 
-SvelteKit (TS, Tailwind, adapter-node) · Drizzle + better-sqlite3 · better-auth (Google OAuth) · Vitest · LogTape · node-thermal-printer + libusb · croner. The agent loop (Phase 2) will run on the Vercel AI SDK.
+A receipt printer is fast, cheap, and the output folds into your pocket — I hadn't realised how fast and reliable a cheap one is until I actually used one. I considered my existing A4 laser (already on the network, also reliable), but A4 is too bulky and too dear for a thing you reprint every single day.
 
-## under the hood
+I went near-cheapest on Amazon. Fancier-looking models exist, but as best I can tell the guts all come out of the same handful of Chinese factories — I couldn't pick the print quality of the cheapest from more expensive ones. The software and drivers that ship with them vary wildly — but that stops mattering the moment you render the page yourself. The one thing that's still on you is dithering images down to black-and-white, and that's a problem computer science solved decades ago.
 
-**Two print render paths:**
+## how it works
+
+Data is pulled in on a schedule - each source has a ts file that defines its schedule and the code to do the job. The fiddliest source is the kids' school timetable: there's no API, so Chota drives a headless browser through the NSW Department of Education login — SAML redirects, click-throughs and all — and scrapes the schedule.
+
+The print path was a suprising journey leading to:
 
 - **Plain text** — ESC/POS bytes, ASCII-only. The always-works fallback.
-- **HTML → screenshot** — renders the kiosk's own `/print/<who>` page in a headless browser, screenshots it at the printer's 576px width, and prints that raster. More moving parts — but it means the printout is styled with ordinary CSS, so you can tweak it any which way.
+- **HTML → browser to take a screenshot** — the kiosk renders its *own* `/print/<who>` page, a [headless browser](https://agent-browser.dev/) screenshots it at the printer's 576px width and passes it on for printing.
+  - this is an impressively energy-inefficient way to print the page, but this is the kind of pathway AI enables, and also this kind of limited printer requires.
+  - it does however mean the output is easy to customize with tailwindcss - can do anything whatsover, within the constraints of the printer.
 
-**Tools are plain TS functions** — one file each, exporting a small async function. The same function powers a route, a scheduled job, the tests, and (later) a tool for the agent loop.
+**No AI is used in the output:** this repo was largely built *with* AI and verified by me. Nothing on the printout is *generated by AI*. The output is formed by deterministic code using real data. The agent loop (Phase 2) will work *around* the brief; it won't write it.
+
+In [work AI things I build](https://khalido.dev/), now that every biz is furiously [vibe coding](https://x.com/karpathy/status/1886192184808149383), the real work is more legal - what data is accessed, how, what uses it, why and how, risks of hallucinations and out-of-order nondeterministic stuff, evals yada yada. So I applied a bit of the same process here.
+
+### tech stack
+
+- **frontend** — [SvelteKit](https://svelte.dev/) + Tailwind CSS
+- **backend** — Drizzle + better-sqlite3 · better-auth (Google OAuth) · Vitest · LogTape · node-thermal-printer + libusb · croner
+- **remote access** — over [Tailscale](https://tailscale.com/); the dashboard isn't meant for the public internet. `/admin` and `/api/*` aren't auth-gated yet, so it's **local-trusted only**. Google Calendar goes through [better-auth's Google OAuth](https://better-auth.com/docs/authentication/google).
 
 ## status
 
 **Phase 1 shipped** — the morning and evening prints are live, firing daily. Genuinely useful already.
 
 Next:
-- **Phase 2** — an agent loop, more tools, kiosk polish.
+- **Phase 2** — an agent loop (Vercel AI SDK), more tools, kiosk polish.
 - **Phase 3** — voice (push-to-talk + Groq Whisper) and a Telegram chat surface.
 
-## getting started
+## FAQ
 
-- **Want to run your own?** Start at [`docs/deploy.md`](docs/deploy.md).
-- **Hacking on the code?** [`CLAUDE.md`](CLAUDE.md) is the project map.
-- **Curious about the design?** [`docs/plan.md`](docs/plan.md) is the long-form build doc.
+**Why not a ios/android tablet?** You'd think a tablet is the obvious home for this. But then it's an Android or iOS app, and even in the age of AI they suck for running a real Node or Python server. You can't dodge having a real computer.
 
-## security
+**Does it need an SP5 — couldn't this run on something tiny?** ideally it should, but some of my data-gathering requires headless browser automation — and so does my print path. Browser automation needs a real computer.
 
-Remote access is over [Tailscale](https://tailscale.com/); the dashboard isn't meant for the public internet. `/admin` and `/api/*` aren't auth-gated yet, so it's **local-trusted only** — keep it on your LAN / tailnet. Google Calendar access goes through better-auth's OAuth; a dashboard PIN is on the list.
+**Why the Vercel AI SDK?** It's provider-agnostic — Chota isn't married to one model vendor. I use Anthropic's Claude Agent SDK at work; it's genuinely powerful, but it's heavy and it ties you to Anthropic. I have also used [Gemini ADK](https://adk.dev/agents/models/google-gemini/) but I can't recommend it for small projects, they keep changing things and their docs and code aren't nimble. 
+
+For something like this, where *speed* matters and model price and latency keep moving, I'd rather not be locked to one provider. The [Vercel AI SDK](https://ai-sdk.dev/) lets me point an agent at any model, route around a slow one, and run different agents on different models. It's what [opencode](https://opencode.ai/) is built on, which is a good sign. [Pi](https://pi.dev/) (a minimal coding agent) uses vercel, so that's a good enough recommendation. [OpenClaw](https://openclaw.ai/) is built on pi which is built on vercel so yeah, it's a good sign.
+
+**Can I run this for my family?** Yes — though not yet as a turnkey thing. Clone the repo, point [Codex](https://openai.com/codex/) / [Claude Code](https://claude.com/product/claude-code) / [OpenCode](https://opencode.ai/) at it, and go to town. Read [`docs/deploy.md`](docs/deploy.md) for the deploy ritual and [`CLAUDE.md`](CLAUDE.md) for the code map.
+
+It's still shaped tightly around my family's setup — I'm tempted to build a properly reusable version once the hardware choices settle. For now, treat it as a working reference.

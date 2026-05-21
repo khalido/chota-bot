@@ -5,20 +5,40 @@
 	import Chores from '$lib/components/Chores.svelte';
 	import Calendar from '$lib/components/Calendar.svelte';
 	import Lists from '$lib/components/Lists.svelte';
+	import FunQuote from '$lib/components/FunQuote.svelte';
 	import PrintMorning from '$lib/components/PrintMorning.svelte';
 	import { resolve } from '$app/paths';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	// Re-run +page.server.ts.load() every minute. Tools return cached data
-	// (warmed by the *-refresh jobs), so this is cheap. Keeps the dashboard
-	// fresh without per-card polling logic.
+	// Idle kiosk: with no interaction for this long, fall back to the ambient
+	// clock view. Tapping the clock returns here (/clock is a link back to /).
+	const IDLE_TO_CLOCK_MS = 3 * 60_000;
+
 	onMount(() => {
-		const id = setInterval(() => invalidateAll(), 60_000);
-		return () => clearInterval(id);
+		// Re-run +page.server.ts.load() every minute. Tools return cached data
+		// (warmed by the *-refresh jobs), so this is cheap — keeps the dashboard
+		// fresh without per-card polling.
+		const refresh = setInterval(() => invalidateAll(), 60_000);
+
+		// Reset an idle countdown on any interaction; on timeout, show the clock.
+		let idle: ReturnType<typeof setTimeout>;
+		const resetIdle = () => {
+			clearTimeout(idle);
+			idle = setTimeout(() => goto(resolve('/clock')), IDLE_TO_CLOCK_MS);
+		};
+		const activity = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
+		for (const evt of activity) window.addEventListener(evt, resetIdle, { passive: true });
+		resetIdle();
+
+		return () => {
+			clearInterval(refresh);
+			clearTimeout(idle);
+			for (const evt of activity) window.removeEventListener(evt, resetIdle);
+		};
 	});
 </script>
 
@@ -50,6 +70,7 @@
 		<Chores chores={data.chores} />
 		<Calendar events={data.events} />
 		<Lists lists={data.lists} />
+		<FunQuote quote={data.funQuote} />
 
 		<div class="md:col-span-2 lg:col-span-3">
 			<PrintMorning recipients={data.recipients} />

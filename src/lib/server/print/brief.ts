@@ -19,9 +19,22 @@ import { getBus, schoolRunLine, type BusDeparture } from '$lib/server/tools/bus'
 import { getWeather } from '$lib/server/tools/weather';
 import { getCalendar, type CalendarEvent } from '$lib/server/tools/calendar';
 import { getFamilyLists, cleanListName, type ProjectWithTasks } from '$lib/server/tools/ticktick';
+import { parseTaskPeople } from '$lib/server/people';
 import { getBootprintFact } from '$lib/server/tools/bootprint';
+import {
+	getSchoolWeek,
+	getUpcomingSchoolEvents,
+	getSchoolBreak
+} from '$lib/server/tools/schoolterms';
 import { pickPuzzle } from '$lib/server/puzzles';
-import { sydneyDateLong, sydneyTimeOnDay, sydneyYMD } from '$lib/time';
+import { pickFunQuote, type FunQuote } from '$lib/server/funquotes';
+import {
+	sydneyDateLong,
+	sydneyDateShort,
+	sydneyTimeCompact,
+	sydneyTimeOnDay,
+	sydneyYMD
+} from '$lib/time';
 import { logErr } from '$lib/server/log';
 import { weatherBlock } from './weather-block';
 
@@ -39,10 +52,16 @@ export interface BriefInputs {
 	day?: 'today' | 'tomorrow';
 }
 
-export interface DueSoonGroup {
-	/** TickTick list name, e.g. "Read". */
-	list: string;
-	items: { title: string; when: 'today' | 'tmrw' }[];
+/**
+ * One task off the TickTick "Family" list, surfaced on the brief — resolved to
+ * the people it's assigned to and windowed against the brief's day.
+ */
+export interface FamilyTask {
+	title: string;
+	/** Family-member names this task is assigned to; empty = unassigned. */
+	people: string[];
+	/** `today` = due on the brief's day; `overdue` = past due and still open. */
+	when: 'today' | 'overdue';
 }
 
 /**
@@ -56,18 +75,30 @@ export interface BriefData {
 	day?: 'today' | 'tomorrow';
 	/** "Monday 11 May" — title case. The brief day (tomorrow's date when `day` is `'tomorrow'`). */
 	date: string;
+	/** "Thu 21st May, 6:47am" — when the brief was generated, for the receipt footer. */
+	printedAt: string;
 	/** Pre-formatted compact weather lines, or null if the lookup failed. */
 	weatherLines: string[] | null;
 	/** lucide-icon key for the condition (see `weatherGlyph`), or null. */
 	weatherIcon: string | null;
 	events: CalendarEvent[];
 	family: FamilyMember[];
+	/** Kid names (config order) — lets the renderer tell parents from kids. */
+	kids: string[];
 	/** Per unique kid bus trip: which kids it serves + the school-run line ("501 at 7:42am, …"). */
 	schoolBus: { kids: string[]; line: string | null }[];
+	/** School term + week the brief day falls in — null on weekends/holidays. */
+	schoolWeek: { term: number; week: number } | null;
+	/** Upcoming NSW school dates (dev days, holiday blocks) within ~2 weeks, pre-formatted. */
+	schoolUpcoming: { label: string; when: string }[];
+	/** When school is out: days until it's back + the resume date. null in term. */
+	schoolBreak: { resumesLabel: string; days: number } | null;
 	chores: { person: string; chores: string[] }[];
-	/** Tasks across the family lists (excl. Shopping) due today or tomorrow. */
-	dueSoon: DueSoonGroup[];
+	/** "Family" list tasks due on the brief's day or overdue, with assignees. */
+	familyTasks: FamilyTask[];
 	puzzle: { q: string; a: string };
+	/** A TV / comic-strip quote for the morning brief's QUOTE section. */
+	funQuote: FunQuote | null;
 	/** "Shopping" list items, shown in full. Empty if the list is empty/missing. */
 	shoppingItems: string[];
 	/** Shopping items ticked off recently — the evening brief's "recently bought" recap. */
@@ -84,7 +115,7 @@ export async function gatherBrief({
 }: BriefInputs = {}): Promise<BriefData> {
 	const config = getConfig();
 	const tomorrow = day === 'tomorrow';
-	// Every date-keyed lookup (calendar, chores, school bus, masthead, due-soon)
+	// Every date-keyed lookup (calendar, chores, school bus, masthead, family tasks)
 	// pivots on `ref` — `now` for the morning brief, tomorrow for the evening one.
 	const ref = tomorrow ? new Date(now.getTime() + 86_400_000) : now;
 
@@ -97,6 +128,29 @@ export async function gatherBrief({
 		return [] as CalendarEvent[];
 	});
 	const schoolBus = await collectSchoolBus(ref, tomorrow);
+	const schoolWeek = await getSchoolWeek(ref).catch((err) => {
+		logErr('brief', 'school week lookup failed:', err);
+		return null;
+	});
+	const schoolUpcoming = await getUpcomingSchoolEvents({ from: ref, withinDays: 14 })
+		.then((events) => events.map((e) => ({ label: e.label, when: schoolWhen(e, now) })))
+		.catch((err) => {
+			logErr('brief', 'school events lookup failed:', err);
+			return [] as { label: string; when: string }[];
+		});
+	const schoolBreak = await getSchoolBreak(ref)
+		.then((b) => {
+			if (!b) return null;
+			const days = Math.round(
+				(Date.parse(`${b.resumes}T00:00:00Z`) - Date.parse(`${sydneyYMD(ref)}T00:00:00Z`)) /
+					86_400_000
+			);
+			return { resumesLabel: fmtDay(b.resumes), days };
+		})
+		.catch((err) => {
+			logErr('brief', 'school break lookup failed:', err);
+			return null;
+		});
 	const familyLists = await getFamilyLists().catch((err) => {
 		logErr('brief', 'ticktick lists lookup failed:', err);
 		return [] as ProjectWithTasks[];
@@ -109,25 +163,25 @@ export async function gatherBrief({
 				return null;
 			});
 	// TickTick glues an emoji onto the list name ("🛒Shopping"), so match on the cleaned name.
-	const isShopping = (l: ProjectWithTasks) =>
-		cleanListName(l.project.name).toLowerCase() === 'shopping';
-	const shoppingItems = familyLists.find(isShopping)?.tasks.map((t) => t.title) ?? [];
+	const listIs = (name: string) => (l: ProjectWithTasks) =>
+		cleanListName(l.project.name).toLowerCase() === name;
+	const shoppingItems = familyLists.find(listIs('shopping'))?.tasks.map((t) => t.title) ?? [];
 	// Evening brief only: shopping items ticked off recently (rides along on the
 	// list's `done`), for a recap line under the shopping block.
 	const boughtRecently = tomorrow
-		? (familyLists.find(isShopping)?.done ?? []).map((t) => t.title)
+		? (familyLists.find(listIs('shopping'))?.done ?? []).map((t) => t.title)
 		: [];
-	const dueSoon: DueSoonGroup[] = familyLists
-		.filter((l) => !isShopping(l))
-		.map((l) => ({
-			list: cleanListName(l.project.name),
-			items: l.tasks
-				// Anchored on the real `now`, not `ref` — the reader sees the sheet
-				// today, so a task due tomorrow must read "tmrw" on both briefs.
-				.map((t) => ({ title: t.title, when: dueLabel(t.dueDate, now) }))
-				.filter((x): x is DueSoonGroup['items'][number] => x.when !== null)
-		}))
-		.filter((g) => g.items.length > 0);
+	// The "Family" list — shared family to-dos. Each task is windowed against the
+	// brief's day and resolved to its assignees (a person tag, else a name in the
+	// title); tasks outside the window or without a due date are dropped.
+	const familyTasks: FamilyTask[] = (familyLists.find(listIs('family'))?.tasks ?? []).flatMap(
+		(t) => {
+			const when = taskWhen(t.dueDate, ref);
+			if (!when) return [];
+			const people = parseTaskPeople(t.title, t.tags, config.family ?? []);
+			return [{ title: t.title.trim(), people, when }];
+		}
+	);
 
 	const wx = weather ? weatherBlock(weather, day, now) : { lines: null, icon: null };
 
@@ -135,14 +189,20 @@ export async function gatherBrief({
 		now,
 		day,
 		date: sydneyDateLong(ref),
+		printedAt: `${sydneyDateShort(now)}, ${sydneyTimeCompact(now)}`,
 		weatherLines: wx.lines,
 		weatherIcon: wx.icon,
 		events,
 		family: config.family ?? [],
+		kids: config.kids.map((k) => k.name),
 		schoolBus,
+		schoolWeek,
+		schoolUpcoming,
+		schoolBreak,
 		chores: getChores({ now: ref }),
-		dueSoon,
+		familyTasks,
 		puzzle: pickPuzzle(ref),
+		funQuote: pickFunQuote(ref),
 		shoppingItems,
 		boughtRecently,
 		fact: bootprint
@@ -152,15 +212,42 @@ export async function gatherBrief({
 	};
 }
 
-/** "today" / "tmrw" if the TickTick dueDate is today/tomorrow in Sydney; else null. */
-function dueLabel(dueDate: string | undefined, now: Date): 'today' | 'tmrw' | null {
+/**
+ * Where a TickTick task falls relative to the brief's day (`ref`): `today` =
+ * due that day, `overdue` = due before it and still open, null = no due date
+ * or due in the future (not surfaced). `sydneyYMD` is zero-padded `YYYY-MM-DD`,
+ * so a plain string compare orders the dates.
+ */
+function taskWhen(dueDate: string | undefined, ref: Date): 'today' | 'overdue' | null {
 	if (!dueDate) return null;
 	const d = new Date(dueDate);
 	if (Number.isNaN(d.getTime())) return null;
-	const ymd = sydneyYMD(d);
-	if (ymd === sydneyYMD(now)) return 'today';
-	if (ymd === sydneyYMD(new Date(now.getTime() + 86_400_000))) return 'tmrw';
+	const due = sydneyYMD(d);
+	const day = sydneyYMD(ref);
+	if (due === day) return 'today';
+	if (due < day) return 'overdue';
 	return null;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A `YYYY-MM-DD` date as a compact "Mon 2 Feb". */
+function fmtDay(ymd: string): string {
+	const d = new Date(`${ymd}T00:00:00Z`);
+	return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+/**
+ * A school event's date(s) relative to `now`: "today" / "tomorrow" when it's a
+ * single day close by, "Mon 2 Feb" otherwise, and a "Tue 27–Fri 30 Jan" span
+ * for a multi-day block.
+ */
+function schoolWhen(e: { start: string; end: string }, now: Date): string {
+	if (e.start !== e.end) return `${fmtDay(e.start)}–${fmtDay(e.end)}`;
+	if (e.start === sydneyYMD(now)) return 'today';
+	if (e.start === sydneyYMD(new Date(now.getTime() + 86_400_000))) return 'tomorrow';
+	return fmtDay(e.start);
 }
 
 // ────────────────────────────────────────────────────────────────────────────

@@ -42,18 +42,20 @@ A thin wrapper around croner's `new Cron(...)`:
 
 ```
 src/lib/server/
-  scheduler.ts            # defineJob + JOBS + bootJobs (lazy glob)
+  scheduler.ts            # defineJob + JOBS + bootJobs + stopJobs
   jobs/
     CLAUDE.md             # "how to write a job"
     heartbeat.ts          # every 5 min: console.log (debug)
-    morning-print.ts      # weekday 06:45: compose + print briefs (gated by KIOSK env)
-    sentral-refresh.ts    # weekdays before school: refresh Sentral .ics caches
+    morning-print.ts      # daily 06:45: print today's briefs (gated by KIOSK env)
+    evening-print.ts      # daily 19:15: print tomorrow's briefs (gated by KIOSK env)
+    sentral-refresh.ts    # weekday mornings: refresh Sentral .ics caches
+    sentral-login.ts      # Mondays 04:00: pre-emptive Sentral cookie refresh
     weather-refresh.ts    # warm weather cache
     calendar-refresh.ts   # warm Google Calendar cache
     bus-refresh.ts        # warm bus departures cache
     ticktick-refresh.ts   # warm TickTick lists cache
     dreaming.ts           # daily 03:00: stub, will consolidate memory
-src/hooks.server.ts       # await bootJobs() if !building
+src/hooks.server.ts       # init hook: configureLogging + bootJobs + shutdown
 src/routes/admin/jobs/    # /admin/jobs page (reads JOBS)
 ```
 
@@ -75,18 +77,23 @@ Jobs folder is **flat + jobs only**. No framework code in there — `defineJob` 
 
 Reference: https://croner.56k.guru/usage/pattern/
 
-## Boot
+## Boot + shutdown
 
-`hooks.server.ts` does one thing:
+Jobs boot in the `init` hook of `hooks.server.ts` — it runs once at server
+startup, after env vars are available:
 
 ```ts
-import { bootJobs } from '$lib/server/scheduler';
-import { building } from '$app/environment';
-
-if (!building) await bootJobs();
+export const init: ServerInit = async () => {
+  await configureLogging();
+  await bootJobs();
+  // Stop the crons on SIGTERM/SIGINT so the process exits cleanly.
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, stopJobs);
+};
 ```
 
-The `building` guard skips during `vite build` so jobs don't fire at build time.
+`stopJobs()` matters: without it, croner's timers keep the event loop alive
+after the HTTP server closes, so the process never exits on its own and systemd
+SIGKILLs it once the stop timeout elapses.
 
 ## Hardening discipline (when agent jobs land)
 
@@ -106,7 +113,9 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 |---|---|---|---|
 | `heartbeat` | `*/5 * * * *` | scripted | Debug log |
 | `morning-print` | `45 6 * * *` | scripted | Compose + print today's briefs (gated by `KIOSK=true`) |
-| `sentral-refresh` | weekday morning | scripted | Refresh per-kid Sentral .ics caches |
+| `evening-print` | `15 19 * * *` | scripted | Compose + print tomorrow's briefs (gated by `KIOSK=true`) |
+| `sentral-refresh` | `30 6,7,8 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches |
+| `sentral-login` | `0 4 * * 1` | scripted | Mondays — pre-emptive Sentral cookie refresh |
 | `weather-refresh` | refresh cadence | scripted | Warm weather cache |
 | `calendar-refresh` | refresh cadence | scripted | Warm Google Calendar cache |
 | `bus-refresh` | refresh cadence | scripted | Warm bus departures cache |

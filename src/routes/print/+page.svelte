@@ -40,10 +40,15 @@
 	<div class="flex items-start gap-8 overflow-x-auto pb-4">
 		{#each data.briefs as b (b.who)}
 			<div class="shrink-0">
-				<div class="flex items-center justify-between gap-3 bg-slate-800 px-3 py-1.5 text-slate-100">
+				<div
+					class="flex items-center justify-between gap-3 bg-slate-800 px-3 py-1.5 text-slate-100"
+				>
 					<span class="text-xs font-semibold tracking-wider uppercase">{b.who}</span>
 					<div class="flex items-center gap-3">
-						<a class="text-xs text-slate-300 hover:text-white" href={resolve('/print/[who]', { who: b.who })}>
+						<a
+							class="text-xs text-slate-300 hover:text-white"
+							href={resolve('/print/[who]', { who: b.who })}
+						>
 							open
 						</a>
 						<button
@@ -57,7 +62,13 @@
 					</div>
 				</div>
 				<div class="shadow-lg">
-					<BriefSheet date={data.date} mark={b.mark} sections={b.sections} closing={data.closing} />
+					<BriefSheet
+						date={data.date}
+						mark={b.mark}
+						sections={b.sections}
+						closing={data.closing}
+						printedAt={data.printedAt}
+					/>
 				</div>
 			</div>
 		{/each}
