@@ -182,11 +182,13 @@ function factSection(d: BriefData): PrintSectionBody | null {
 // ── briefs ──────────────────────────────────────────────────────────────────
 
 /**
- * The puzzle + quote + fact "fun" tail. The evening (tomorrow) brief drops them
- * — it's a get-ready-for-tomorrow sheet, so it stays to weather/school/events/chores/shopping.
+ * The "fun" tail: puzzle + quote on every morning sheet, plus the did-you-know
+ * fact for kids only — a parent's sheet stays a get-stuff-done one. The evening
+ * (tomorrow) brief drops the whole tail.
  */
-function tailSections(d: BriefData): (PrintSectionBody | null)[] {
-	return d.day === 'tomorrow' ? [] : [puzzleSection(d), funQuoteSection(d), factSection(d)];
+function tailSections(d: BriefData, isParent: boolean): (PrintSectionBody | null)[] {
+	if (d.day === 'tomorrow') return [];
+	return [puzzleSection(d), funQuoteSection(d), isParent ? null : factSection(d)];
 }
 
 /**
@@ -196,7 +198,8 @@ function tailSections(d: BriefData): (PrintSectionBody | null)[] {
  * parent gets the parents-only FAMILY overview of the kids' tasks. The SCHOOL
  * slot holds the timetable on a school day, or — during the holidays, for
  * everyone — a countdown to school coming back. The morning brief also gets a
- * puzzle + fact; the evening one drops them (`tailSections`).
+ * puzzle + quote (+ a did-you-know fact for kids); the evening one drops that
+ * tail (`tailSections`).
  *
  * (Later, when each person has their own calendar, the events fed in here
  * become per-recipient; for now the calendar + chores are shared.)
@@ -217,7 +220,7 @@ export function recipientToSections(
 		choresSection(d),
 		isParent ? familySection(d) : null,
 		shoppingSection(d),
-		...tailSections(d)
+		...tailSections(d, isParent)
 	]);
 }
 

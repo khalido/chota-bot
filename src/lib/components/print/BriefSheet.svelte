@@ -128,7 +128,10 @@
 					<div class="flex items-center justify-between gap-4">
 						<div class="min-w-0 flex-1">
 							{#each s.lines as line, i (i)}
-								<p class="whitespace-pre-wrap {i === 0 ? 'text-lg' : ''}">
+								{@const isTomorrow = /^->\s*tmrw/i.test(line)}
+								<p
+									class="whitespace-pre-wrap {i === 0 ? 'text-lg' : ''} {isTomorrow ? 'mt-2' : ''}"
+								>
 									{prettyWeather(line, i === 0)}
 								</p>
 							{/each}
@@ -213,7 +216,14 @@
 					{#each s.upcoming ?? [] as u (u.label + u.when)}
 						{@render footnote(CalendarDays, `${u.label} — ${u.when}`)}
 					{/each}
-					{#if s.busLine}{@render footnote(BusIcon, s.busLine)}{/if}
+					{#if s.busLine}
+						<!-- The school-run bus line — a touch larger than the other
+						     footnotes; it's the actionable "leave by" detail. -->
+						<div class="mt-2.5 flex items-center gap-2 text-[15px]" style:color={FOOTNOTE}>
+							<BusIcon size={18} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
+							<span>{s.busLine}</span>
+						</div>
+					{/if}
 				{:else if s.kind === 'puzzle'}
 					<div class="border-2 border-black p-3 leading-relaxed">{s.q}</div>
 				{:else if s.kind === 'fact'}

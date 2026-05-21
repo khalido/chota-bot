@@ -274,9 +274,6 @@ describe('print pipeline', () => {
 			Ah, duck cake!
 			— Bandit, Bluey
 
-			08 DID YOU KNOW
-			Earth is the only planet in the solar system not named after a Greek or Roman god.
-
 			Have a good day, kids -- Chota
 
 			printed Wed 13th May, 6:45am"

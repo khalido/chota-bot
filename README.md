@@ -4,7 +4,7 @@
 
 Why: I realized we reached app overload - we wanted fewer devices at breakfast - but the modern work + school systems practically demand you to look at multiple apps before school/work. How do you ask a kid to put down their phone when they need to check 2 different school apps to figure out their timetable, a third for events, a fourth for bus and optionally a fifth for weather.
 
-I've been building agents for work which use tools to connect to all the things and do the boring bits - so why not for home? The photo of the initial brief explains this better than all the text below. The actual printouts are changing fast as I get user feedback, the below is already out of date (like most docs in the real world [until you setup proactive agentic workflows that is](https://youtu.be/eSP7PLTXNy8?si=sLe14ADCPyXy5hJO)!).
+I've been building agents for work which use tools to connect to all the things and do the boring bits - so why not for home? The photo of the initial brief explains this better than all the text below. The actual printouts are changing fast as I get user feedback, the below is already out of date (like most docs in the real world [until you setup proactive agentic workflows that is](https://youtu.be/eSP7PLTXNy8?si=sLe14ADCPyXy5hJO)!.
 
 ## what it does
 
