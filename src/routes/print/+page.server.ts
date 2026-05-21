@@ -13,5 +13,5 @@ export const load: PageServerLoad = async () => {
 			sections: recipientToSections(who, d, await getSchedule(who))
 		}))
 	);
-	return { date: d.date, closing: d.closing, briefs };
+	return { date: d.date, closing: d.closing, printedAt: d.printedAt, briefs };
 };

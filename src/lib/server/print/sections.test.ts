@@ -52,6 +52,7 @@ const EVENTS: CalendarEvent[] = [
 const DATA: BriefData = {
 	now: new Date('2026-05-13T20:45:00Z'), // not used by the renderers; just satisfies the type
 	date: 'Wednesday 13 May',
+	printedAt: 'Wed 13th May, 6:45am',
 	weatherLines: [
 		'[ PARTLY SUNNY ]  18C now (feels 22C)',
 		'rain 1-3pm  ::##::',
@@ -61,19 +62,30 @@ const DATA: BriefData = {
 	weatherIcon: 'cloud-sun',
 	events: EVENTS,
 	family: FAMILY,
+	kids: ['Kid1', 'Kid2'],
 	schoolBus: [{ kids: ['Kid1', 'Kid2'], line: '501 at 7:35am, 7:45am, 7:55am' }],
+	schoolWeek: { term: 1, week: 3 },
+	schoolUpcoming: [
+		{ label: 'School Development Day', when: 'Fri 6 Mar' },
+		{ label: 'School holidays', when: 'Tue 7 Apr–Fri 17 Apr' }
+	],
+	schoolBreak: null,
 	chores: [
 		{ person: 'Kid1', chores: ['Walk and feed the dog'] },
 		{ person: 'Kid2', chores: ['Empty + load the dishwasher'] }
 	],
-	dueSoon: [
-		{ list: 'Read', items: [{ title: 'The Hobbit', when: 'tmrw' }] },
-		{ list: 'Watch', items: [{ title: 'Dune', when: 'today' }] }
+	familyTasks: [
+		{ title: 'Sign the excursion form', people: ['Kid1'], when: 'today' },
+		{ title: 'Pack swimming gear', people: ['Kid1'], when: 'overdue' },
+		{ title: 'Return library books', people: ['Kid2'], when: 'overdue' },
+		{ title: 'Book the dentist', people: [], when: 'today' },
+		{ title: 'Renew car rego', people: ['Parent1'], when: 'today' }
 	],
 	puzzle: {
 		q: 'A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?',
 		a: '1 — the centre cube.'
 	},
+	funQuote: { kind: 'tv', quote: 'Ah, duck cake!', speaker: 'Bandit', title: 'Bluey' },
 	shoppingItems: ['Choc', 'Hot Choc Powder (Cadbury)', 'Coriander', 'Salt for the salt grinder'],
 	fact: {
 		text: 'Earth is the only planet in the solar system not named after a Greek or Roman god.'
@@ -110,7 +122,70 @@ describe('print pipeline', () => {
 			DATA.date,
 			recipientToSections('kid1', DATA, KID1_SCHEDULE),
 			DATA.closing,
-			'Kid1'
+			'Kid1',
+			DATA.printedAt
+		);
+		expect(text).toMatchInlineSnapshot(`
+			"Wednesday 13 May                          Kid1
+
+			01 WEATHER
+			[ PARTLY SUNNY ]  18C now (feels 22C)
+			rain 1-3pm  ::##::
+			-> 17-19C today, wind 12km/h
+			-> tmrw: light rain, 14-16C
+
+			02 SCHOOL · T1 Wk3
+			Creativity Yr7  8:50-9:50am  1D.02
+			  with Ms E. Teacher (7CRE&)
+			SOCIAL VOLLEYBALL 3 SPORT  10:45-11:45am  3D.04
+			  with Mr S. Staff (SSVOLLEY3)
+			  -> Take sports stuff!
+			  School Development Day — Fri 6 Mar
+			  School holidays — Tue 7 Apr–Fri 17 Apr
+			  501 at 7:35am, 7:45am, 7:55am
+
+			03 TODAY
+			8:30-9am     Drop car for service
+			3:30-4:15pm  Kid1 lesson  (Kid1)
+			all day      Bin night
+			overdue      Pack swimming gear
+			to-do        Sign the excursion form
+
+			04 CHORES
+			Kid1: Walk and feed the dog
+			Kid2: Empty + load the dishwasher
+
+			05 SHOPPING
+			Choc, Hot Choc Powder, Coriander,
+			Salt for the salt g…
+
+			06 PUZZLE
+			A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?
+
+			07 QUOTE
+			Ah, duck cake!
+			— Bandit, Bluey
+
+			08 DID YOU KNOW
+			Earth is the only planet in the solar system not named after a Greek or Roman god.
+
+			Have a good day, kids -- Chota
+
+			printed Wed 13th May, 6:45am"
+		`);
+	});
+
+	it('school holidays — the SCHOOL slot shows a countdown, not a timetable', () => {
+		const text = sectionsToText(
+			DATA.date,
+			recipientToSections(
+				'kid1',
+				{ ...DATA, schoolBreak: { resumesLabel: 'Mon 20 Apr', days: 9 } },
+				[]
+			),
+			DATA.closing,
+			'Kid1',
+			DATA.printedAt
 		);
 		expect(text).toMatchInlineSnapshot(`
 			"Wednesday 13 May                          Kid1
@@ -122,37 +197,37 @@ describe('print pipeline', () => {
 			-> tmrw: light rain, 14-16C
 
 			02 SCHOOL
-			Creativity Yr7  8:50-9:50am  1D.02
-			  with Ms E. Teacher (7CRE&)
-			SOCIAL VOLLEYBALL 3 SPORT  10:45-11:45am  3D.04
-			  with Mr S. Staff (SSVOLLEY3)
-			  -> Take sports stuff!
-			  501 at 7:35am, 7:45am, 7:55am
+			School holidays
+			9 days till school — back Mon 20 Apr
 
 			03 TODAY
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
+			overdue      Pack swimming gear
+			to-do        Sign the excursion form
 
 			04 CHORES
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
-			05 TICKTICK
-			Shopping:
+			05 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
 			Salt for the salt g…
-
-			Read: "The Hobbit" (tmrw)
-			Watch: "Dune" (today)
 
 			06 PUZZLE
 			A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?
 
-			07 DID YOU KNOW
+			07 QUOTE
+			Ah, duck cake!
+			— Bandit, Bluey
+
+			08 DID YOU KNOW
 			Earth is the only planet in the solar system not named after a Greek or Roman god.
 
-			Have a good day, kids -- Chota"
+			Have a good day, kids -- Chota
+
+			printed Wed 13th May, 6:45am"
 		`);
 	});
 
@@ -161,7 +236,8 @@ describe('print pipeline', () => {
 			DATA.date,
 			recipientToSections('parent1', DATA, []),
 			DATA.closing,
-			'Parent1'
+			'Parent1',
+			DATA.printedAt
 		);
 		expect(text).toMatchInlineSnapshot(`
 			"Wednesday 13 May                       Parent1
@@ -176,26 +252,83 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
+			to-do        Renew car rego
 
 			03 CHORES
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
-			04 TICKTICK
-			Shopping:
+			04 FAMILY
+			Kid1: !Pack swimming gear, Sign the excursion form
+			Kid2: !Return library books
+			Family: Book the dentist
+
+			05 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
 			Salt for the salt g…
 
-			Read: "The Hobbit" (tmrw)
-			Watch: "Dune" (today)
-
-			05 PUZZLE
+			06 PUZZLE
 			A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?
 
-			06 DID YOU KNOW
+			07 QUOTE
+			Ah, duck cake!
+			— Bandit, Bluey
+
+			08 DID YOU KNOW
 			Earth is the only planet in the solar system not named after a Greek or Roman god.
 
-			Have a good day, kids -- Chota"
+			Have a good day, kids -- Chota
+
+			printed Wed 13th May, 6:45am"
+		`);
+	});
+
+	it('evening brief — TOMORROW heading, no puzzle/fact tail, "recently bought" recap', () => {
+		const text = sectionsToText(
+			DATA.date,
+			recipientToSections(
+				'parent1',
+				{ ...DATA, day: 'tomorrow', boughtRecently: ['Oat milk', 'Bananas'] },
+				[]
+			),
+			DATA.closing,
+			'Parent1',
+			DATA.printedAt
+		);
+		expect(text).toMatchInlineSnapshot(`
+			"Wednesday 13 May                       Parent1
+
+			01 WEATHER
+			[ PARTLY SUNNY ]  18C now (feels 22C)
+			rain 1-3pm  ::##::
+			-> 17-19C today, wind 12km/h
+			-> tmrw: light rain, 14-16C
+
+			02 TOMORROW
+			8:30-9am     Drop car for service
+			3:30-4:15pm  Kid1 lesson  (Kid1)
+			all day      Bin night
+			to-do        Renew car rego
+
+			03 CHORES
+			Kid1: Walk and feed the dog
+			Kid2: Empty + load the dishwasher
+
+			04 FAMILY
+			Kid1: !Pack swimming gear, Sign the excursion form
+			Kid2: !Return library books
+			Family: Book the dentist
+
+			05 SHOPPING
+			Choc, Hot Choc Powder, Coriander,
+			Salt for the salt g…
+
+			Recently bought:
+			Oat milk, Bananas
+
+			Have a good day, kids -- Chota
+
+			printed Wed 13th May, 6:45am"
 		`);
 	});
 });

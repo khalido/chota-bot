@@ -33,6 +33,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		mark: who[0].toUpperCase(),
 		date: d.date,
 		sections: recipientToSections(who, d, schedule),
-		closing: d.closing
+		closing: d.closing,
+		printedAt: d.printedAt
 	};
 };

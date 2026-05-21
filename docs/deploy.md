@@ -11,7 +11,7 @@ The kiosk box is a Surface Pro 5 running Linux at the lounge wall. It hosts the 
   build/                       # adapter-node output (`npm run build` writes here)
   data/                        # runtime data (gitignored except data/quotes/)
     home.db                    #   sqlite — jobs, sessions, auth
-    logs/chota.log             #   LogTape rotating file (planned; see docs/logging.md)
+    logs/chota.log             #   LogTape rotating file (see docs/logging.md)
     morning/                   #   dev preview PNGs (production writes to tmpdir)
     sentral/<who>-timetable.ics  # per-kid Sentral .ics cache (one folder, files keyed by name)
   .env                         # secrets + KIOSK=true (gitignored, copied manually)
@@ -73,6 +73,12 @@ cp deploy/chota-kiosk.desktop ~/.config/autostart/
 #    Then enable auto-login: Mint menu → Login Window → Users → Automatic login.
 #    Reboot — the dashboard should come up fullscreen on its own. The systemd
 #    service (step 7) is the server; this entry is just the browser pointed at it.
+
+# 10. Keep the screen on — disable the Cinnamon screensaver, idle lock, and
+#     AC display-sleep so the wall display never blanks. (Per-user; persists.)
+gsettings set org.cinnamon.desktop.screensaver lock-enabled false
+gsettings set org.cinnamon.desktop.session idle-delay 0
+gsettings set org.cinnamon.settings-daemon.plugins.power sleep-display-ac 0
 ```
 
 ## When you upgrade Node (fnm)

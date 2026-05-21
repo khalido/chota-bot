@@ -50,7 +50,7 @@ export default defineChota({
 		}
 	},
 	home: { suburb: 'Sydney', lat: -33.86, lon: 151.18 },
-	school: { region: 'NSW' },
+	school: { region: 'NSW', division: 'E' }, // division: 'E' (Eastern) or 'W' (Western) NSW
 	// Google Calendar to read for the family schedule. List your calendar IDs
 	// from /admin (after signing in with Google), paste the right one here.
 	calendar: { id: 'your-family-calendar-id@group.calendar.google.com' },
@@ -61,9 +61,9 @@ export default defineChota({
 		// Order matters — it's the order lists appear on /lists. Shopping leads:
 		// it's the most-churned list (items added + ticked off daily).
 		lists: {
-			shopping: 'Shopping', // everyday items / groceries — shown in full on the morning print
+			shopping: 'Shopping', // everyday items / groceries — shown in full on every brief
 			buying: 'Buying', // longer-term wishlist (shoes, gear, "someday" stuff)
-			read: 'Read', // books, articles, links to share with the family
+			family: 'Family', // shared family to-dos / reminders — surfaced on the briefs per assignee
 			watch: 'Watch', // TV, movies, YouTube — things to watch together
 			notes: 'Notes' // general family notes
 		}

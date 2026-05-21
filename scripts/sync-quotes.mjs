@@ -3,13 +3,15 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const DEFAULT_URL = 'https://raw.githubusercontent.com/khalido/clockquotes/main/quotes.json';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// Quote-clock source: the sibling `curios` content repo's built output. Once
+// curios is pushed to GitHub the raw URL works as a drop-in too:
+//   https://raw.githubusercontent.com/khalido/curios/main/dist/clock-quotes.json
+const DEFAULT_SOURCE = resolve(REPO_ROOT, '../curios/dist/clock-quotes.json');
 const DEST = resolve(REPO_ROOT, 'data/quotes/literary.json');
 
 // First arg overrides the source — pass a URL or a local file path.
-// Default is the GitHub raw URL (the cloneable canonical source).
-const SOURCE = process.argv[2] || DEFAULT_URL;
+const SOURCE = process.argv[2] || DEFAULT_SOURCE;
 
 const HHMM = /^\d{2}:\d{2}$/;
 

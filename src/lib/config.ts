@@ -78,8 +78,10 @@ export interface ChotaConfig {
 		lon?: number;
 		weather?: Partial<WeatherThresholds>;
 	};
-	/** For NSW school-term + public-holiday tools (later). */
-	school?: { region?: string };
+	/** School region + NSW division. `division` picks which School Development
+	 *  Days apply — `'E'` (Eastern: Sydney, coast, Hunter, Illawarra) or `'W'`
+	 *  (Western). Defaults to `'E'` when omitted. */
+	school?: { region?: string; division?: 'E' | 'W' };
 	/** Family Google Calendar (read-only, later). */
 	calendar?: { id?: string };
 	/** TickTick MCP integration. Maps stable internal names (used in code +

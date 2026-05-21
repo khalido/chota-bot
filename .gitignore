@@ -25,7 +25,7 @@ vite.config.ts.timestamp-*
 *.db
 
 # Data — runtime state, all gitignored except data/quotes/ (vendored from
-# clockquotes via scripts/sync-quotes.mjs — deterministic, fine to track).
+# the curios repo via scripts/sync-quotes.mjs — deterministic, fine to track).
 # New tool-specific subdirs (data/sentral/, data/morning/, etc.) are auto-
 # ignored by this rule; no need to add them one-by-one.
 /data/*

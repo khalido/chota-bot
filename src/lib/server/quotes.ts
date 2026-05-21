@@ -14,7 +14,8 @@ export interface Quote {
 	after: string | null;
 	title: string;
 	author: string;
-	nsfw?: 'sfw' | 'unknown';
+	/** Audience rating from curios — ordered kids < family < mature, plus unrated. */
+	rating: 'kids' | 'family' | 'mature' | 'unrated';
 	lang?: string;
 	source?: string;
 }

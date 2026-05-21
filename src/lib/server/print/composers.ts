@@ -81,7 +81,13 @@ export async function composeText(
 	// getSchedule reads the cached .ics — empty for a non-kid, so their brief
 	// is just the household sections.
 	const schedule = await getSchedule(kind, scheduleDateFor(date, day));
-	return sectionsToText(d.date, recipientToSections(kind, d, schedule), d.closing, recipientName(kind));
+	return sectionsToText(
+		d.date,
+		recipientToSections(kind, d, schedule),
+		d.closing,
+		recipientName(kind),
+		d.printedAt
+	);
 }
 
 /**

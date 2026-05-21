@@ -10,5 +10,10 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async () => {
 	const who = getRecipients()[0] ?? '';
 	const d = await gatherBrief();
-	return { date: d.date, sections: recipientToSections(who, d), closing: d.closing };
+	return {
+		date: d.date,
+		sections: recipientToSections(who, d),
+		closing: d.closing,
+		printedAt: d.printedAt
+	};
 };

@@ -8,7 +8,7 @@ Family kiosk + thermal printer running on a Surface Pro 5 w/Linux, MUNBYN ITPP09
 
 ```bash
 npm run dev        # http://localhost:8000/  (vite.config.ts pins the port)
-npm test           # vitest --run (99 tests, fast)
+npm test           # vitest --run (102 tests, fast)
 npm run check      # svelte-check (type errors)
 npm run lint       # prettier + eslint
 npm run build      # adapter-node → build/index.js
@@ -33,7 +33,7 @@ The live dashboard runs on the kiosk box at **`http://sp5.local/`** (home LAN) �
 - **croner** auto-discovered jobs (one file per job in `src/lib/server/jobs/`) — see [`docs/jobs.md`](docs/jobs.md)
 - **node-thermal-printer + node-usb (libusb)** — see [`docs/printers.md`](docs/printers.md)
 - **Vercel AI SDK + AI Gateway** — agent runtime (planned; see [`docs/agent.md`](docs/agent.md))
-- **LogTape** — structured logging (planned; current code uses thin `log()` wrapper at `$lib/server/log.ts`)
+- **LogTape** — structured logging at `$lib/server/log.ts` — see [`docs/logging.md`](docs/logging.md)
 
 ## Where things live
 
@@ -44,16 +44,16 @@ chota.config.example.ts  # committed reference shape — uses placeholder names
 src/
   routes/                # pages (/, /clock, /weather, /lists, /morning, /admin, /print)
   lib/components/        # Svelte UI (Clock, Weather, Calendar, Bus, Lists, Chores, PrintMorning)
-  lib/components/print/  # BriefSheet — the screenshot-target sheet for the morning print
+  lib/components/print/  # BriefSheet — the screenshot-target sheet for the printed briefs
   lib/server/
     config.ts            # loads chota.config.ts → getConfig() / findKid()
     chores.ts            # daily rotation lookup
     tools/               # weather, bus, calendar, sentral, ticktick, tmdb, apod, bootprint
-    print/               # morning + sections + render + printer + composers + snapshot
+    print/               # brief + weather-block + sections + composers + render + snapshot + printer
     jobs/                # croner-scheduled jobs (auto-discovered; one file = one job)
     db/                  # Drizzle schema + client
     auth.ts              # better-auth config
-    log.ts               # log() wrapper
+    log.ts               # LogTape structured logging
 
 deploy/                  # production deploy: deploy.sh + chota.service
 scripts/                 # ad-hoc / exploratory (printer-test, sync-quotes, *-explore)
@@ -80,7 +80,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/tools.md`](docs/tools.md) — tool roadmap (built + planned + API keys checklist).
 - [`docs/agent.md`](docs/agent.md) — agent integration spec (pre-implementation).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot design (Phase 3, pre-implementation).
-- [`docs/logging.md`](docs/logging.md) — LogTape design (proposal, not yet built).
+- [`docs/logging.md`](docs/logging.md) — LogTape structured logging: design + what shipped.
 
 ---
 
