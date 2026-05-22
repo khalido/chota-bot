@@ -11,7 +11,7 @@
  * gets their school timetable. Choosing what a recipient sees is just code
  * here — no JSON config / registry yet.
  */
-import type { BriefData, FamilyTask } from './brief';
+import type { BriefData } from './brief';
 import type { SchedulePeriod } from '$lib/server/tools/sentral';
 import { getConfig } from '$lib/server/config';
 import { parseEventPeople } from '$lib/server/people';
@@ -24,8 +24,9 @@ type BodyByKind =
 	| {
 			kind: 'events';
 			events: { time: string; summary: string; people: string[] }[];
-			/** The recipient's own "Family" list to-dos, listed under the events. */
-			tasks: { title: string; overdue: boolean }[];
+			/** To-dos listed under the events — each with its overdue flag and the
+			    people (TickTick tags) it's assigned to, rendered as chips. */
+			tasks: { title: string; overdue: boolean; people: string[] }[];
 	  }
 	| { kind: 'chores'; rows: { person: string; chores: string }[] }
 	| {
@@ -54,7 +55,14 @@ type BodyByKind =
 			busLine?: string;
 	  }
 	| { kind: 'puzzle'; q: string }
-	| { kind: 'fact'; text: string; image?: string };
+	| { kind: 'fact'; text: string; image?: string }
+	| {
+			/** A TV / comic-strip quote — body lines plus a separate attribution
+			    so a renderer can set it inline and styled, not as a stray line. */
+			kind: 'quote';
+			lines: string[];
+			attribution: string;
+	  };
 
 export type PrintSectionBody = { title: string } & BodyByKind;
 export type PrintSection = PrintSectionBody & { n: number };
@@ -105,7 +113,7 @@ function todaySection(d: BriefData, who: string): PrintSectionBody | null {
 	const tasks = d.familyTasks
 		.filter((t) => t.people.some((p) => p.toLowerCase() === who.toLowerCase()))
 		.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
-		.map((t) => ({ title: t.title, overdue: t.when === 'overdue' }));
+		.map((t) => ({ title: t.title, overdue: t.when === 'overdue', people: t.people }));
 	if (!events.length && !tasks.length) return null;
 	return { title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY', kind: 'events', events, tasks };
 }
@@ -117,29 +125,23 @@ function choresSection(d: BriefData): PrintSectionBody | null {
 }
 
 /**
- * Parents-only overview of the kids' "Family" list tasks for the day — one
- * compressed row per kid (chores-style), then a "Family" row for unassigned
- * tasks. Overdue tasks take a `!` prefix and sort first. A parent's own tasks
- * are left out — they read those in their own TODAY section. null when nothing
- * is assigned to a kid or unassigned.
+ * Parents-only overview of the kids' "Family" list tasks for the day — one line
+ * per task with its overdue flag and assignee chips, the same layout TODAY uses
+ * for events. Unassigned tasks get a "Family" chip; a parent's own tasks are
+ * left out (they read those in their own TODAY section). Overdue tasks sort
+ * first. null when nothing is assigned to a kid or unassigned.
  */
 function familySection(d: BriefData): PrintSectionBody | null {
-	const label = (tasks: FamilyTask[]) =>
-		tasks
-			.slice()
-			.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
-			.map((t) => (t.when === 'overdue' ? `!${t.title}` : t.title))
-			.join(', ');
-	const rows: { person: string; chores: string }[] = [];
-	for (const kid of d.kids) {
-		const mine = d.familyTasks.filter((t) =>
-			t.people.some((p) => p.toLowerCase() === kid.toLowerCase())
-		);
-		if (mine.length) rows.push({ person: kid, chores: label(mine) });
-	}
-	const unassigned = d.familyTasks.filter((t) => t.people.length === 0);
-	if (unassigned.length) rows.push({ person: 'Family', chores: label(unassigned) });
-	return rows.length ? { title: 'FAMILY', kind: 'chores', rows } : null;
+	const kidSet = new Set(d.kids.map((k) => k.toLowerCase()));
+	const tasks = d.familyTasks
+		.filter((t) => t.people.length === 0 || t.people.some((p) => kidSet.has(p.toLowerCase())))
+		.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
+		.map((t) => ({
+			title: t.title,
+			overdue: t.when === 'overdue',
+			people: t.people.length ? t.people : ['Family']
+		}));
+	return tasks.length ? { title: 'FAMILY', kind: 'events', events: [], tasks } : null;
 }
 
 /** The shopping list — shown to everyone. The evening brief adds a "bought today" recap. */
@@ -165,17 +167,22 @@ function funQuoteSection(d: BriefData): PrintSectionBody | null {
 	if (!d.funQuote) return null;
 	const { quote, speaker, title } = d.funQuote;
 	const attribution = speaker ? `${speaker}, ${title}` : title;
-	return { title: 'QUOTE', kind: 'lines', lines: [...quote.split('\n'), `— ${attribution}`] };
+	return { title: 'QUOTE', kind: 'quote', lines: quote.split('\n'), attribution };
 }
 
-/** A daily picture + fact (bootprint.space). Skipped when the lookup fails. */
+/**
+ * A daily picture + fact (bootprint.space). Skipped when the lookup fails. The
+ * picture rides along only when `print.factImage` is on — off by default, so
+ * the brief stays text-only until the image is deliberately enabled.
+ */
 function factSection(d: BriefData): PrintSectionBody | null {
 	if (!d.fact) return null;
+	const withImage = getConfig().print?.factImage ?? false;
 	return {
 		title: 'DID YOU KNOW',
 		kind: 'fact',
 		text: d.fact.text,
-		...(d.fact.image ? { image: d.fact.image } : {})
+		...(withImage && d.fact.image ? { image: d.fact.image } : {})
 	};
 }
 
@@ -258,7 +265,8 @@ export function sectionsToText(
 					lines.push(`${e.time.padEnd(11, ' ')}  ${e.summary}${who}`);
 				}
 				for (const t of s.tasks) {
-					lines.push(`${(t.overdue ? 'overdue' : 'to-do').padEnd(11, ' ')}  ${t.title}`);
+					const who = t.people.length ? `  (${t.people.join('+')})` : '';
+					lines.push(`${(t.overdue ? 'overdue' : 'to-do').padEnd(11, ' ')}  ${t.title}${who}`);
 				}
 				break;
 			case 'chores':
@@ -283,6 +291,9 @@ export function sectionsToText(
 				if (s.reminder) lines.push(`  -> ${s.reminder}`);
 				for (const u of s.upcoming ?? []) lines.push(`  ${u.label} — ${u.when}`);
 				if (s.busLine) lines.push(`  ${s.busLine}`);
+				break;
+			case 'quote':
+				lines.push(...s.lines, `— ${s.attribution}`);
 				break;
 			case 'puzzle':
 				lines.push(s.q);

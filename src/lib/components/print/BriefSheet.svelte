@@ -128,12 +128,19 @@
 					<div class="flex items-center justify-between gap-4">
 						<div class="min-w-0 flex-1">
 							{#each s.lines as line, i (i)}
-								{@const isTomorrow = /^->\s*tmrw/i.test(line)}
-								<p
-									class="whitespace-pre-wrap {i === 0 ? 'text-lg' : ''} {isTomorrow ? 'mt-2' : ''}"
-								>
-									{prettyWeather(line, i === 0)}
-								</p>
+								{@const isTomorrow = /^tmrw\b/i.test(line)}
+								{#if isTomorrow}
+									<!-- Tomorrow's one-line outlook: a labelled line, not an
+									     arrow bullet, so it doesn't read as today's weather. -->
+									<p class="mt-2 whitespace-pre-wrap">
+										<span class="font-bold">Tomorrow:</span>
+										{line.replace(/^tmrw:?\s*/i, '')}
+									</p>
+								{:else}
+									<p class="whitespace-pre-wrap {i === 0 ? 'text-lg' : ''}">
+										{prettyWeather(line, i === 0)}
+									</p>
+								{/if}
 							{/each}
 						</div>
 						<Icon size={72} strokeWidth={2} class="shrink-0" aria-hidden="true" />
@@ -164,6 +171,12 @@
 										? 'bg-black text-white'
 										: ''}">{t.overdue ? 'overdue' : 'to-do'}</span
 								>
+								{#each t.people as p (p)}
+									<span
+										class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase"
+										>{p}</span
+									>
+								{/each}
 							</li>
 						{/each}
 					</ul>
@@ -228,6 +241,18 @@
 					<div class="border-2 border-black p-3 leading-relaxed">{s.q}</div>
 				{:else if s.kind === 'fact'}
 					<p class="leading-relaxed">{s.text}</p>
+					{#if s.image}
+						<!-- Only present when `print.factImage` is enabled (sections.ts). -->
+						<img src={s.image} alt="" class="mt-3 w-full" />
+					{/if}
+				{:else if s.kind === 'quote'}
+					<!-- The attribution rides the same line as the quote, wrapping only
+					     if it doesn't fit — italic + grey so it reads as a footnote. -->
+					<p class="leading-relaxed whitespace-pre-wrap">
+						{s.lines.join('\n')}<span class="ml-2 text-[14px] italic" style:color={FOOTNOTE}
+							>— {s.attribution}</span
+						>
+					</p>
 				{:else}
 					<!-- Backstop: a section kind with no branch above renders visibly,
 					     not as a silent blank. sectionsToText has a compile-time guard. -->

@@ -68,6 +68,9 @@ export default defineChota({
 			notes: 'Notes' // general family notes
 		}
 	},
+	// Print-output options. `factImage` adds the bootprint picture to the DID
+	// YOU KNOW section — off for now, flip to true to print it.
+	print: { factImage: false },
 	// Thermal printer (MUNBYN ITPP098P or similar 80mm ESC/POS). Vendor/product
 	// IDs from `lsusb` / `system_profiler SPUSBDataType`. Column width is set in
 	// code (Font A ≈ 46 cols on an 80mm head); the "test" print's ruler confirms.

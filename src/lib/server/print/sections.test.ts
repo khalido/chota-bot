@@ -57,7 +57,7 @@ const DATA: BriefData = {
 		'[ PARTLY SUNNY ]  18C now (feels 22C)',
 		'rain 1-3pm  ::##::',
 		'-> 17-19C today, wind 12km/h',
-		'-> tmrw: light rain, 14-16C'
+		'tmrw: light rain, 14-16C'
 	],
 	weatherIcon: 'cloud-sun',
 	events: EVENTS,
@@ -132,7 +132,7 @@ describe('print pipeline', () => {
 			[ PARTLY SUNNY ]  18C now (feels 22C)
 			rain 1-3pm  ::##::
 			-> 17-19C today, wind 12km/h
-			-> tmrw: light rain, 14-16C
+			tmrw: light rain, 14-16C
 
 			02 SCHOOL · T1 Wk3
 			Creativity Yr7  8:50-9:50am  1D.02
@@ -148,8 +148,8 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
-			overdue      Pack swimming gear
-			to-do        Sign the excursion form
+			overdue      Pack swimming gear  (Kid1)
+			to-do        Sign the excursion form  (Kid1)
 
 			04 CHORES
 			Kid1: Walk and feed the dog
@@ -194,7 +194,7 @@ describe('print pipeline', () => {
 			[ PARTLY SUNNY ]  18C now (feels 22C)
 			rain 1-3pm  ::##::
 			-> 17-19C today, wind 12km/h
-			-> tmrw: light rain, 14-16C
+			tmrw: light rain, 14-16C
 
 			02 SCHOOL
 			School holidays
@@ -204,8 +204,8 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
-			overdue      Pack swimming gear
-			to-do        Sign the excursion form
+			overdue      Pack swimming gear  (Kid1)
+			to-do        Sign the excursion form  (Kid1)
 
 			04 CHORES
 			Kid1: Walk and feed the dog
@@ -246,22 +246,23 @@ describe('print pipeline', () => {
 			[ PARTLY SUNNY ]  18C now (feels 22C)
 			rain 1-3pm  ::##::
 			-> 17-19C today, wind 12km/h
-			-> tmrw: light rain, 14-16C
+			tmrw: light rain, 14-16C
 
 			02 TODAY
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
-			to-do        Renew car rego
+			to-do        Renew car rego  (Parent1)
 
 			03 CHORES
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
 			04 FAMILY
-			Kid1: !Pack swimming gear, Sign the excursion form
-			Kid2: !Return library books
-			Family: Book the dentist
+			overdue      Pack swimming gear  (Kid1)
+			overdue      Return library books  (Kid2)
+			to-do        Sign the excursion form  (Kid1)
+			to-do        Book the dentist  (Family)
 
 			05 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
@@ -299,22 +300,23 @@ describe('print pipeline', () => {
 			[ PARTLY SUNNY ]  18C now (feels 22C)
 			rain 1-3pm  ::##::
 			-> 17-19C today, wind 12km/h
-			-> tmrw: light rain, 14-16C
+			tmrw: light rain, 14-16C
 
 			02 TOMORROW
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
-			to-do        Renew car rego
+			to-do        Renew car rego  (Parent1)
 
 			03 CHORES
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
 			04 FAMILY
-			Kid1: !Pack swimming gear, Sign the excursion form
-			Kid2: !Return library books
-			Family: Book the dentist
+			overdue      Pack swimming gear  (Kid1)
+			overdue      Return library books  (Kid2)
+			to-do        Sign the excursion form  (Kid1)
+			to-do        Book the dentist  (Family)
 
 			05 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
