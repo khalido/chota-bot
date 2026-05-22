@@ -78,6 +78,7 @@ const DATA: BriefData = {
 		{ title: 'Sign the excursion form', people: ['Kid1'], when: 'today' },
 		{ title: 'Pack swimming gear', people: ['Kid1'], when: 'overdue' },
 		{ title: 'Return library books', people: ['Kid2'], when: 'overdue' },
+		{ title: 'Bring library bag', people: ['Kid1'], when: 'tomorrow' },
 		{ title: 'Book the dentist', people: [], when: 'today' },
 		{ title: 'Renew car rego', people: ['Parent1'], when: 'today' }
 	],
@@ -149,7 +150,8 @@ describe('print pipeline', () => {
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
 			overdue      Pack swimming gear  (Kid1)
-			to-do        Sign the excursion form  (Kid1)
+			             Sign the excursion form  (Kid1)
+			tmrw         Bring library bag  (Kid1)
 
 			04 CHORES
 			Kid1: Walk and feed the dog
@@ -205,7 +207,8 @@ describe('print pipeline', () => {
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
 			overdue      Pack swimming gear  (Kid1)
-			to-do        Sign the excursion form  (Kid1)
+			             Sign the excursion form  (Kid1)
+			tmrw         Bring library bag  (Kid1)
 
 			04 CHORES
 			Kid1: Walk and feed the dog
@@ -252,7 +255,7 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
-			to-do        Renew car rego  (Parent1)
+			             Renew car rego  (Parent1)
 
 			03 CHORES
 			Kid1: Walk and feed the dog
@@ -261,8 +264,9 @@ describe('print pipeline', () => {
 			04 FAMILY
 			overdue      Pack swimming gear  (Kid1)
 			overdue      Return library books  (Kid2)
-			to-do        Sign the excursion form  (Kid1)
-			to-do        Book the dentist  (Family)
+			             Sign the excursion form  (Kid1)
+			             Book the dentist  (Family)
+			tmrw         Bring library bag  (Kid1)
 
 			05 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
@@ -306,7 +310,7 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
-			to-do        Renew car rego  (Parent1)
+			             Renew car rego  (Parent1)
 
 			03 CHORES
 			Kid1: Walk and feed the dog
@@ -315,8 +319,9 @@ describe('print pipeline', () => {
 			04 FAMILY
 			overdue      Pack swimming gear  (Kid1)
 			overdue      Return library books  (Kid2)
-			to-do        Sign the excursion form  (Kid1)
-			to-do        Book the dentist  (Family)
+			             Sign the excursion form  (Kid1)
+			             Book the dentist  (Family)
+			tmrw         Bring library bag  (Kid1)
 
 			05 SHOPPING
 			Choc, Hot Choc Powder, Coriander,

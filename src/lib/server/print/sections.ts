@@ -24,9 +24,9 @@ type BodyByKind =
 	| {
 			kind: 'events';
 			events: { time: string; summary: string; people: string[] }[];
-			/** To-dos listed under the events — each with its overdue flag and the
-			    people (TickTick tags) it's assigned to, rendered as chips. */
-			tasks: { title: string; overdue: boolean; people: string[] }[];
+			/** To-dos listed under the events — each with its due-window (today /
+			    tomorrow / overdue) and the people (TickTick tags) it's assigned to. */
+			tasks: { title: string; when: 'today' | 'tomorrow' | 'overdue'; people: string[] }[];
 	  }
 	| { kind: 'chores'; rows: { person: string; chores: string }[] }
 	| {
@@ -87,6 +87,11 @@ function numberSections(bodies: (PrintSectionBody | null)[]): PrintSection[] {
 		.map((b, i) => ({ ...b, n: i + 1 }));
 }
 
+/** Sort weight for a task's due-window — overdue floats up, tomorrow sinks. */
+function taskRank(when: 'today' | 'tomorrow' | 'overdue'): number {
+	return when === 'overdue' ? 0 : when === 'today' ? 1 : 2;
+}
+
 // ── per-section builders ────────────────────────────────────────────────────
 
 function weatherSection(d: BriefData): PrintSectionBody | null {
@@ -112,8 +117,8 @@ function todaySection(d: BriefData, who: string): PrintSectionBody | null {
 	}));
 	const tasks = d.familyTasks
 		.filter((t) => t.people.some((p) => p.toLowerCase() === who.toLowerCase()))
-		.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
-		.map((t) => ({ title: t.title, overdue: t.when === 'overdue', people: t.people }));
+		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
+		.map((t) => ({ title: t.title, when: t.when, people: t.people }));
 	if (!events.length && !tasks.length) return null;
 	return { title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY', kind: 'events', events, tasks };
 }
@@ -135,10 +140,10 @@ function familySection(d: BriefData): PrintSectionBody | null {
 	const kidSet = new Set(d.kids.map((k) => k.toLowerCase()));
 	const tasks = d.familyTasks
 		.filter((t) => t.people.length === 0 || t.people.some((p) => kidSet.has(p.toLowerCase())))
-		.sort((a, b) => Number(b.when === 'overdue') - Number(a.when === 'overdue'))
+		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
 		.map((t) => ({
 			title: t.title,
-			overdue: t.when === 'overdue',
+			when: t.when,
 			people: t.people.length ? t.people : ['Family']
 		}));
 	return tasks.length ? { title: 'FAMILY', kind: 'events', events: [], tasks } : null;
@@ -266,7 +271,8 @@ export function sectionsToText(
 				}
 				for (const t of s.tasks) {
 					const who = t.people.length ? `  (${t.people.join('+')})` : '';
-					lines.push(`${(t.overdue ? 'overdue' : 'to-do').padEnd(11, ' ')}  ${t.title}${who}`);
+					const tag = t.when === 'overdue' ? 'overdue' : t.when === 'tomorrow' ? 'tmrw' : '';
+					lines.push(`${tag.padEnd(11, ' ')}  ${t.title}${who}`);
 				}
 				break;
 			case 'chores':

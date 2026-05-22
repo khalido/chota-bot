@@ -163,14 +163,26 @@
 								{/each}
 							</li>
 						{/each}
+						{#if s.events.length && s.tasks.length}
+							<!-- A faint divider between the calendar events and the to-dos. -->
+							<li
+								aria-hidden="true"
+								class="border-t border-dashed"
+								style:border-color={FOOTNOTE}
+							></li>
+						{/if}
 						{#each s.tasks as t, i (`task-${i}`)}
 							<li class="flex items-baseline gap-2">
 								<span class="flex-1">{t.title}</span>
-								<span
-									class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase {t.overdue
-										? 'bg-black text-white'
-										: ''}">{t.overdue ? 'overdue' : 'to-do'}</span
-								>
+								{#if t.when !== 'today'}
+									<!-- A "today" to-do skips the chip; overdue is filled, tmrw outlined. -->
+									<span
+										class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase {t.when ===
+										'overdue'
+											? 'bg-black text-white'
+											: ''}">{t.when === 'overdue' ? 'overdue' : 'tmrw'}</span
+									>
+								{/if}
 								{#each t.people as p (p)}
 									<span
 										class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase"
