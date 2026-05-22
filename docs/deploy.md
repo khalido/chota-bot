@@ -109,11 +109,18 @@ Caddy reverse-proxy and mDNS are listed at the bottom as optional hardening — 
 From your Mac:
 
 ```bash
-npm run deploy    # = ssh chota 'cd ~/code/chota-bot && bash deploy/deploy.sh'
+npm run deploy    # = bash deploy/push.sh  (preflight, then deploy.sh on the kiosk)
 npm run logs      # = ssh chota 'sudo journalctl -u chota -f'
 ```
 
-(`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) The deploy script is idempotent (re-running with no new commits is a no-op):
+(`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) `push.sh` is a
+thin Mac-side wrapper: it runs a timed preflight SSH check before handing off to
+the kiosk-side `deploy.sh`. The preflight exists because Tailscale SSH's periodic
+re-auth check blocks the session on a "visit this URL" prompt — without it the
+real deploy hangs mid-run. On a stale auth the preflight times out fast and
+prints the URL; authenticate, then re-run `npm run deploy`.
+
+The deploy script (`deploy.sh`, on the kiosk) is idempotent (re-running with no new commits is a no-op):
 
 1. `git fetch` + `git pull --ff-only origin main` (fails loudly on a non-fast-forward — investigate, don't paper over)
 2. If `package-lock.json` changed → `npm ci`

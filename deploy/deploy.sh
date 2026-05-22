@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Manual deploy on the kiosk box. Run from your Mac:
-#
-#   ssh chota 'cd ~/code/chota-bot && bash deploy/deploy.sh'
+# Manual deploy — runs on the kiosk box. Don't invoke this directly; from your
+# Mac run `npm run deploy`, which calls `deploy/push.sh` (a preflight SSH guard)
+# and that hands off to this script over SSH.
 #
 # What it does (idempotent — re-runnable, no-op when there's nothing new):
 #   - git fetch + fast-forward pull from origin/main (fails on conflict)
