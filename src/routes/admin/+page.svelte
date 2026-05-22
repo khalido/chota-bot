@@ -35,7 +35,9 @@
 		pingJson = null;
 		try {
 			const r = await (await fetch('/api/ticktick/ping')).json();
-			pingSummary = r.ok ? `✓ ${r.ms}ms · ${r.projects} projects` : `✗ ${r.ms}ms · ${r.error ?? 'failed'}`;
+			pingSummary = r.ok
+				? `✓ ${r.ms}ms · ${r.projects} projects`
+				: `✗ ${r.ms}ms · ${r.error ?? 'failed'}`;
 			pingJson = JSON.stringify(r, null, 2);
 		} catch (e) {
 			pingSummary = `✗ ${e instanceof Error ? e.message : String(e)}`;
@@ -51,7 +53,8 @@
 		try {
 			const res = await fetch(`/api/print/${kind}${query}`, { method: 'POST' });
 			const body = await res.json();
-			const meta = body.lines != null ? `${body.lines} lines, ${body.bytes} bytes` : `${body.bytes} bytes`;
+			const meta =
+				body.lines != null ? `${body.lines} lines, ${body.bytes} bytes` : `${body.bytes} bytes`;
 			printResult = body.ok
 				? `✓ ${label}: ${meta} (${body.mode})`
 				: `✗ ${label}: ${body.error ?? 'failed'}`;
@@ -184,6 +187,28 @@
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div class="font-mono text-xs text-slate-500 dark:text-neutral-500">
 				<span title="package version + git commit">{version}</span>
+				{#if data.deploy.state === 'up-to-date'}
+					<span
+						class="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+						>up to date</span
+					>
+				{:else if data.deploy.state === 'behind'}
+					<span
+						class="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+						title="origin/main is at {data.deploy.latest} — run npm run deploy"
+						>{data.deploy.behind} commit{data.deploy.behind === 1 ? '' : 's'} behind</span
+					>
+				{:else if data.deploy.state === 'ahead'}
+					<span
+						class="ml-1.5 rounded bg-sky-100 px-1.5 py-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400"
+						>ahead of main</span
+					>
+				{:else}
+					<span
+						class="ml-1.5 text-slate-400 dark:text-neutral-600"
+						title="couldn't reach the git remote">version check failed</span
+					>
+				{/if}
 				<span class="mx-1.5 text-slate-300 dark:text-neutral-700">·</span>
 				<span>{data.now}</span>
 			</div>
@@ -245,10 +270,13 @@
 		</div>
 		{#if pingJson}
 			<details class="mt-2">
-				<summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300">
+				<summary
+					class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+				>
 					raw JSON ▸
 				</summary>
-				<pre class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{pingJson}</pre>
+				<pre
+					class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{pingJson}</pre>
 			</details>
 		{/if}
 	</section>
@@ -335,14 +363,18 @@
 				{s.title}
 			</h2>
 			<p class="mt-2 font-mono text-sm text-slate-700 dark:text-neutral-300">{s.summary}</p>
-			<details class="mt-3 group">
+			<details class="group mt-3">
 				<summary
 					class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
 				>
 					raw JSON ▸
 				</summary>
 				<pre
-					class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{JSON.stringify(s.data, null, 2)}</pre>
+					class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{JSON.stringify(
+						s.data,
+						null,
+						2
+					)}</pre>
 			</details>
 		</section>
 	{/each}
