@@ -93,11 +93,14 @@ export function formatGusWeather(weather: Weather, now: Date = new Date()): stri
 	if (weather.uvIndex >= 3) bits.push(`UV ${Math.round(weather.uvIndex)}`);
 	lines.push(`-> ${bits.join(', ')}`);
 
-	// One short line for tomorrow (condition + range, or rain onset).
+	// One short line for tomorrow (condition + range, or rain onset). It is a
+	// distinct line about a different day, so it deliberately *doesn't* carry
+	// the "-> " arrow the today bullets use — renderers key off the "tmrw:"
+	// prefix to set it apart.
 	const tm = tomorrowSummary(weather, thresholds, now);
 	if (tm) {
 		lines.push(
-			`-> tmrw: ${tm
+			`tmrw: ${tm
 				.replace(/^Tomorrow:\s*/, '')
 				.replace(/\.$/, '')
 				.replace(/^./, (c) => c.toLowerCase())}`

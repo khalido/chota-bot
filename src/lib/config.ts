@@ -95,6 +95,13 @@ export interface ChotaConfig {
 	ticktick?: {
 		lists?: Record<string, string>;
 	};
+	/** Print-output options (what the briefs include). */
+	print?: {
+		/** Print the bootprint picture alongside the DID YOU KNOW fact.
+		 *  Off by default — kept as a toggle so the image can be enabled
+		 *  later without re-plumbing the fetch. */
+		factImage?: boolean;
+	};
 	/** Thermal printer USB IDs + paper geometry. Vary per unit — confirm
 	 *  yours with `node scripts/printer-test.mjs visible`. */
 	printer?: {

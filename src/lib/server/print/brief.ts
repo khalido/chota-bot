@@ -133,7 +133,7 @@ export async function gatherBrief({
 		return null;
 	});
 	const schoolUpcoming = await getUpcomingSchoolEvents({ from: ref, withinDays: 14 })
-		.then((events) => events.map((e) => ({ label: e.label, when: schoolWhen(e, now) })))
+		.then((events) => events.map((e) => ({ label: e.label, when: schoolWhen(e, ref) })))
 		.catch((err) => {
 			logErr('brief', 'school events lookup failed:', err);
 			return [] as { label: string; when: string }[];
@@ -239,14 +239,15 @@ function fmtDay(ymd: string): string {
 }
 
 /**
- * A school event's date(s) relative to `now`: "today" / "tomorrow" when it's a
- * single day close by, "Mon 2 Feb" otherwise, and a "Tue 27–Fri 30 Jan" span
- * for a multi-day block.
+ * A school event's date(s) relative to the brief's day (`ref` — tomorrow on the
+ * evening print, so "today"/"tomorrow" read correctly to whoever holds the
+ * sheet): "today" / "tomorrow" when it's a single day close by, "Mon 2 Feb"
+ * otherwise, and a "Tue 27–Fri 30 Jan" span for a multi-day block.
  */
-function schoolWhen(e: { start: string; end: string }, now: Date): string {
+function schoolWhen(e: { start: string; end: string }, ref: Date): string {
 	if (e.start !== e.end) return `${fmtDay(e.start)}–${fmtDay(e.end)}`;
-	if (e.start === sydneyYMD(now)) return 'today';
-	if (e.start === sydneyYMD(new Date(now.getTime() + 86_400_000))) return 'tomorrow';
+	if (e.start === sydneyYMD(ref)) return 'today';
+	if (e.start === sydneyYMD(new Date(ref.getTime() + 86_400_000))) return 'tomorrow';
 	return fmtDay(e.start);
 }
 
