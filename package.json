@@ -19,7 +19,7 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
-		"deploy": "ssh chota 'cd ~/code/chota-bot && bash deploy/deploy.sh'",
+		"deploy": "bash deploy/push.sh",
 		"logs": "ssh chota 'sudo journalctl -u chota -f'"
 	},
 	"devDependencies": {
