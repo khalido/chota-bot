@@ -60,8 +60,9 @@ export interface FamilyTask {
 	title: string;
 	/** Family-member names this task is assigned to; empty = unassigned. */
 	people: string[];
-	/** `today` = due on the brief's day; `overdue` = past due and still open. */
-	when: 'today' | 'overdue';
+	/** `today` = due on the brief's day; `tomorrow` = due the next day;
+	 *  `overdue` = past due and still open. */
+	when: 'today' | 'tomorrow' | 'overdue';
 }
 
 /**
@@ -214,17 +215,18 @@ export async function gatherBrief({
 
 /**
  * Where a TickTick task falls relative to the brief's day (`ref`): `today` =
- * due that day, `overdue` = due before it and still open, null = no due date
- * or due in the future (not surfaced). `sydneyYMD` is zero-padded `YYYY-MM-DD`,
- * so a plain string compare orders the dates.
+ * due that day, `tomorrow` = due the next day, `overdue` = due before it and
+ * still open, null = no due date or due further out (not surfaced). `sydneyYMD`
+ * is zero-padded `YYYY-MM-DD`, so a plain string compare orders the dates.
  */
-function taskWhen(dueDate: string | undefined, ref: Date): 'today' | 'overdue' | null {
+function taskWhen(dueDate: string | undefined, ref: Date): 'today' | 'tomorrow' | 'overdue' | null {
 	if (!dueDate) return null;
 	const d = new Date(dueDate);
 	if (Number.isNaN(d.getTime())) return null;
 	const due = sydneyYMD(d);
 	const day = sydneyYMD(ref);
 	if (due === day) return 'today';
+	if (due === sydneyYMD(new Date(ref.getTime() + 86_400_000))) return 'tomorrow';
 	if (due < day) return 'overdue';
 	return null;
 }
