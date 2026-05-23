@@ -26,6 +26,7 @@ import {
 } from '@logtape/logtape';
 import { getRotatingFileSink } from '@logtape/file';
 import { getOpenTelemetrySink } from '@logtape/otel';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { mkdirSync } from 'node:fs';
 import { dev, version } from '$app/environment';
 import { env } from '$env/dynamic/private';
@@ -98,6 +99,15 @@ export async function configureLogging(): Promise<void> {
 			sinks.otel = getOpenTelemetrySink({
 				serviceName: env.OTEL_SERVICE_NAME || 'chota-bot',
 				diagnostics: true,
+				// PostHog-recommended resource attributes (service.name comes from
+				// serviceName above; service.version + deployment.environment ride
+				// here). These are set once per resource — every log record inherits
+				// them — so PostHog can filter / facet without us repeating the
+				// fields on every event.
+				additionalResource: resourceFromAttributes({
+					'service.version': version,
+					'deployment.environment': dev ? 'dev' : 'prod'
+				}),
 				otlpExporterConfig: {
 					url: otlpEndpoint,
 					headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_LOGS_HEADERS)
@@ -142,9 +152,9 @@ function parseOtlpHeaders(raw: string | undefined): Record<string, string> {
 export interface Event {
 	/** Add or overwrite a field. Chainable. */
 	set(key: string, value: unknown): Event;
-	/** Emit at `info` with `outcome: 'ok'` + `durationMs`. */
+	/** Emit at `info` with `outcome: 'ok'` + `duration_ms`. */
 	done(extra?: Record<string, unknown>): void;
-	/** Emit at `error` with `outcome: 'failed'` + `durationMs` + `error`. */
+	/** Emit at `error` with `outcome: 'failed'` + `duration_ms` + `error` + `error_stack?`. */
 	fail(err: unknown, extra?: Record<string, unknown>): void;
 }
 
@@ -155,6 +165,9 @@ export interface Event {
  *   const ev = event('jobs', 'job {job} ran', { job: name });
  *   try { ev.set('summary', await fn()).done(); }
  *   catch (e) { ev.fail(e); }
+ *
+ * Field naming is snake_case (PostHog / OTel convention): `duration_ms`,
+ * `error_stack`, `outcome`. Caller-supplied fields should follow the same.
  */
 export function event(
 	category: string,
@@ -170,15 +183,17 @@ export function event(
 			return ev;
 		},
 		done(extra) {
-			log.info(message, { ...acc, ...extra, durationMs: Date.now() - start, outcome: 'ok' });
+			log.info(message, { ...acc, ...extra, duration_ms: Date.now() - start, outcome: 'ok' });
 		},
 		fail(err, extra) {
+			const isErr = err instanceof Error;
 			log.error(`${message} failed`, {
 				...acc,
 				...extra,
-				durationMs: Date.now() - start,
+				duration_ms: Date.now() - start,
 				outcome: 'failed',
-				error: err instanceof Error ? err.message : String(err)
+				error: isErr ? err.message : String(err),
+				...(isErr && err.stack ? { error_stack: err.stack } : {})
 			});
 		}
 	};
