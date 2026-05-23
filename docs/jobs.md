@@ -46,8 +46,8 @@ src/lib/server/
   jobs/
     CLAUDE.md             # "how to write a job"
     heartbeat.ts          # every 5 min: console.log (debug)
-    morning-print.ts      # daily 06:45: print today's briefs (gated by KIOSK env)
-    evening-print.ts      # Sun–Thu 19:15: print tomorrow's briefs (gated by KIOSK env)
+    morning-print.ts      # Mon–Fri 06:45: per-person briefs (gated by KIOSK env)
+    weekend-print.ts      # Sat+Sun 06:45: one whole-family sheet (gated by KIOSK env)
     sentral-refresh.ts    # weekday mornings: refresh Sentral .ics caches
     sentral-login.ts      # Mondays 04:00: pre-emptive Sentral cookie refresh
     weather-refresh.ts    # warm weather cache
@@ -112,8 +112,8 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 | Name | Pattern | Kind | Purpose |
 |---|---|---|---|
 | `heartbeat` | `*/5 * * * *` | scripted | Debug log |
-| `morning-print` | `45 6 * * *` | scripted | Compose + print today's briefs (gated by `KIOSK=true`) |
-| `evening-print` | `15 19 * * 0-4` | scripted | Compose + print tomorrow's briefs, Sun–Thu (gated by `KIOSK=true`) |
+| `morning-print` | `45 6 * * 1-5` | scripted | Per-person briefs, Mon–Fri (gated by `KIOSK=true`) |
+| `weekend-print` | `45 6 * * 0,6` | scripted | One whole-family sheet, Sat+Sun (gated by `KIOSK=true`) |
 | `sentral-refresh` | `30 6,7,8 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches |
 | `sentral-login` | `0 4 * * 1` | scripted | Mondays — pre-emptive Sentral cookie refresh |
 | `weather-refresh` | refresh cadence | scripted | Warm weather cache |

@@ -17,7 +17,7 @@ import { db } from '$lib/server/db';
 import { account } from '$lib/server/db/auth.schema';
 import { log } from '$lib/server/log';
 import { eq } from 'drizzle-orm';
-import { sydneyDayOfWeek, sydneyTimeOnDay } from '$lib/time';
+import { sydneyDayOfWeek, sydneyTimeOnDay, sydneyYMD } from '$lib/time';
 
 export interface CalendarEvent {
 	id: string;
@@ -39,13 +39,21 @@ export interface GetCalendarOptions {
 	calendarId?: string;
 }
 
-// Cache by range. Custom calendarId bypasses cache.
-const cache = new Map<CalendarRange, CalendarEvent[]>();
+// Cache keyed by `(range, sydneyYMD)` so a 'today'/'tomorrow'/'week' entry
+// can't outlive the date it was computed for — a failed refresh after midnight
+// used to leave yesterday's events cached forever. Custom calendarId bypasses
+// the cache (it's per-test/per-debug, not the shared path).
+const cache = new Map<string, CalendarEvent[]>();
+const cacheKey = (range: CalendarRange, now: Date) => `${range}:${sydneyYMD(now)}`;
 
-/** Read events for a range. Returns cache if hot; delegates to refresh on cold. */
+/** Read events for a range. Returns cache if hot for *today's* key; otherwise refreshes. */
 export async function getCalendar(opts: GetCalendarOptions = {}): Promise<CalendarEvent[]> {
 	const range = opts.range ?? 'today';
-	if (!opts.calendarId && cache.has(range)) return cache.get(range)!;
+	if (!opts.calendarId) {
+		const key = cacheKey(range, new Date());
+		const hit = cache.get(key);
+		if (hit) return hit;
+	}
 	return refreshCalendar(range, opts.calendarId);
 }
 
@@ -64,9 +72,7 @@ export async function refreshCalendar(
 
 	const accessToken = await getStoredGoogleToken();
 	if (!accessToken) {
-		throw new Error(
-			'No Google account connected. Visit /admin and click "Sign in with Google".'
-		);
+		throw new Error('No Google account connected. Visit /admin and click "Sign in with Google".');
 	}
 
 	const client = new OAuth2Client();
@@ -85,7 +91,13 @@ export async function refreshCalendar(
 	});
 
 	const events = (res.data.items ?? []).map(toEvent);
-	if (!customCalendarId) cache.set(range, events);
+	if (!customCalendarId) {
+		const now = new Date();
+		const key = cacheKey(range, now);
+		// Drop any older-day entries for this range so the map can't grow unbounded.
+		for (const k of cache.keys()) if (k.startsWith(`${range}:`) && k !== key) cache.delete(k);
+		cache.set(key, events);
+	}
 	log('calendar', `${events.length} events for range=${range}`);
 	return events;
 }
@@ -156,7 +168,13 @@ function rangeFor(range: CalendarRange, now: Date): { timeMin: Date; timeMax: Da
 		case 'next_week': {
 			// Days until next Monday (Sydney): if today's Sydney day is Mon, next Mon = +7
 			const dayMap: Record<string, number> = {
-				Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7
+				Mon: 1,
+				Tue: 2,
+				Wed: 3,
+				Thu: 4,
+				Fri: 5,
+				Sat: 6,
+				Sun: 7
 			};
 			const daysToNextMon = 8 - (dayMap[sydneyDayOfWeek(now)] ?? 1);
 			const start = addDays(now, daysToNextMon);

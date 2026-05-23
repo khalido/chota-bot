@@ -2,7 +2,7 @@
 
 Family kiosk + thermal printer running on a Surface Pro 5 w/Linux, MUNBYN ITPP098P over USB.
 
-**Status:** Phase 1 shipped. The thermal printer fires at 06:45 (today's brief) daily and 19:15 (tomorrow's brief) Sun–Thu — with weather + bus + chores + per-kid School schedule. Phase 2 = agent loop; Phase 3 = voice.
+**Status:** Phase 1 shipped. The thermal printer fires at 06:45 every day — per-person briefs Mon–Fri (with weather + bus + chores + per-kid School schedule), one whole-family sheet Sat+Sun. Phase 2 = agent loop; Phase 3 = voice.
 
 ## Day-to-day
 

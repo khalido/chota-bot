@@ -1,9 +1,10 @@
-// Daily 06:45 Sydney print — one sheet per family member (everyone in
-// chota.config.ts). A kid's sheet carries their school timetable; the SCHOOL
-// section auto-omits on weekends/no-school, so there's no weekday branching
-// here. Prints the designed image (a screenshot of /print/<who>); composeImage
-// falls back to the canvas renderer if the screenshot path is unavailable. One
-// recipient failing doesn't stop the rest.
+// Weekday 06:45 Sydney print — one sheet per family member (everyone in
+// chota.config.ts). Mon–Fri only; the weekend brief is a separate
+// `weekend-print` job (one family-wide sheet, no per-person split). A kid's
+// sheet carries their school timetable. Prints the designed image (a
+// screenshot of /print/<who>); composeImage falls back to the canvas renderer
+// if the screenshot path is unavailable. One recipient failing doesn't stop
+// the rest.
 //
 // No retry/catch-up here yet — if the box was asleep at 06:45 or the printer was
 // off, the run is just missed. See docs/jobs.md if/when we add a catch-up tick.
@@ -14,7 +15,7 @@ import { getRecipients } from '$lib/server/print/sections';
 import { logErr } from '$lib/server/log';
 import { env } from '$env/dynamic/private';
 
-defineJob('morning-print', '45 6 * * *', async () => {
+defineJob('morning-print', '45 6 * * 1-5', async () => {
 	// Only the kiosk has a printer attached. On a dev machine this would log a
 	// failure every morning at 06:45 — no thanks.
 	if (env.KIOSK !== 'true') return 'skipped (KIOSK env not set)';

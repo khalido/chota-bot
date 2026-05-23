@@ -80,6 +80,14 @@ export function getRecipients(): readonly string[] {
 	return roster.map((n) => n.toLowerCase());
 }
 
+/** The whole-family weekend sheet's recipient slug — one print, not per-person. */
+export const FAMILY_RECIPIENT = 'family';
+
+/** True for any "who" we know how to render — family-config people + the weekend `'family'` sheet. */
+export function isPrintRecipient(who: string): boolean {
+	return who === FAMILY_RECIPIENT || getRecipients().includes(who);
+}
+
 /** Drop nulls, assign 1-based section numbers. */
 function numberSections(bodies: (PrintSectionBody | null)[]): PrintSection[] {
 	return bodies
@@ -127,6 +135,34 @@ function todaySection(d: BriefData, who: string): PrintSectionBody | null {
 function choresSection(d: BriefData): PrintSectionBody | null {
 	const rows = d.chores.map((c) => ({ person: c.person, chores: c.chores.join(', ') }));
 	return rows.length ? { title: 'CHORES', kind: 'chores', rows } : null;
+}
+
+/**
+ * The whole-family TODAY/TOMORROW — the weekend sheet's centre block. Every
+ * calendar event (already shared) plus every open `familyTasks` task regardless
+ * of assignee, each with its chips. Unassigned tasks get a "Family" chip.
+ */
+function familyTodaySection(d: BriefData): PrintSectionBody | null {
+	const events = d.events.map((e) => ({
+		time: e.isAllDay ? 'all day' : sydneyTimeRange(e.start, e.end),
+		summary: e.summary,
+		people: parseEventPeople(e.summary, d.family)
+	}));
+	const tasks = d.familyTasks
+		.slice()
+		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
+		.map((t) => ({
+			title: t.title,
+			when: t.when,
+			people: t.people.length ? t.people : ['Family']
+		}));
+	if (!events.length && !tasks.length) return null;
+	return {
+		title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY',
+		kind: 'events',
+		events,
+		tasks
+	};
 }
 
 /**
@@ -221,6 +257,17 @@ export function recipientToSections(
 	d: BriefData,
 	schedule: SchedulePeriod[] = []
 ): PrintSection[] {
+	// The weekend "whole family" sheet: one print for everyone, no SCHOOL, no
+	// per-person split — every event + every open task on one page.
+	if (who === FAMILY_RECIPIENT) {
+		return numberSections([
+			weatherSection(d),
+			familyTodaySection(d),
+			choresSection(d),
+			shoppingSection(d),
+			...tailSections(d, false)
+		]);
+	}
 	const busLine =
 		d.schoolBus.find((b) => b.kids.some((k) => k.toLowerCase() === who.toLowerCase()))?.line ??
 		null;

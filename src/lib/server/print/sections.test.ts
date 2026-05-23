@@ -285,6 +285,58 @@ describe('print pipeline', () => {
 		`);
 	});
 
+	it('weekend family sheet — one print, every event + every open task, no SCHOOL', () => {
+		const text = sectionsToText(
+			DATA.date,
+			recipientToSections('family', DATA, []),
+			DATA.closing,
+			'Family',
+			DATA.printedAt
+		);
+		expect(text).toMatchInlineSnapshot(`
+			"Wednesday 13 May                        Family
+
+			01 WEATHER
+			[ PARTLY SUNNY ]  18C now (feels 22C)
+			rain 1-3pm  ::##::
+			-> 17-19C today, wind 12km/h
+			tmrw: light rain, 14-16C
+
+			02 TODAY
+			8:30-9am     Drop car for service
+			3:30-4:15pm  Kid1 lesson  (Kid1)
+			all day      Bin night
+			overdue      Pack swimming gear  (Kid1)
+			overdue      Return library books  (Kid2)
+			             Sign the excursion form  (Kid1)
+			             Book the dentist  (Family)
+			             Renew car rego  (Parent1)
+			tmrw         Bring library bag  (Kid1)
+
+			03 CHORES
+			Kid1: Walk and feed the dog
+			Kid2: Empty + load the dishwasher
+
+			04 SHOPPING
+			Choc, Hot Choc Powder, Coriander,
+			Salt for the salt g…
+
+			05 PUZZLE
+			A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?
+
+			06 QUOTE
+			Ah, duck cake!
+			— Bandit, Bluey
+
+			07 DID YOU KNOW
+			Earth is the only planet in the solar system not named after a Greek or Roman god.
+
+			Have a good day, kids -- Chota
+
+			printed Wed 13th May, 6:45am"
+		`);
+	});
+
 	it('evening brief — TOMORROW heading, no puzzle/fact tail, "recently bought" recap', () => {
 		const text = sectionsToText(
 			DATA.date,
