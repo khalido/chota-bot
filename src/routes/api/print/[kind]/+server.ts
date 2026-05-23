@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { composeText, composeImage } from '$lib/server/print/composers';
 import { printText, printPng } from '$lib/server/print/printer';
-import { logErr } from '$lib/server/log';
+import { event } from '$lib/server/log';
 import type { RequestHandler } from './$types';
 
 /**
@@ -53,6 +53,14 @@ export const POST: RequestHandler = async ({ params, url }) => {
 		throw error(404, `Unknown print kind: ${params.kind}`);
 	}
 
+	const ev = event('print', 'printed {who} ({mode}, {day})', {
+		who: params.kind,
+		mode,
+		day,
+		source: 'api',
+		renderer: composed ? (composed.fallback ? 'canvas' : 'screenshot') : 'text',
+		...(composed?.fallback ? { fallback: composed.fallback } : {})
+	});
 	try {
 		let bytes: number;
 		if (composed) {
@@ -64,10 +72,11 @@ export const POST: RequestHandler = async ({ params, url }) => {
 		}
 		// `lines` only meaningful for text mode; null for image (no notion of lines in raster).
 		const lines = mode === 'text' && text ? text.split('\n').length : null;
+		ev.set('bytes', bytes).set('lines', lines).done();
 		return json({ ok: true, kind: params.kind, mode, bytes, lines, fallback: composed?.fallback });
 	} catch (err) {
+		ev.fail(err);
 		const message = err instanceof Error ? err.message : String(err);
-		logErr('print', `${params.kind} (${mode}) print failed:`, err);
 		return json({ ok: false, kind: params.kind, mode, error: message }, { status: 500 });
 	}
 };

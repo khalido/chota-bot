@@ -1,6 +1,6 @@
 # Logging — design notes
 
-Status: **built** — `src/lib/server/log.ts` runs on LogTape: a console sink + a rotating JSON-lines file sink at `data/logs/chota.log`. The cloud (OTel) sink is still deferred. This doc now describes what's there — see [`## What got built`](#what-got-built) for the actual setup; the sections above it are the design that led to it.
+Status: **built** — `src/lib/server/log.ts` runs on LogTape: a console sink, a rotating JSON-lines file sink at `data/logs/chota.log`, and (when `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` is set) an OTLP cloud sink — PostHog Logs by default, but any OTel-native backend works the same way. This doc now describes what's there — see [`## What got built`](#what-got-built) for the actual setup; the sections above it are the design that led to it.
 
 ## The decisions
 
@@ -70,7 +70,7 @@ Packages: `@logtape/logtape` + `@logtape/file`. `src/lib/server/log.ts` is the w
 - **`logger(scope)`** — a LogTape logger for ad-hoc structured lines. `logger('tool/ticktick')` → category `['chota','tool','ticktick']`.
 - **`log(scope, ...args)` / `logErr(scope, ...args)`** — compat shims for the old `console.log` wrapper. Every existing callsite kept working unchanged; they log at `info` / `error`, joining loose args into a message (braces escaped so a stray `{` isn't read as a placeholder) and pulling Errors into an `error` prop.
 
-Sinks: a **console** sink (human-readable, → stdout → `journalctl` / `npm run logs` on the kiosk) and a **rotating file** sink at `data/logs/chota.log` (JSON-lines via `jsonLinesFormatter`, `maxSize` 8 MiB, `maxFiles` 30, `bufferSize: 0`). Base context — `version` (the `<pkgver>+<gitsha>` build stamp from `$app/environment`) and `env` (`dev`/`prod`) — rides every record via `getLogger(['chota']).with({...})`.
+Sinks: a **console** sink (human-readable, → stdout → `journalctl` / `npm run logs` on the kiosk), a **rotating file** sink at `data/logs/chota.log` (JSON-lines via `jsonLinesFormatter`, `maxSize` 8 MiB, `maxFiles` 30, `bufferSize: 0`), and — gated on `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` — an **OTLP** sink via `@logtape/otel`. PostHog Logs is the default backend (`https://us.i.posthog.com/i/v1/logs` + `Authorization=Bearer phc_…` in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`); Axiom / Honeycomb / any OTel-native store works the same way. `diagnostics: true` routes the OTel SDK's own warnings through the `['logtape','meta']` logger (which only writes to console+file, never OTel, to avoid an export-failure loop). Base context — `version` (the `<pkgver>+<gitsha>` build stamp from `$app/environment`) and `env` (`dev`/`prod`) — rides every record via `getLogger(['chota']).with({...})`.
 
 `defineJob`'s wrapper (`scheduler.ts`) emits one `job.run` wide event per fire: `const ev = event('jobs', 'job {job} ran', { job: name }); try { ev.done({ summary }); } catch (e) { ev.fail(e); }`. The 20-row `JOBS[].recent` ring buffer stays — it's /admin's at-a-glance view; the log file is the durable record. `runId` joins the event once the `job_runs` table lands (`docs/jobs.md`).
 
@@ -90,7 +90,7 @@ Legacy `log()` / `logErr()` callsites still work via the compat shims — migrat
 
 ### Instrumented / not
 
-Instrumented: server boot, every job run (`job.run`), and — via the still-live compat shims — the per-tool refresh lines (`tool.*`), printer, snapshot. Deliberately _not_: HTTP requests, SvelteKit hooks, render internals. The `print.brief` / `auth.signin` / `agent.turn` events in the table above are the next migration targets — the endpoints still use `logErr` shims, not `event()` yet.
+Instrumented: server boot, every job run (`job.run`), the per-recipient `print.brief` wide event (from `morning-print`, `weekend-print`, and the `POST /api/print/<kind>` endpoint — fields `who`, `source`, `renderer: 'screenshot' | 'canvas' | 'text'`, `bytes`, `fallback?`, `outcome`, `durationMs`), and — via the still-live compat shims — per-tool refresh lines (`tool.*`), printer, snapshot. Deliberately _not_: HTTP requests, SvelteKit hooks, render internals. `auth.signin` / `agent.turn` are the next migration targets when those flows expand.
 
 ## Settled decisions
 
@@ -98,7 +98,7 @@ Instrumented: server boot, every job run (`job.run`), and — via the still-live
 2. **`@logtape/pretty` for dev?** — skipped. The plain console sink reads fine.
 3. **`withContext`?** — not used. Base context goes in via `.with()` on the root logger instead; once `job_runs` lands, a job's `runId` is just a field on the `job.run` event.
 4. **`job_runs` table** — still pending; lands with the retry/catch-up task (`docs/jobs.md`). It's the future source of `runId`.
-5. **OTel cloud sink** — deferred; see the cloud-sink bullet under [The decisions](#the-decisions). Axiom vs PostHog is a one-URL choice at implementation time.
+5. **OTel cloud sink** — built. `@logtape/otel` ships logs to whatever `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` points at; PostHog Logs is the current backend, but it's one env-var change to swap. `diagnostics: true` so export failures surface (not silent 401/404s); `serviceName` defaults to `'chota-bot'` (override with `OTEL_SERVICE_NAME`). Best-effort, batched — if the endpoint is unreachable the kiosk never notices, the file sink stays the always-works path.
 
 ## LogTape — practical reference
 
