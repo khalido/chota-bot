@@ -17,10 +17,18 @@
  * then loggers resolve lazily to no-ops — so importing this module in tests
  * or scripts opens no file and prints nothing.
  */
-import { configure, getConsoleSink, getLogger, jsonLinesFormatter } from '@logtape/logtape';
+import {
+	configure,
+	getConsoleSink,
+	getLogger,
+	jsonLinesFormatter,
+	type Sink
+} from '@logtape/logtape';
 import { getRotatingFileSink } from '@logtape/file';
+import { getOpenTelemetrySink } from '@logtape/otel';
 import { mkdirSync } from 'node:fs';
 import { dev, version } from '$app/environment';
+import { env } from '$env/dynamic/private';
 
 const LOG_DIR = 'data/logs';
 const LOG_FILE = `${LOG_DIR}/chota.log`;
@@ -54,6 +62,11 @@ declare global {
  * Configure LogTape's sinks. Idempotent, and wrapped in try/catch — logging
  * is a side concern, a bad sink config must never take down the app. Call
  * once at boot, after env vars are available.
+ *
+ * Sinks: console (always, → stdout → journalctl on the kiosk) + a rotating
+ * JSON-lines file at `data/logs/chota.log` + an OTLP sink to PostHog/Axiom/etc
+ * when `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` is set. The OTel sink is best-effort
+ * and batched — a dropped endpoint never blocks local logging.
  */
 export async function configureLogging(): Promise<void> {
 	if (globalThis.__chotaLogConfigured) return;
@@ -61,29 +74,68 @@ export async function configureLogging(): Promise<void> {
 	try {
 		// getRotatingFileSink opens the file immediately — the dir must exist.
 		mkdirSync(LOG_DIR, { recursive: true });
+
+		const sinks: Record<string, Sink> = {
+			console: getConsoleSink(),
+			// bufferSize 0 → unbuffered: nothing is lost on a crash / SIGTERM.
+			// Kiosk volume is a handful of events a day, so sync writes are fine.
+			file: getRotatingFileSink(LOG_FILE, {
+				formatter: jsonLinesFormatter,
+				maxSize: 8 * 1024 * 1024,
+				maxFiles: 30,
+				bufferSize: 0
+			})
+		};
+		const sinkNames = ['console', 'file'];
+
+		// OTLP export — gated on env presence so dev / CI / fresh boxes need zero
+		// setup. PostHog: endpoint `https://us.i.posthog.com/i/v1/logs`, headers
+		// `Authorization=Bearer phc_…`. Axiom / Honeycomb / others work the same
+		// way. `diagnostics: true` surfaces export failures through the
+		// `['logtape','meta']` logger — otherwise a 401/404 would be silent.
+		const otlpEndpoint = env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
+		if (otlpEndpoint) {
+			sinks.otel = getOpenTelemetrySink({
+				serviceName: env.OTEL_SERVICE_NAME || 'chota-bot',
+				diagnostics: true,
+				otlpExporterConfig: {
+					url: otlpEndpoint,
+					headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_LOGS_HEADERS)
+				}
+			});
+			sinkNames.push('otel');
+		}
+
 		await configure({
-			sinks: {
-				console: getConsoleSink(),
-				// bufferSize 0 → unbuffered: nothing is lost on a crash / SIGTERM.
-				// Kiosk volume is a handful of events a day, so sync writes are fine.
-				file: getRotatingFileSink(LOG_FILE, {
-					formatter: jsonLinesFormatter,
-					maxSize: 8 * 1024 * 1024,
-					maxFiles: 30,
-					bufferSize: 0
-				})
-			},
+			sinks,
 			loggers: [
-				{ category: ['chota'], lowestLevel: 'info', sinks: ['console', 'file'] },
+				{ category: ['chota'], lowestLevel: 'info', sinks: sinkNames },
 				// LogTape's own diagnostics (a failed sink, a log sent nowhere).
-				// Without this entry those problems are silent.
+				// Routed to console+file only — never OTel, so a broken OTel sink
+				// can't recursively try to log its own failures over itself.
 				{ category: ['logtape', 'meta'], lowestLevel: 'warning', sinks: ['console', 'file'] }
 			]
 		});
-		root.info('logging configured: console + {file}', { file: LOG_FILE });
+		root.info('logging configured: {sinks}', { sinks: sinkNames.join('+'), file: LOG_FILE });
 	} catch (err) {
 		console.error('LogTape config failed — continuing without it.', err);
 	}
+}
+
+/**
+ * Parse the standard `OTEL_EXPORTER_OTLP_LOGS_HEADERS` format —
+ * `key1=value1,key2=value2` — into a plain headers object. Values can contain
+ * `=` (Bearer tokens), so we split only on the first `=` per pair.
+ */
+function parseOtlpHeaders(raw: string | undefined): Record<string, string> {
+	if (!raw) return {};
+	const out: Record<string, string> = {};
+	for (const pair of raw.split(',')) {
+		const eq = pair.indexOf('=');
+		if (eq <= 0) continue;
+		out[pair.slice(0, eq).trim()] = pair.slice(eq + 1).trim();
+	}
+	return out;
 }
 
 /** A wide event for one unit of work — accumulate fields, end with done/fail. */

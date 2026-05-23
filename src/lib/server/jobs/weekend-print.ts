@@ -9,20 +9,27 @@ import { defineJob } from '$lib/server/scheduler';
 import { composeImage } from '$lib/server/print/composers';
 import { printPng } from '$lib/server/print/printer';
 import { FAMILY_RECIPIENT } from '$lib/server/print/sections';
-import { logErr } from '$lib/server/log';
+import { event } from '$lib/server/log';
 import { env } from '$env/dynamic/private';
 
 // `0,6` = Sun + Sat (cron: Sun=0). The five weekdays are handled by morning-print.
 defineJob('weekend-print', '45 6 * * 0,6', async () => {
 	if (env.KIOSK !== 'true') return 'skipped (KIOSK env not set)';
+	const ev = event('print', 'printed {who} ({source})', {
+		who: FAMILY_RECIPIENT,
+		source: 'weekend-print'
+	});
 	try {
 		const composed = await composeImage(FAMILY_RECIPIENT, undefined, 'today');
 		if (!composed) throw new Error('composeImage returned null');
 		const bytes = await printPng(composed.image);
+		ev.set('bytes', bytes).set('renderer', composed.fallback ? 'canvas' : 'screenshot');
+		if (composed.fallback) ev.set('fallback', composed.fallback);
+		ev.done();
 		const tag = composed.fallback ? ` (canvas: ${composed.fallback})` : '';
 		return `family ${bytes}b${tag}`;
 	} catch (err) {
-		logErr('weekend-print', 'failed:', err);
+		ev.fail(err);
 		return 'family FAILED';
 	}
 });
