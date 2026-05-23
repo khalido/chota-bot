@@ -92,6 +92,19 @@ Legacy `log()` / `logErr()` callsites still work via the compat shims — migrat
 
 Instrumented: server boot, every job run (`job.run`), the per-recipient `print.brief` wide event (from `morning-print`, `weekend-print`, and the `POST /api/print/<kind>` endpoint — fields `who`, `source`, `renderer: 'screenshot' | 'canvas' | 'text'`, `bytes`, `fallback?`, `outcome`, `durationMs`), and — via the still-live compat shims — per-tool refresh lines (`tool.*`), printer, snapshot. Deliberately _not_: HTTP requests, SvelteKit hooks, render internals. `auth.signin` / `agent.turn` are the next migration targets when those flows expand.
 
+## Conventions (PostHog / OTel)
+
+[PostHog's logs best practices](https://posthog.com/docs/logs/best-practices) translate into a handful of rules we follow, most of them by construction:
+
+- **Field names are snake_case.** `duration_ms`, `error_stack`, `posthog_distinct_id` — never `durationMs` / `posthogDistinctId`. PostHog's UI and OTel semconv both treat snake_case as the norm; the `event()` helper sets `duration_ms` / `outcome` / `error` / `error_stack?` to match.
+- **Resource attributes vs log attributes.** Things that describe the _deployment_ go in the OTel resource (set once, every record inherits): `service.name` (= `chota-bot`), `service.version` (= the `<pkgver>+<sha>` build stamp), `deployment.environment` (= `dev` / `prod`). Things that describe _this event_ go in the log attributes: `who`, `source`, `renderer`, `bytes`, `outcome`, `duration_ms`. We keep `version` / `env` on every record too so the file sink (no resource concept) is self-describing.
+- **One rich event per unit of work.** Not 15 step-by-step lines. The `event()` helper accumulates context as the work runs and emits once at `done` / `fail` — see the `print.brief` callsites for the pattern.
+- **Scalars only.** Strings, numbers, booleans. No object dumps, no full request/response bodies — the structure is the fields, not nested JSON.
+- **No PII or secrets.** First names only (per `chota.config.ts` — real names live there alone). API keys never reach a log line; the OTel sink reads them from env at startup and forwards them as headers, nothing logged.
+- **No health-check / per-request noise.** The `/api/health` endpoint and SvelteKit hooks don't emit. We log meaningful actions (a print, a tool refresh, a job run), not every page load.
+- **Sampling: none.** Kiosk volume is tens of events a day — well below any threshold where head- or tail-sampling would help. Revisit only if a chatty agent loop pushes us past that.
+- **Future, when the agent loop / a UI for kids lands:** add `session_id` (joins logs to PostHog Session Replay) and `posthog_distinct_id` (joins logs to Product Analytics events) on the per-turn / per-session events. Not relevant for the kiosk's machine-driven flow today.
+
 ## Settled decisions
 
 1. **App version in base context** — done. `version` from `$app/environment` (`<pkgver>+<gitsha>`, set in `svelte.config.js > kit.version.name`) is folded into base context.
