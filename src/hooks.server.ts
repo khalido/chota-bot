@@ -3,18 +3,24 @@ import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { bootJobs, stopJobs } from '$lib/server/scheduler';
-import { configureLogging } from '$lib/server/log';
+import { configureLogging, shutdownLogging } from '$lib/server/log';
 
 // Runs once at server startup (not during build) — env vars are available.
 export const init: ServerInit = async () => {
 	await configureLogging();
 	await bootJobs();
 
-	// Stop the cron jobs on shutdown so Node's event loop drains and the
-	// process exits promptly — otherwise systemd SIGKILLs it after the stop
-	// timeout (croner's timers outlive adapter-node's server.close()).
+	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
+	// cron timers (croner's intervals outlive adapter-node's server.close()
+	// otherwise), then flush LogTape so the OTel batch processor exports its
+	// queued records before the process exits. The unbuffered file sink
+	// doesn't need a flush — it writes through — but the OTel batch would
+	// otherwise drop on every deploy.
 	for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-		process.once(signal, stopJobs);
+		process.once(signal, async () => {
+			await stopJobs();
+			await shutdownLogging();
+		});
 	}
 };
 

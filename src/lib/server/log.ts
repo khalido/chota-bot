@@ -19,6 +19,7 @@
  */
 import {
 	configure,
+	dispose,
 	getConsoleSink,
 	getLogger,
 	jsonLinesFormatter,
@@ -129,6 +130,22 @@ export async function configureLogging(): Promise<void> {
 		root.info('logging configured: {sinks}', { sinks: sinkNames.join('+'), file: LOG_FILE });
 	} catch (err) {
 		console.error('LogTape config failed — continuing without it.', err);
+	}
+}
+
+/**
+ * Flush + tear down all configured sinks. Call from the SIGTERM/SIGINT
+ * handler so the OTel batch processor exports its queued records (and the
+ * non-blocking sinks, if we ever enable them, drain) before the process
+ * exits. The unbuffered file sink doesn't need this — it writes through —
+ * but losing the last OTel batch on every deploy restart hides events.
+ * Safe to call when logging was never configured (LogTape no-ops).
+ */
+export async function shutdownLogging(): Promise<void> {
+	try {
+		await dispose();
+	} catch {
+		// Shutdown is best-effort; never throw from a signal handler.
 	}
 }
 
