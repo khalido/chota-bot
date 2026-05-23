@@ -7,11 +7,18 @@
  *
  * Kinds:
  *   - `test`     — the ruler smoke-test sheet
+ *   - `family`   — the whole-family weekend sheet (one print for everyone)
  *   - `<person>` — one family member's brief (household sections + their
  *                  school day if they're a kid with a Sentral timetable)
  */
 import { gatherBrief } from './brief';
-import { recipientToSections, sectionsToText, getRecipients } from './sections';
+import {
+	recipientToSections,
+	sectionsToText,
+	getRecipients,
+	isPrintRecipient,
+	FAMILY_RECIPIENT
+} from './sections';
 import { getSchedule } from '$lib/server/tools/sentral';
 import { briefToPng } from './snapshot';
 import { renderReceiptPng } from './render';
@@ -27,13 +34,9 @@ function scheduleDateFor(date: string | undefined, day: 'today' | 'tomorrow'): s
 	return day === 'tomorrow' ? sydneyYMD(new Date(Date.now() + 86_400_000)) : undefined;
 }
 
-/** Printable URL kinds = the `test` sheet + every family member. */
+/** Printable URL kinds = the `test` sheet + the whole-family weekend sheet + every family member. */
 export function getPrintKinds(): readonly string[] {
-	return ['test', ...getRecipients()];
-}
-
-function isRecipient(who: string): boolean {
-	return getRecipients().includes(who);
+	return ['test', FAMILY_RECIPIENT, ...getRecipients()];
 }
 
 /** Title-cased recipient name for the masthead, e.g. `savi` → `Savi`. */
@@ -76,7 +79,7 @@ export async function composeText(
 	day: 'today' | 'tomorrow' = 'today'
 ): Promise<string | null> {
 	if (kind === 'test') return testSheet();
-	if (!isRecipient(kind)) return null;
+	if (!isPrintRecipient(kind)) return null;
 	const d = await gatherBrief({ day });
 	// getSchedule reads the cached .ics — empty for a non-kid, so their brief
 	// is just the household sections.
@@ -106,7 +109,7 @@ export async function composeImage(
 	day: 'today' | 'tomorrow' = 'today'
 ): Promise<ComposedImage | null> {
 	if (kind === 'test') return { image: await renderReceiptPng(testSheet(), {}) };
-	if (!isRecipient(kind)) return null;
+	if (!isPrintRecipient(kind)) return null;
 	try {
 		return { image: await briefToPng(kind, date, day) };
 	} catch (err) {

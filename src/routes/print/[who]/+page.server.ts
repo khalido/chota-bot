@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { gatherBrief } from '$lib/server/print/brief';
-import { recipientToSections, getRecipients } from '$lib/server/print/sections';
+import { recipientToSections, isPrintRecipient } from '$lib/server/print/sections';
 import { getSchedule } from '$lib/server/tools/sentral';
 import { sydneyYMD } from '$lib/time';
 import type { PageServerLoad } from './$types';
@@ -19,7 +19,7 @@ import type { PageServerLoad } from './$types';
  */
 export const load: PageServerLoad = async ({ params, url }) => {
 	const who = params.who.toLowerCase();
-	if (!getRecipients().includes(who)) {
+	if (!isPrintRecipient(who)) {
 		throw error(404, `Unknown print recipient: ${params.who}`);
 	}
 	const day = url.searchParams.get('day') === 'tomorrow' ? 'tomorrow' : 'today';
