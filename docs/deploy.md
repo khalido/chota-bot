@@ -113,12 +113,23 @@ npm run deploy    # = bash deploy/push.sh  (preflight, then deploy.sh on the kio
 npm run logs      # = ssh chota 'sudo journalctl -u chota -f'
 ```
 
-(`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) `push.sh` is a
-thin Mac-side wrapper: it runs a timed preflight SSH check before handing off to
-the kiosk-side `deploy.sh`. The preflight exists because Tailscale SSH's periodic
-re-auth check blocks the session on a "visit this URL" prompt — without it the
-real deploy hangs mid-run. On a stale auth the preflight times out fast and
-prints the URL; authenticate, then re-run `npm run deploy`.
+(`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) `push.sh` is
+the Mac-side wrapper that runs before `deploy.sh` on the kiosk. It does three
+things:
+
+1. **SSH preflight with auto re-auth.** Tailscale SSH does a periodic re-auth
+   check that blocks the session on a "visit this URL" prompt. The preflight
+   detects it, `open`s the URL in your default browser, and polls until the
+   login completes (up to 5 min) — so the deploy auto-continues, no manual
+   re-run.
+2. **Auto-syncs `chota.config.ts` → kiosk.** The config is gitignored, so the
+   kiosk doesn't get it via `git pull`. SP5 is treated as a dumb deploy target
+   — edit the config here, `npm run deploy` pushes it up.
+3. **Hands off to `deploy/deploy.sh` on the kiosk** for the actual pull / build
+   / restart.
+
+`.env` stays per-machine — it carries SP5-only `KIOSK=true` and the OAuth
+`ORIGIN`. Edit those on the box.
 
 The deploy script (`deploy.sh`, on the kiosk) is idempotent (re-running with no new commits is a no-op):
 
