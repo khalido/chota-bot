@@ -60,7 +60,7 @@
 	<div class="flex items-center gap-3">
 		<h2 class="text-xl font-bold tracking-wide whitespace-nowrap">{title}</h2>
 		<div class="h-0 flex-1 border-b-2 border-dashed border-black"></div>
-		<span class="text-sm tabular-nums">{pad2(n)}</span>
+		<span class="text-sm tabular-nums" style:color={FOOTNOTE}>{pad2(n)}</span>
 	</div>
 {/snippet}
 
