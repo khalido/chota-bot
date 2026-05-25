@@ -112,6 +112,16 @@ export interface ChotaConfig {
 	};
 	/** Activity → packing-list mapping for the after-school gear tool (later). */
 	activities?: Activity[];
+	/** Telegram bot wiring. Token + username live in `.env` (the token's a
+	 *  secret); chat IDs live here because they're per-family and typed. */
+	telegram?: {
+		/** Chat IDs that receive proactive pushes from the bot — the daily
+		 *  log-summary, print-failure alerts, etc. Usually a parent or two. */
+		notifyChatIds?: number[];
+		/** Chat IDs allowed to interact with the bot (Phase 3 inbound). Anyone
+		 *  not on this list is silently dropped at the middleware layer. */
+		allowedChatIds?: number[];
+	};
 }
 
 /**
