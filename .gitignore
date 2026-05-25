@@ -38,6 +38,8 @@ vite.config.ts.timestamp-*
 /docs/private.md
 /docs/private/
 
-# Claude Code skill artifacts — per-developer tooling, not part of the app
+# Claude Code skill artifacts. skills-lock.json is per-developer state; the
+# .agents/ tree itself is committed so a fresh clone picks up the project's
+# installed agent skills (re-sync with `npx skills add <slug>` when upstream
+# updates).
 /skills-lock.json
-/.agents/

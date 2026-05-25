@@ -56,11 +56,14 @@
 		"@logtape/otel": "^2.1.1",
 		"@lucide/svelte": "^1.14.0",
 		"@napi-rs/canvas": "^1.0.0",
+		"ai": "^6.0.191",
 		"better-sqlite3": "^12.8.0",
 		"cheerio": "^1.2.0",
 		"croner": "^10.0.1",
 		"googleapis": "^171.4.0",
+		"grammy": "^1.43.0",
 		"node-thermal-printer": "^4.6.0",
-		"usb": "^2.17.0"
+		"usb": "^2.17.0",
+		"zod": "^4.4.3"
 	}
 }

@@ -74,5 +74,9 @@ export default defineChota({
 	// Thermal printer (MUNBYN ITPP098P or similar 80mm ESC/POS). Vendor/product
 	// IDs from `lsusb` / `system_profiler SPUSBDataType`. Column width is set in
 	// code (Font A ≈ 46 cols on an 80mm head); the "test" print's ruler confirms.
-	printer: { vendorId: 0x0483, productId: 0x5743 }
+	printer: { vendorId: 0x0483, productId: 0x5743 },
+	// Telegram chat IDs — token + username are in .env. notifyChatIds receive
+	// proactive pushes (daily log-summary etc); allowedChatIds whitelist who
+	// the bot will answer back to once inbound (Phase 3) lands.
+	telegram: { notifyChatIds: [], allowedChatIds: [] }
 });
