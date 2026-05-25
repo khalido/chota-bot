@@ -38,7 +38,7 @@ import {
 import { logErr } from '$lib/server/log';
 import { weatherBlock } from './weather-block';
 
-const DEFAULT_CLOSING = 'Have a good day, kids -- Chota';
+const DEFAULT_CLOSING = 'Have a good day, kids';
 
 export interface BriefInputs {
 	now?: Date;
