@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { Quote } from '$lib/server/quotes';
+	import type { ClockQuote } from '$lib/server/tools/clock-quotes';
 	import type { Weather } from '$lib/server/tools/weather';
 	import { sydneyDateLong, sydneyDateShort, sydneyTimeShort } from '$lib/time';
 
 	interface Props {
-		quote: Quote | null;
+		quote: ClockQuote | null;
 		size?: 'card' | 'full';
 		/** Only used in size='full' — small chip in the corner. */
 		weather?: Weather | null;
