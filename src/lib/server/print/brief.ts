@@ -29,7 +29,7 @@ import {
 import { pickPuzzle, type Puzzle } from '$lib/server/puzzles';
 import { getQuote, type Quote } from '$lib/server/tools/quotes';
 import {
-	sydneyDateLong,
+	sydneyDateMedium,
 	sydneyDateShort,
 	sydneyTimeCompact,
 	sydneyTimeOnDay,
@@ -193,7 +193,7 @@ export async function gatherBrief({
 	return {
 		now,
 		day,
-		date: sydneyDateLong(ref),
+		date: sydneyDateMedium(ref),
 		printedAt: `${sydneyDateShort(now)}, ${sydneyTimeCompact(now)}`,
 		weatherLines: wx.lines,
 		weatherIcon: wx.icon,

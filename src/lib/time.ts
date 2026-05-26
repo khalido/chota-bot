@@ -98,6 +98,16 @@ export function sydneyDateLong(d: Date = new Date()): string {
 	}).format(d);
 }
 
+/** "Tue 26 May" — abbreviated weekday + day + abbreviated month. */
+export function sydneyDateMedium(d: Date = new Date()): string {
+	return new Intl.DateTimeFormat('en-AU', {
+		timeZone: TZ,
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short'
+	}).format(d);
+}
+
 /** "Thu 9th May" — short weekday + day with English ordinal + short month. */
 export function sydneyDateShort(d: Date = new Date()): string {
 	const day = parseInt(

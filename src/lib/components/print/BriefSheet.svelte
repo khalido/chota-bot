@@ -18,25 +18,25 @@
 	// is grandfathered. New additions: this form.
 	import BellRing from '@lucide/svelte/icons/bell-ring';
 	import Frown from '@lucide/svelte/icons/frown';
+	import BriefHeader from './BriefHeader.svelte';
 
 	let {
+		who,
 		date,
 		sections,
 		closing,
 		/** "Thu 21st May, 6:47am" — receipt-style footer line. */
-		printedAt,
-		/** Masthead badge: a single char → that letter as a monogram; otherwise the sparkle. */
-		mark
+		printedAt
 	}: {
+		/** Recipient name (kebab/lowercase). Drives the masthead title + the per-person pattern. */
+		who: string;
 		date: string;
 		sections: PrintSection[];
 		closing: string;
 		printedAt: string;
-		mark?: string;
 	} = $props();
 
 	const pad2 = (n: number) => String(n).padStart(2, '0');
-	const monogram = $derived(mark && mark.trim().length === 1 ? mark.trim().toUpperCase() : null);
 
 	// Footnote ink: a dark grey so the bus/sports lines read as secondary without
 	// being so light that thermal dithering loses them.
@@ -86,43 +86,7 @@
 <div
 	class="plex mx-auto w-[576px] bg-white px-6 py-6 text-[17px] leading-snug font-medium text-black"
 >
-	<header class="flex items-end justify-between gap-4">
-		<h1 class="border-b-2 border-black pb-1.5 text-2xl font-bold tracking-tight">{date}</h1>
-		<svg width="58" height="58" viewBox="0 0 48 48" class="shrink-0" aria-hidden="true">
-			<rect x="2" y="2" width="44" height="44" rx="11" fill="black" />
-			<rect
-				x="6.5"
-				y="6.5"
-				width="35"
-				height="35"
-				rx="7.5"
-				fill="none"
-				stroke="#fff"
-				stroke-width="1.6"
-			/>
-			{#if monogram}
-				<text
-					x="24"
-					y="34"
-					text-anchor="middle"
-					fill="#fff"
-					font-family="'IBM Plex Mono', ui-monospace, monospace"
-					font-weight="800"
-					font-size="30">{monogram}</text
-				>
-			{:else}
-				<path
-					d="M22 12 L25.2 20.8 L34 24 L25.2 27.2 L22 36 L18.8 27.2 L10 24 L18.8 20.8 Z"
-					fill="#fff"
-				/>
-				<path
-					d="M34 10 L35.4 13.6 L39 15 L35.4 16.4 L34 20 L32.6 16.4 L29 15 L32.6 13.6 Z"
-					fill="#fff"
-				/>
-				<circle cx="13" cy="35" r="2.2" fill="#fff" />
-			{/if}
-		</svg>
-	</header>
+	<BriefHeader {who} {date} />
 
 	{#each sections as s (s.n)}
 		<section class="mt-5">

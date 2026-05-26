@@ -11,6 +11,7 @@ export const load: PageServerLoad = async () => {
 	const who = getRecipients()[0] ?? '';
 	const d = await gatherBrief();
 	return {
+		who,
 		date: d.date,
 		sections: recipientToSections(who, d),
 		closing: d.closing,
