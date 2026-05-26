@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { ButtonGroup } from '$lib/components/ui/button-group';
 	import BriefSheet from '$lib/components/print/BriefSheet.svelte';
 	import type { PageData } from './$types';
 
@@ -9,6 +10,16 @@
 
 	let printing = $state<string | null>(null);
 	let result = $state<string | null>(null);
+
+	// Tab-style nav, three views. Today/Tomorrow toggle the multi-person
+	// preview's day param; Weekend jumps to the family whole-household sheet
+	// at /print/family — a different route + render, hence a navigation,
+	// not a URL-param swap.
+	const dayTabs = [
+		{ label: 'Today', href: resolve('/print'), active: () => data.day === 'today' },
+		{ label: 'Tomorrow', href: resolve('/print') + '?day=tomorrow', active: () => data.day === 'tomorrow' },
+		{ label: 'Weekend', href: resolve('/print/[who]', { who: 'family' }), active: () => false }
+	];
 
 	// Re-run +page.server.ts.load() every minute. Tools return cached data
 	// (warmed by the *-refresh jobs), so this is cheap — keeps the preview
@@ -36,16 +47,36 @@
 <svelte:head><title>Chota — Print preview</title></svelte:head>
 
 <div class="min-h-screen bg-slate-200 p-8 dark:bg-neutral-950">
-	<header class="mb-6 flex flex-wrap items-baseline gap-3">
-		<h1 class="text-2xl font-light tracking-tight text-slate-900 dark:text-neutral-100">
-			Print preview
-		</h1>
-		<span class="text-sm text-slate-500 dark:text-neutral-500">
-			{data.briefs.length} brief{data.briefs.length === 1 ? '' : 's'} · {data.date}
-		</span>
-		{#if result}
-			<span class="font-mono text-xs text-slate-600 dark:text-neutral-400">{result}</span>
-		{/if}
+	<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+		<div class="flex flex-wrap items-baseline gap-3">
+			<h1 class="text-2xl font-light tracking-tight text-slate-900 dark:text-neutral-100">
+				Print preview
+			</h1>
+			<span class="text-sm text-slate-500 dark:text-neutral-500">
+				{data.briefs.length} brief{data.briefs.length === 1 ? '' : 's'} · {data.date}
+			</span>
+			{#if result}
+				<span class="font-mono text-xs text-slate-600 dark:text-neutral-400">{result}</span>
+			{/if}
+		</div>
+
+		<!--
+		  Day toggle. Buttons-as-links so the URL is the source of truth (back
+		  button works, sharing a URL preserves the view). Touch-friendly: 44px
+		  hit targets via `h-11 px-5` — fingers, not pixels, drive the kiosk
+		  display.
+		-->
+		<ButtonGroup>
+			{#each dayTabs as tab (tab.label)}
+				<a
+					href={tab.href}
+					data-active={tab.active() ? '' : undefined}
+					class="inline-flex h-11 items-center justify-center px-5 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground first:rounded-l-md last:rounded-r-md -ml-px first:ml-0 data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:hover:bg-primary/90 transition-colors"
+				>
+					{tab.label}
+				</a>
+			{/each}
+		</ButtonGroup>
 	</header>
 
 	<div class="flex items-start gap-8 overflow-x-auto pb-4">
