@@ -138,13 +138,20 @@ printer: {
 
 ### Linux specifics (this is what the kiosk box runs)
 
-- libusb is usually pre-installed; otherwise `sudo apt install libusb-1.0-0-dev`
-- May need a udev rule to grant non-root access (otherwise the systemd unit needs `User=root`):
+- **libusb is statically linked into `node-usb@2.17+`** for `linux-x64` / `linux-arm64` prebuilds — nothing to apt-install. (`libusb-1.0-0-dev` is only needed if you're building `node-usb` from source on an unsupported arch, which we're not.)
+- **udev rule** for non-root USB access — without this you'd get `LIBUSB_ERROR_ACCESS` and have to run chota as root:
   ```
-  # /etc/udev/rules.d/99-munbyn.rules
-  SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5743", MODE="0666"
+  # /etc/udev/rules.d/99-munbyn.rules — also in deploy/
+  SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5743", MODE="0660", GROUP="plugdev"
   ```
-- No kernel-driver detach needed — Linux doesn't auto-claim USB-printer-class devices
+  And the runtime user (`ko`) must be in `plugdev` — Pop!_OS doesn't auto-add: `sudo usermod -aG plugdev ko` (re-login to take effect).
+- **CUPS will fight you for the device.** Pop!_OS / Ubuntu ship `cups` + `cups-browsed` enabled, and the kernel `usblp` module auto-binds to anything USB-class 0x07 (printer). When both are active, opening the printer from `node-usb` returns `LIBUSB_ERROR_BUSY` or silently does nothing. Two fixes (do both on the kiosk box):
+  ```bash
+  sudo systemctl disable --now cups cups-browsed
+  echo 'blacklist usblp' | sudo tee /etc/modprobe.d/blacklist-usblp.conf
+  # then unplug + replug, or reboot
+  ```
+- macOS-side: `detachKernelDriver()` covers the equivalent on that OS; on Linux with `usblp` blacklisted it's a no-op.
 
 ### Windows specifics
 

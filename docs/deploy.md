@@ -38,11 +38,24 @@ when you have the box physically wired to a dedicated kiosk display
 The commands as written target Cinnamon (the SP5's Mint install); they need
 a Pop!\_OS / GNOME rewrite before they're useful again.
 
-Assumes Node is installed via fnm with `/usr/local/bin/node` symlinked to `~/.local/share/fnm/aliases/default/bin/node` (so systemd can find it). See `docs/printers.md` for libusb-dev install. Also needs `sqlite3` on PATH for the first-time DB init step (`sudo apt install sqlite3` on Debian/Mint).
+Assumes Node is installed via fnm — `chota.service` points directly at `~/.local/share/fnm/aliases/default/bin/node`, so no `/usr/local/bin` symlink to maintain. `node-usb` ships libusb statically linked, so no apt libusb either. See [`docs/printers.md`](printers.md) for the full USB story.
 
 ### Phase 1 — core chota (always run this)
 
 ```bash
+# 0. Host prep (one-time, sudo). Brings a fresh Pop!_OS / Ubuntu box to a
+#    chota-ready baseline:
+#      - sqlite3 for the first-time DB init
+#      - plugdev so node-usb can open /dev/bus/usb/* as non-root
+#      - cups + cups-browsed disabled and usblp blacklisted so neither
+#        userspace nor the kernel claim the MUNBYN out from under us
+sudo apt install -y sqlite3
+sudo usermod -aG plugdev "$USER"
+sudo systemctl disable --now cups cups-browsed
+echo 'blacklist usblp' | sudo tee /etc/modprobe.d/blacklist-usblp.conf
+#    The plugdev change needs a fresh login to take effect — easiest:
+#    `exit` the SSH session and reconnect once.
+
 # 1. Clone (in ~/code, mirroring the Mac layout)
 mkdir -p ~/code && cd ~/code
 git clone <repo-url> chota-bot
@@ -52,9 +65,11 @@ cd chota-bot
 npm ci
 
 # 3. Install agent-browser (the production HTML→screenshot print path needs it)
+#    Skip the install steps if setup_linux.sh already did them.
 npm install -g agent-browser
 agent-browser install                 # downloads Chromium (~150MB, one-time)
-sudo ln -sf ~/.local/share/fnm/aliases/default/bin/agent-browser /usr/local/bin/agent-browser
+#    No /usr/local/bin/agent-browser symlink — chota.service has the fnm bin
+#    dir on PATH, so the subprocess spawn finds it directly.
 
 # 4. Copy secrets from your Mac (one-time)
 #    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
