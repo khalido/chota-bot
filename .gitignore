@@ -30,14 +30,11 @@ vite.config.ts.timestamp-*
 # src/lib/server/db/auth.schema.ts (tracked).
 /drizzle/
 
-# Data — runtime state, all gitignored except data/quotes/ + data/puzzles/
-# (both vendored from the curios repo via scripts/sync-{quotes,puzzles}.mjs —
-# deterministic content, fine to track). New tool-specific subdirs
-# (data/sentral/, data/morning/, etc.) are auto-ignored by this rule; no
-# need to add them one-by-one.
+# Data — runtime state, all gitignored. Vendored content (quotes, puzzles)
+# now lives in the sibling curios repo at ~/code/curios; loaded directly
+# from ../curios/dist/*. New tool-specific subdirs (data/sentral/,
+# data/morning/, etc.) are auto-ignored by this rule.
 /data/*
-!/data/quotes/
-!/data/puzzles/
 
 # Per-family config (root, gitignored). chota.config.example.ts is committed.
 /chota.config.ts

@@ -48,6 +48,21 @@ git fetch --quiet origin main
 git pull --ff-only origin main
 AFTER=$(git rev-parse HEAD)
 
+# Refresh the sibling curios repo (quotes + puzzles content). chota
+# reads from ../curios/dist/* at runtime, so pulling here keeps the
+# kiosk's content as current as the curios main branch. Hard-fail on
+# error: internet is required for the chota git pull above anyway, so
+# if curios is unreachable something larger is broken. clone-if-missing
+# covers the first deploy after the data-folder → sibling-repo migration.
+if [ ! -d ../curios/.git ]; then
+	echo "Cloning ../curios for the first time…"
+	git clone https://github.com/khalido/curios ../curios
+else
+	echo "Updating ../curios…"
+	(cd ../curios && git fetch --quiet && git pull --ff-only)
+fi
+echo "  curios at $(cd ../curios && git rev-parse --short HEAD)"
+
 if [ "$BEFORE" = "$AFTER" ]; then
 	echo "Already at $AFTER — nothing to deploy."
 	exit 0
@@ -71,7 +86,8 @@ npm run build
 
 # Runtime data dir — tool-specific subdirs (data/sentral/, data/morning/, etc.)
 # are created on demand by the writing code. data/logs/ is pre-created for
-# LogTape's rotating sink. Quotes are committed in data/quotes/.
+# LogTape's rotating sink. Vendored content (quotes, puzzles) lives in the
+# sibling ../curios/ repo, not here.
 mkdir -p data data/logs
 
 # Fresh-box DB init: if the sqlite file doesn't exist, generate the schema

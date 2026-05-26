@@ -3,17 +3,16 @@
  * time (e.g. "midnight", "half-past five"). HH:MM-keyed lookup, distinct
  * from the kind-filtered random pool in `./quotes.ts`.
  *
- * Data: `data/quotes/literary.json`, vendored from the curios content
- * repo via `npm run sync`. The local filename intentionally does NOT
- * match the `*-quotes.json` pattern that `./quotes.ts` auto-discovers —
- * the shape is fundamentally different (HH:MM-keyed object vs flat
- * array), so the unified loader skips it.
+ * Data: `../curios/dist/clock-quotes.json` — curios is a sibling repo
+ * cloned next to chota-bot (`~/code/curios`, `~/code/chota-bot`).
+ * `deploy.sh` does a `git pull` in curios on every deploy, so the
+ * dashboard is always reading current content.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sydneyHHMM } from '$lib/time';
 
-const PATH = resolve(process.cwd(), 'data/quotes/literary.json');
+const PATH = resolve(process.cwd(), '../curios/dist/clock-quotes.json');
 
 export interface ClockQuote {
 	quote: string;

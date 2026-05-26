@@ -19,7 +19,6 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
-		"sync": "node scripts/sync-curios.mjs",
 		"deploy": "bash deploy/push.sh",
 		"logs": "ssh chota 'sudo journalctl -u chota -f'"
 	},

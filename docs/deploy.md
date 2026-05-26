@@ -9,13 +9,17 @@ The kiosk box is a Surface Pro 5 running Linux at the lounge wall. It hosts the 
 ```
 /home/ko/code/chota-bot/      # repo (mirrors ~/code/chota-bot on Mac)
   build/                       # adapter-node output (`npm run build` writes here)
-  data/                        # runtime data (gitignored except data/quotes/)
+  data/                        # runtime data (all gitignored)
     home.db                    #   sqlite — jobs, sessions, auth
     logs/chota.log             #   LogTape rotating file (see docs/logging.md)
     morning/                   #   dev preview PNGs (production writes to tmpdir)
     sentral/<who>-timetable.ics  # per-kid Sentral .ics cache (one folder, files keyed by name)
   .env                         # secrets + KIOSK=true (gitignored, copied manually)
   chota.config.ts              # per-family config (gitignored)
+
+/home/ko/code/curios/         # sibling repo for vendored content (quotes + puzzles)
+                              #   chota reads ../curios/dist/* at runtime.
+                              #   deploy.sh keeps it current with `git pull`.
 
 /etc/systemd/system/chota.service   # symlink isn't supported by systemd — copy
 ```
