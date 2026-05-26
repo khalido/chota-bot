@@ -1,9 +1,10 @@
 # Caddy reverse proxy — :80 → the chota app on :8000, so the dashboard is
-# reachable portless at http://sp5.local/ (and http://<lan-ip>/) on the home LAN.
+# reachable portless at http://<hostname>/ on the LAN AND at
+# http://<hostname>.<tailnet>.ts.net/ over Tailscale.
 #
 # LAN-only, plain HTTP: the bare `:80` site address tells Caddy NOT to
 # provision TLS certificates (no auto-HTTPS, no port 443) and to answer for
-# any Host header — sp5.local, the LAN IP, whatever.
+# any Host header — whatever name resolves to this box.
 #
 # Deploy: copy to /etc/caddy/Caddyfile, then `sudo systemctl reload caddy`.
 # See docs/deploy.md.
