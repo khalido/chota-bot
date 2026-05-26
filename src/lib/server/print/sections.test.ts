@@ -83,8 +83,12 @@ const DATA: BriefData = {
 		{ title: 'Renew car rego', people: ['Parent1'], when: 'today' }
 	],
 	puzzle: {
-		q: 'A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?',
-		a: '1 — the centre cube.'
+		question:
+			'A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?',
+		answer: '1 — the centre cube.',
+		category: 'classic',
+		rating: 'family',
+		source: 'test-fixture'
 	},
 	funQuote: { kind: 'tv', quote: 'Ah, duck cake!', speaker: 'Bandit', title: 'Bluey' },
 	shoppingItems: ['Choc', 'Hot Choc Powder (Cadbury)', 'Coriander', 'Salt for the salt grinder'],
