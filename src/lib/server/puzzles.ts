@@ -3,19 +3,17 @@
  * but keep the answer around for the dashboard, an "answer" companion print,
  * or a reveal command later.
  *
- * Source: vendored from the curios content repo (`khalido/curios`) at
- * `data/puzzles/puzzles.json` — refresh with `npm run sync` (which also
- * pulls the literary-clock quotes). Commit the result.
- *
- * Load is runtime via readFileSync (same pattern as quotes.ts) — relative
- * to `process.cwd()` which is the repo root under both `vite dev` and the
+ * Source: the sibling curios repo at `../curios/dist/puzzles.json` —
+ * cloned alongside chota-bot at `~/code/curios`, refreshed by deploy.sh
+ * via `git pull` on every deploy. Path is relative to `process.cwd()`
+ * which is the chota-bot repo root under both `vite dev` and the
  * systemd unit (chota.service sets WorkingDirectory).
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sydneyYMD } from '$lib/time';
 
-const PATH = resolve(process.cwd(), 'data/puzzles/puzzles.json');
+const PATH = resolve(process.cwd(), '../curios/dist/puzzles.json');
 
 export interface Puzzle {
 	question: string;

@@ -100,6 +100,15 @@ if ! grep -q '^PORT=' .env; then
 	echo "✓ Appended PORT + KIOSK to .env"
 fi
 
+# Clone the sibling content repo (curios) for quotes + puzzles. chota
+# reads from ../curios/dist/* at runtime; deploy.sh keeps it current
+# with `git pull` on every deploy.
+if [ ! -d ../curios/.git ]; then
+	say "Cloning curios alongside chota-bot (content for quotes + puzzles)"
+	git clone https://github.com/khalido/curios ../curios
+fi
+echo "✓ ../curios/ at $(cd ../curios && git rev-parse --short HEAD)"
+
 # ── 8. npm ci ──────────────────────────────────────────────────────────────
 say "Step 8/9 — npm ci"
 if [ -d node_modules ] && [ -f node_modules/.package-lock.json ]; then

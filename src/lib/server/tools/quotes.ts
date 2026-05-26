@@ -1,16 +1,18 @@
 /**
- * Quotes tool — flat-pool picks across every `*-quotes.json` in
- * `data/quotes/`. The filename's prefix becomes the `kind`:
+ * Quotes tool — flat-pool picks across every `*-quotes.json` in the
+ * sibling curios repo (`../curios/dist/`). The filename's prefix
+ * becomes the `kind`:
  *
- *   data/quotes/tv-quotes.json     → kind 'tv'
- *   data/quotes/comic-quotes.json  → kind 'comic'
- *   data/quotes/book-quotes.json   → kind 'book'   (when curios adds it)
+ *   curios/dist/tv-quotes.json     → kind 'tv'
+ *   curios/dist/comic-quotes.json  → kind 'comic'
+ *   curios/dist/book-quotes.json   → kind 'book'   (when curios adds it)
  *
- * Drop a new `<x>-quotes.json` into curios + sync; no code change here.
+ * Drop a new `<x>-quotes.json` into curios + push; no code change here.
  *
- * `data/quotes/literary.json` is excluded — it's HH:MM-keyed for the
- * literary clock and lives under `$lib/server/quotes.ts` (different
- * domain: time-of-day lookup vs random/kind-filtered).
+ * `clock-quotes.json` is also in that folder but loaded separately by
+ * `./clock-quotes.ts` (HH:MM-keyed object, not a flat array). This
+ * loader detects shape and skips non-array files, so the literary
+ * clock data doesn't accidentally get adopted as a quote pool.
  *
  * `mature`-rated entries are dropped — this is a kid-facing surface.
  *
@@ -45,7 +47,7 @@ interface RawEntry {
 	rating?: string;
 }
 
-const DIR = resolve(process.cwd(), 'data/quotes');
+const DIR = resolve(process.cwd(), '../curios/dist');
 const KIND_RE = /^(.+)-quotes\.json$/;
 
 let cached: Quote[] | null = null;
@@ -63,14 +65,22 @@ function load(): Quote[] {
 	const all: Quote[] = [];
 	for (const file of files) {
 		const m = KIND_RE.exec(file);
-		if (!m) continue; // skip literary.json + anything else
+		if (!m) continue;
 		const kind = m[1];
-		let raw: RawEntry[];
+		let parsed: unknown;
 		try {
-			raw = JSON.parse(readFileSync(resolve(DIR, file), 'utf8')) as RawEntry[];
+			parsed = JSON.parse(readFileSync(resolve(DIR, file), 'utf8'));
 		} catch {
 			continue;
 		}
+		// Shape-detect: this loader is for flat-array quote pools. The
+		// literary clock's `clock-quotes.json` lives in the same folder
+		// (curios/dist/) and matches the `*-quotes.json` pattern, but its
+		// shape is an HH:MM-keyed object — skipped here, handled by
+		// `./clock-quotes.ts` instead. Anything else non-array gets
+		// skipped too.
+		if (!Array.isArray(parsed)) continue;
+		const raw = parsed as RawEntry[];
 		for (const e of raw) {
 			if (e.rating === 'mature') continue;
 			all.push({

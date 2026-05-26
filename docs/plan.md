@@ -67,7 +67,7 @@ Tools (typed TS functions, runtime-agnostic — see docs/tools.md):
   Future: drive, enphase, exa, memory
 
 External: TfNSW · Google Weather · Google Calendar · TickTick MCP · TMDB · NASA APOD
-Local: sqlite (Drizzle: auth tables) · chota.config.ts · data/quotes/literary.json (vendored)
+Local: sqlite (Drizzle: auth tables) · chota.config.ts · ../curios/dist/* (vendored content, sibling repo)
 ```
 
 **MCP usage:** TickTick is consumed via TickTick's official hosted MCP at `https://mcp.ticktick.com` (raw fetch + JSON-RPC, no SDK — see `tools/ticktick.ts`). Agent tools themselves will be plain typed Vercel AI SDK tools (see `docs/agent.md`).
@@ -159,7 +159,7 @@ End state: a kiosk you actually look at + a print menu with several formats + th
 - **Print menu** — buttons per recipient + per format: `Today`, `<Kid1>`, `<Kid2>`, `<Kid3>`, `Cal`, `Joke`, `Crossword`, `Puzzle`, `+`. Button → `POST /api/print/<kind>`.
 - **Basic agent loop** — `runAgent()` wrapper per `docs/agent.md`, read-only tools only, behind a feature flag with strict timeout + step caps. First agent job: the closing line on the morning brief (until then a static "Have a good day, kids -- Chota" sign-off). **No memory writes in Phase 2** — do more research on the memory-tool design first (moved to Phase 3, see below). Keeping the Phase 2 agent stateless makes it a small, safe target.
 - **More tools** — `drive`, `exa` (web search), NSW school terms / public holidays, council bin night, school canteen menu, Opal/school transport balance.
-- **`/clock` polish** — already have the literary clock dataset (`data/quotes/literary.json`, vendored from [`khalido/curios`](https://github.com/khalido/curios) via `scripts/sync-curios.mjs`, 24h `HH:MM` keys). Add Urdu/Pakistani shers as `lang: "ur-roman"` entries; add `data/quotes/family.md` for hand-edited family quotes; fallback chain: `literary[hhmm]` → `family.md` → Quotable API.
+- **`/clock` polish** — already have the literary clock dataset (`../curios/dist/clock-quotes.json`, sibling repo [`khalido/curios`](https://github.com/khalido/curios), 24h `HH:MM` keys). Add Urdu/Pakistani shers as `lang: "ur-roman"` entries; add `family.md` for hand-edited family quotes upstream in curios; fallback chain: `clock-quotes[hhmm]` → `family.md` → Quotable API.
 - **Tomorrow lookahead** — ✅ *shipped, retired.* The plan was one compressed `tmrw:` line on the morning brief (density-tiered acronym extraction). That landed differently — first as a full evening (`15 19`) print of tomorrow's per-person briefs, then retired in favour of a single labelled "Tomorrow:" line on the morning weather block (lighter touch, fewer prints). The morning sheet itself is the place to peek at tomorrow.
 - **Night mode** — two layers because CSS alone doesn't dim the backlight. (1) **CSS filter:** extend the existing Sydney-hour pre-paint script in `app.html` to also add a `night` class after, say, 21:00; `html.night { filter: brightness(0.4) grayscale(1) }` wraps everything cheaply with no per-component changes. (2) **Backlight:** a Chota cron job (`night-brightness.ts`) writes to `/sys/class/backlight/intel_backlight/brightness` (Surface Pro 5 device) at 21:00/06:00. Needs `ko` in the `video` group (or a udev rule for the backlight device). The CSS layer is the visual win; the backlight layer is what makes the SP5 actually disappear into the wall at night.
 - **Logging + observability** — wire LogTape in place of the thin `log()` wrapper: console + rotating file sinks, plus a best-effort, non-blocking OTel sink shipping to Axiom over OTLP. OTel keeps it vendor-neutral (the backend is just an endpoint — a reusable logging pattern across projects). Structured wide-events. The real payoff is one alert: morning-print failure / canvas-fallback → phone. See `docs/logging.md`.
@@ -358,7 +358,7 @@ Captured so future-you knows what was evaluated and why we landed where we did.
 
 **Patterns to borrow:**
 - `~/code/khalido.dev/` — proves pi/Vercel AI SDK embeds cleanly in SvelteKit. Mirror its `src/lib/agent/` + `src/lib/server/llm.ts` shape.
-- `~/code/pi-pico-clock/` — quote source for the clock screen → `data/quotes/literary.json` (vendored).
+- `~/code/curios/` — sibling content repo: literary-clock quotes + TV/comic quotes + puzzles. chota reads `../curios/dist/*` at runtime. `deploy.sh` `git pull`s it on every deploy.
 - `refs/pi-autoresearch/` — JSONL log + living markdown precedent.
 - `refs/jabberwocky/` — file-based memory in production.
 - `refs/yaad/` — `daily_digest()` pattern (pure-code ops report, no LLM).
