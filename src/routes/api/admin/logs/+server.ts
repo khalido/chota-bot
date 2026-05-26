@@ -4,8 +4,10 @@
  * level, message, logger, properties. Returns them parsed + most-recent-
  * last so the UI can render in chronological order.
  *
- * Session-gated. Default tail is 200 lines (≈ what fits on a screen
- * without overwhelming); caps at 2000 to keep the endpoint cheap.
+ * No auth check (see /api/admin/sentral/refresh for rationale) — box is
+ * tailnet-private. TODO re-add when ORIGIN/Caddy is sorted.
+ *
+ * Default tail is 200 lines; caps at 2000 to keep the endpoint cheap.
  *
  * The on-disk file is a rotating JSON-lines sink — see log.ts. When
  * rotation kicks in the latest file is still `chota.log`; the rotated
@@ -13,7 +15,7 @@
  * surface here. If a future case wants historical, add a `?since=…`
  * param that glob-reads the archive files too.
  */
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RequestHandler } from './$types';
@@ -30,9 +32,7 @@ export interface LogEntry {
 	properties?: Record<string, unknown>;
 }
 
-export const GET: RequestHandler = async ({ url, locals }) => {
-	if (!locals.session?.userId) throw error(401, 'sign in first');
-
+export const GET: RequestHandler = async ({ url }) => {
 	const requested = Number(url.searchParams.get('lines') ?? DEFAULT_LINES);
 	const lines = Math.max(
 		1,
