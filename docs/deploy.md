@@ -40,6 +40,12 @@ a Pop!\_OS / GNOME rewrite before they're useful again.
 
 Assumes Node is installed via fnm — `chota.service` points directly at `~/.local/share/fnm/aliases/default/bin/node`, so no `/usr/local/bin` symlink to maintain. `node-usb` ships libusb statically linked, so no apt libusb either. See [`docs/printers.md`](printers.md) for the full USB story.
 
+> **Shortcut:** once the repo is cloned and `.env` + `chota.config.ts` are
+> scp'd over (steps 1 and 4 below), `bash deploy/bootstrap.sh` runs Phase 1
+> steps 0–8 in one shot — idempotent, one sudo prompt for the whole run. The
+> step-by-step that follows is the same script broken out for reading +
+> troubleshooting.
+
 ### Phase 1 — core chota (always run this)
 
 ```bash
@@ -51,10 +57,17 @@ Assumes Node is installed via fnm — `chota.service` points directly at `~/.loc
 #        userspace nor the kernel claim the MUNBYN out from under us
 sudo apt install -y sqlite3
 sudo usermod -aG plugdev "$USER"
-sudo systemctl disable --now cups cups-browsed
+sudo systemctl disable --now cups cups-browsed cups.socket cups.path
 echo 'blacklist usblp' | sudo tee /etc/modprobe.d/blacklist-usblp.conf
 #    The plugdev change needs a fresh login to take effect — easiest:
 #    `exit` the SSH session and reconnect once.
+#
+#    Sudoers entry for unattended deploys — without this, every `npm run deploy`
+#    from the Mac would hang waiting for a sudo password (push.sh shells in
+#    over non-TTY SSH). The rule is narrow: three specific systemctl commands
+#    on the chota unit, nothing else. Self-documenting; see the file header.
+sudo install -m 0440 -o root -g root deploy/chota-deploy.sudoers /etc/sudoers.d/chota-deploy
+sudo visudo -cf /etc/sudoers.d/chota-deploy   # validates before sudoers reloads it
 
 # 1. Clone (in ~/code, mirroring the Mac layout)
 mkdir -p ~/code && cd ~/code
