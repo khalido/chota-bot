@@ -18,6 +18,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# fnm puts node/npm/npx on $PATH only via the rc-file init in interactive
+# shells; this script runs over non-TTY SSH from push.sh on the Mac, so we
+# prepend fnm's default-alias bin dir explicitly. Same path the systemd unit
+# resolves through, so npm version + node version are guaranteed to match.
+export PATH="$HOME/.local/share/fnm/aliases/default/bin:$PATH"
+
 # ── Preflight: fail loudly if a required file is missing ────────────────────
 # A fresh-box deploy that's missing one of these would produce cryptic errors
 # minutes deeper into the script (env parse errors, ESM resolution failures,
