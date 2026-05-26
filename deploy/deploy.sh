@@ -90,7 +90,6 @@ fi
 
 echo "Restarting chota.service…"
 sudo systemctl restart chota
-sleep 2
 
 # Verify the whole boot path landed:
 #   1. systemd active — process is up
@@ -98,12 +97,23 @@ sleep 2
 #   3. journal shows the job-boot banner — every cron job got registered
 # `is-active` alone catches "process is running" but misses partial boots
 # where one job throws on init and the app limps along without it.
+#
+# Boot takes ~2s (preflight + 11 jobs register) + ~3s warm-up on first
+# request. Poll up to 15s instead of a fixed sleep so we don't race the
+# port-bind.
 sudo systemctl is-active chota
-if ! curl -fsS -o /dev/null -m 5 http://localhost:8000/; then
-	echo "Service is active but HTTP check failed — investigate:" >&2
-	echo "  journalctl -u chota -n 30 --no-pager" >&2
-	exit 1
-fi
+for i in $(seq 1 15); do
+	if curl -fsS -o /dev/null -m 2 http://localhost:8000/; then
+		echo "✓ HTTP 200 after ${i}s"
+		break
+	fi
+	if [ "$i" -eq 15 ]; then
+		echo "Service is active but HTTP check failed after 15s — investigate:" >&2
+		echo "  journalctl -u chota -n 30 --no-pager" >&2
+		exit 1
+	fi
+	sleep 1
+done
 if ! journalctl -u chota --since "1 min ago" --no-pager 2>/dev/null \
 		| grep -qE "chota·jobs boot — [0-9]+ job\(s\) registered"; then
 	echo "⚠ HTTP 200 but no job-boot banner in the last minute — a job may have failed to register:" >&2
