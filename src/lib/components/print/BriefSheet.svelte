@@ -14,9 +14,10 @@
 		CalendarDays,
 		Bus as BusIcon
 	} from '@lucide/svelte';
-	// One-off per-icon import is the tree-shake-friendly pattern; the bulk
-	// import above is grandfathered. New additions: this form.
+	// One-off per-icon imports — tree-shake-friendly; the bulk import above
+	// is grandfathered. New additions: this form.
 	import BellRing from '@lucide/svelte/icons/bell-ring';
+	import Frown from '@lucide/svelte/icons/frown';
 
 	let {
 		date,
@@ -187,8 +188,9 @@
 									       today / 1-day late → 1 bell
 									       2 days late        → 2 bells
 									       …                   → +1 bell per day
-									       8+ days late       → 8 bells (clamped — past that the
-									                                     row gets silly wide)
+									       8+ days late       → 8 bells + a Frown (we've maxed
+									                                          out the bells, time
+									                                          for an emoji)
 									     size 22 + strokeWidth 2.5 keep the line weight legible
 									     after the 203dpi ESC/POS dither pass; -space-x-1
 									     overlaps the bells slightly so 8 still fits on the row. -->
@@ -203,6 +205,16 @@
 										{#each bells as _, i (i)}
 											<BellRing class="stroke-black" size={22} strokeWidth={2.5} />
 										{/each}
+										{#if late >= 8}
+											<!-- Frown sits past the overlapping-bell cluster (ml-1.5
+											     to break the overlap) so it reads as punctuation
+											     after the bells: 🔔🔔🔔🔔🔔🔔🔔🔔  😟 -->
+											<Frown
+												class="ml-1.5 stroke-black"
+												size={22}
+												strokeWidth={2.5}
+											/>
+										{/if}
 									</span>
 								{:else if t.when === 'tomorrow'}
 									<!-- "tomorrow" tasks are early — no urgency indicator, just
