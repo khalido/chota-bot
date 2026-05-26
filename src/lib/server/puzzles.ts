@@ -4,9 +4,8 @@
  * or a reveal command later.
  *
  * Source: vendored from the curios content repo (`khalido/curios`) at
- * `data/puzzles/puzzles.json` — refresh with `npm run sync:puzzles` and
- * commit the result. Parallel to `data/quotes/literary.json` for the
- * literary clock.
+ * `data/puzzles/puzzles.json` — refresh with `npm run sync` (which also
+ * pulls the literary-clock quotes). Commit the result.
  *
  * Load is runtime via readFileSync (same pattern as quotes.ts) — relative
  * to `process.cwd()` which is the repo root under both `vite dev` and the
