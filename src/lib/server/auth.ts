@@ -4,6 +4,9 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
+import { event, logger } from '$lib/server/log';
+
+const authLog = logger('auth');
 
 export const auth = betterAuth({
 	baseURL: env.ORIGIN,
@@ -23,6 +26,45 @@ export const auth = betterAuth({
 			accessType: 'offline',
 			prompt: 'select_account consent',
 			scope: ['https://www.googleapis.com/auth/calendar.readonly']
+		}
+	},
+	// Route better-auth's own logs through LogTape — warnings + errors
+	// (including failed sign-ins) land in console + file + PostHog.
+	logger: {
+		level: 'info',
+		log: (level, message, ...args) => {
+			const props = args.length > 0 ? { args } : {};
+			if (level === 'error') authLog.error(message, props);
+			else if (level === 'warn') authLog.warn(message, props);
+			else if (level === 'debug') authLog.debug(message, props);
+			else authLog.info(message, props);
+		}
+	},
+	// Success-path sign-in / sign-up logging. Wide events so PostHog can
+	// chart sign-ins over time without parsing strings. Errors here must
+	// never bubble — a logging failure mustn't break the sign-in itself.
+	databaseHooks: {
+		user: {
+			create: {
+				after: async (user) => {
+					try {
+						event('auth', 'sign-up {email}', { email: user.email, name: user.name }).done();
+					} catch {
+						/* never break auth */
+					}
+				}
+			}
+		},
+		session: {
+			create: {
+				after: async (session) => {
+					try {
+						event('auth', 'sign-in {user_id}', { user_id: session.userId }).done();
+					} catch {
+						/* never break auth */
+					}
+				}
+			}
 		}
 	},
 	plugins: [
