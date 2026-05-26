@@ -24,7 +24,23 @@ The repo lives at `~/code/chota-bot` on both machines so paths in scripts are id
 
 ## First-time bootstrap (fresh box)
 
+Two phases. **Phase 1 (steps 1–8) brings chota up as a service** — agent, jobs,
+dashboard, printer pipeline all work. The dashboard is reachable in any
+browser at `http://localhost:8000/` (or via Caddy at port 80; or from another
+machine over Tailscale). This is enough for most boxes — including any
+not-yet-touchscreen setup where you'll open the dashboard in a browser
+manually when you want to look at it.
+
+**Phase 2 (kiosk display mode, steps 9–10) is opt-in and currently deferred** —
+auto-login + fullscreen Chrome autostart + screensaver-off. Only run those
+when you have the box physically wired to a dedicated kiosk display
+(touchscreen or otherwise) and want chota to come up on the screen at boot.
+The commands as written target Cinnamon (the SP5's Mint install); they need
+a Pop!\_OS / GNOME rewrite before they're useful again.
+
 Assumes Node is installed via fnm with `/usr/local/bin/node` symlinked to `~/.local/share/fnm/aliases/default/bin/node` (so systemd can find it). See `docs/printers.md` for libusb-dev install. Also needs `sqlite3` on PATH for the first-time DB init step (`sudo apt install sqlite3` on Debian/Mint).
+
+### Phase 1 — core chota (always run this)
 
 ```bash
 # 1. Clone (in ~/code, mirroring the Mac layout)
@@ -68,6 +84,22 @@ curl -s http://localhost:8000/ | head -1               # should return HTML
 curl -s -X POST http://localhost:8000/api/print/test   # column ruler — should print
 journalctl -u chota -f                                 # tail server logs
 
+```
+
+### Phase 2 — kiosk display mode (deferred; opt-in)
+
+**Skip this entire phase** unless the box has a dedicated kiosk display
+(touchscreen wired over HDMI, etc.) and you actually want chota to launch
+fullscreen on its own at boot. With Phase 1 alone the dashboard is just a
+web app — open it in any browser when you want to see it.
+
+When you do enable kiosk mode, **the commands below need a rewrite for
+Pop!\_OS / GNOME** — they're currently Cinnamon (Mint) specific and will
+silently no-op on Pop!\_OS. The Wayland-vs-Xorg + GDM-vs-LightDM differences
+also matter. Treat this section as a TODO that lands when a kiosk display is
+physically connected, not as steps to follow today.
+
+```bash
 # 9. Kiosk display — launch the dashboard fullscreen on session login
 cp deploy/chota-kiosk.desktop ~/.config/autostart/
 #    Then enable auto-login: Mint menu → Login Window → Users → Automatic login.
