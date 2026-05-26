@@ -1,0 +1,14 @@
+# Allow `ko` to restart / reload / check the chota service without a password.
+# This is what lets `npm run deploy` finish without an interactive sudo prompt:
+# push.sh shells into the kiosk over SSH (no TTY), and deploy.sh's
+# `sudo systemctl restart chota` at the end of every deploy would otherwise
+# hang asking for a password.
+#
+# Scope is intentionally narrow — three specific commands on the chota unit,
+# nothing else. systemctl takes a unit name (not arbitrary args), so there's
+# no shell-escape vector to widen it accidentally.
+#
+# Install (idempotent — re-run safely):
+#   sudo install -m 0440 -o root -g root deploy/chota-deploy.sudoers /etc/sudoers.d/chota-deploy
+#   sudo visudo -cf /etc/sudoers.d/chota-deploy
+ko ALL=(root) NOPASSWD: /usr/bin/systemctl restart chota, /usr/bin/systemctl reload chota, /usr/bin/systemctl is-active chota
