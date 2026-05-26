@@ -14,6 +14,9 @@
 		CalendarDays,
 		Bus as BusIcon
 	} from '@lucide/svelte';
+	// One-off per-icon import is the tree-shake-friendly pattern; the bulk
+	// import above is grandfathered. New additions: this form.
+	import BellRing from '@lucide/svelte/icons/bell-ring';
 
 	let {
 		date,
@@ -175,13 +178,23 @@
 						{#each s.tasks as t, i (`task-${i}`)}
 							<li class="flex items-baseline gap-2">
 								<span class="flex-1">{t.title}</span>
-								{#if t.when !== 'today'}
-									<!-- A "today" to-do skips the chip; overdue is filled, tmrw outlined. -->
+								{#if t.when === 'overdue'}
+									<!-- Overdue → BellRing icon: more recognisable at a thermal-
+									     print glance than the word "overdue". size 24 sits on the
+									     baseline with the text people-chips next to it without
+									     looming. strokeWidth 2.5 keeps the line weight legible
+									     after the 203dpi ESC/POS dither pass. -->
+									<BellRing
+										aria-label="overdue"
+										class="shrink-0 stroke-black"
+										size={24}
+										strokeWidth={2.5}
+									/>
+								{:else if t.when === 'tomorrow'}
+									<!-- "today" tasks skip the chip; only "tomorrow" gets a text chip. -->
 									<span
-										class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase {t.when ===
-										'overdue'
-											? 'bg-black text-white'
-											: ''}">{t.when === 'overdue' ? 'overdue' : 'tmrw'}</span
+										class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase"
+										>tmrw</span
 									>
 								{/if}
 								{#each t.people as p (p)}
