@@ -31,13 +31,21 @@ WorkingDirectory=/home/ko/code/chota-bot
 # docs/deploy.md.
 EnvironmentFile=/home/ko/code/chota-bot/.env
 
+# Prepend fnm's default-alias bin dir to PATH so subprocesses chota spawns
+# (`agent-browser` for screenshots + Sentral login) resolve to the fnm-managed
+# binaries — no `/usr/local/bin/agent-browser` symlink needed. The rest is the
+# standard systemd default PATH.
+Environment=PATH=/home/ko/.local/share/fnm/aliases/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 
 # adapter-node build output. `node build` boots SvelteKit on $PORT (default
 # 3000; we set PORT=8000 in .env to match the kiosk's Caddy proxy / mDNS).
-# /usr/local/bin/node is a symlink to fnm's default Node — see docs/deploy.md
-# bootstrap step. fnm-as-default still works for interactive shells; this just
-# makes node discoverable by systemd / non-interactive contexts.
-ExecStart=/usr/local/bin/node /home/ko/code/chota-bot/build
+#
+# Path points directly at fnm's default-alias symlink — fnm keeps this stable
+# across `fnm default <new>`, so a Node upgrade (`uv run ~/code/dotfiles/fnm.py
+# upgrade`) automatically updates what this resolves to. No /usr/local/bin
+# symlink to maintain. systemd doesn't expand `~`, hence the absolute path.
+ExecStart=/home/ko/.local/share/fnm/aliases/default/bin/node /home/ko/code/chota-bot/build
 
 Restart=on-failure
 RestartSec=5
