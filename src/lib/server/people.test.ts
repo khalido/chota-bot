@@ -43,6 +43,15 @@ describe('parseEventPeople', () => {
 		expect(parseEventPeople('Kid1, Kid2 swim', FAMILY)).toEqual(['Kid1', 'Kid2']);
 	});
 
+	it('handles "Name: detail" form with a colon — the tokenizer treats : and apostrophes as separators', () => {
+		// Common write-style for tagging an event to a kid: "Kid2: Ezra's birthday"
+		// means "this birthday party is on Kid2's calendar". The colon, the
+		// possessive apostrophe, and the friend's name (not in the family) all
+		// fall away; only the family-member token survives.
+		expect(parseEventPeople("Kid2: Ezra's birthday", FAMILY)).toEqual(['Kid2']);
+		expect(parseEventPeople('K1: dentist', FAMILY)).toEqual(['Kid1']);
+	});
+
 	it('returns empty for unknown names', () => {
 		expect(parseEventPeople('Lewis bday', FAMILY)).toEqual([]);
 	});
