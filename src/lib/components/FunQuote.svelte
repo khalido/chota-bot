@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { FunQuote } from '$lib/server/funquotes';
-	let { quote }: { quote: FunQuote | null } = $props();
+	import type { Quote } from '$lib/server/tools/quotes';
+	let { quote }: { quote: Quote | null } = $props();
 </script>
 
 <section
