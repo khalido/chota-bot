@@ -21,7 +21,7 @@ The live dashboard runs on the kiosk box at **`http://sp5.local/`** (home LAN) �
 1. `cp chota.config.example.ts chota.config.ts` — fill in your family details (real names live here only; never in tests/docs/code)
 2. `cp .env.example .env` — fill API keys (Transport NSW, Google, TickTick, etc.)
 3. `npm install`
-4. (Print pipeline only) `npm i -g agent-browser && agent-browser install` — downloads the bundled Chromium used to screenshot `/print/<who>?bare=1` into the PNG that goes to the thermal printer
+4. (Print pipeline only) `npm i -g agent-browser && agent-browser install` — downloads the bundled Chromium used to screenshot `/print/<who>` into the PNG that goes to the thermal printer
 5. (Kiosk only) plug in MUNBYN, confirm USB IDs with `node scripts/printer-test.mjs visible` — see [`docs/printers.md`](docs/printers.md)
 
 ## Stack

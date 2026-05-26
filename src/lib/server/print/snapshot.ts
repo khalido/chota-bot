@@ -5,8 +5,10 @@
  * `printImageBuffer()`, so the printout is pixel-identical to the `/print/<who>`
  * preview.
  *
- * `?bare=1` drops the dashboard nav so the page is just the white sheet, and
- * the viewport is sized to the rendered sheet — no surrounding whitespace.
+ * The /print/<who> route is rendered bare by the layout — no nav, no
+ * dashboard chrome — so the page is just the white sheet at the
+ * 576px-wide viewport. (Layout's nav-hide is gated on pathname, not a
+ * query flag.)
  *
  * Requires `agent-browser` on PATH with its browser installed
  * (`npm i -g agent-browser && agent-browser install`). If it's missing or
@@ -35,7 +37,7 @@ function baseUrl(): string {
 let chain: Promise<unknown> = Promise.resolve();
 
 /**
- * Screenshot `/print/<who>?bare=1` → PNG bytes. Throws if agent-browser is
+ * Screenshot `/print/<who>` → PNG bytes. Throws if agent-browser is
  * unusable. `date` (YYYY-MM-DD) overrides the school-timetable day; `day:
  * 'tomorrow'` renders the whole brief one day ahead (the evening print).
  */
@@ -50,9 +52,11 @@ export function briefToPng(
 }
 
 async function snapshot(who: string, date?: string, day: 'today' | 'tomorrow' = 'today'): Promise<Buffer> {
-	const dateParam = date ? `&date=${encodeURIComponent(date)}` : '';
-	const dayParam = day === 'tomorrow' ? '&day=tomorrow' : '';
-	const url = `${baseUrl()}/print/${encodeURIComponent(who)}?bare=1${dateParam}${dayParam}`;
+	const params = new URLSearchParams();
+	if (date) params.set('date', date);
+	if (day === 'tomorrow') params.set('day', 'tomorrow');
+	const qs = params.toString();
+	const url = `${baseUrl()}/print/${encodeURIComponent(who)}${qs ? `?${qs}` : ''}`;
 	const out = join(tmpdir(), `chota-brief-${who}-${process.pid}-${Date.now()}.png`);
 	const ab = (args: string[]) => exec('agent-browser', args, { timeout: CMD_TIMEOUT_MS });
 
