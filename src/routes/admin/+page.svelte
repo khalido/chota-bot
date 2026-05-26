@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { version } from '$app/environment';
 	import { authClient } from '$lib/auth-client';
+	import * as Card from '$lib/components/ui/card';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -249,37 +250,41 @@
 		</div>
 	</section>
 
-	<section
-		class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
-	>
-		<h2 class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500">
-			TickTick health
-		</h2>
-		<div class="mt-3 flex items-center gap-3">
-			<button
-				type="button"
-				onclick={pingTickTick}
-				disabled={pinging}
-				class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+	<Card.Root>
+		<Card.Header>
+			<Card.Title
+				class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500"
 			>
-				{pinging ? 'Pinging…' : 'Ping MCP (list_projects)'}
-			</button>
-			{#if pingSummary}
-				<span class="font-mono text-xs text-slate-600 dark:text-neutral-400">{pingSummary}</span>
-			{/if}
-		</div>
-		{#if pingJson}
-			<details class="mt-2">
-				<summary
-					class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+				TickTick health
+			</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<div class="flex items-center gap-3">
+				<button
+					type="button"
+					onclick={pingTickTick}
+					disabled={pinging}
+					class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
 				>
-					raw JSON ▸
-				</summary>
-				<pre
-					class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{pingJson}</pre>
-			</details>
-		{/if}
-	</section>
+					{pinging ? 'Pinging…' : 'Ping MCP (list_projects)'}
+				</button>
+				{#if pingSummary}
+					<span class="font-mono text-xs text-slate-600 dark:text-neutral-400">{pingSummary}</span>
+				{/if}
+			</div>
+			{#if pingJson}
+				<details class="mt-3">
+					<summary
+						class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+					>
+						raw JSON ▸
+					</summary>
+					<pre
+						class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{pingJson}</pre>
+				</details>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 
 	<section
 		class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
@@ -358,30 +363,38 @@
 		</div>
 	</section>
 
-	<!-- Each section: summary on top, raw JSON collapsible. -->
+	<!-- Each tool section: header label + one-line summary + raw JSON.
+	     shadcn Card replaces the hand-rolled ring-1/bg-white pattern, so
+	     these match /admin/sentral and /admin/logs visually. Raw-JSON
+	     details stays as native <details>/<summary> — Accordion is over-
+	     kill for a single per-card collapsible. -->
 	{#each sections as s (s.title)}
-		<section
-			class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
-		>
-			<h2
-				class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500"
-			>
-				{s.title}
-			</h2>
-			<p class="mt-2 font-mono text-sm text-slate-700 dark:text-neutral-300">{s.summary}</p>
-			<details class="group mt-3">
-				<summary
-					class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+		<Card.Root>
+			<Card.Header>
+				<Card.Title
+					class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500"
 				>
-					raw JSON ▸
-				</summary>
-				<pre
-					class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{JSON.stringify(
-						s.data,
-						null,
-						2
-					)}</pre>
-			</details>
-		</section>
+					{s.title}
+				</Card.Title>
+				<Card.Description class="font-mono text-sm text-slate-700 dark:text-neutral-300">
+					{s.summary}
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<details class="group">
+					<summary
+						class="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+					>
+						raw JSON ▸
+					</summary>
+					<pre
+						class="mt-2 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 dark:bg-neutral-950 dark:text-neutral-200">{JSON.stringify(
+							s.data,
+							null,
+							2
+						)}</pre>
+				</details>
+			</Card.Content>
+		</Card.Root>
 	{/each}
 </div>
