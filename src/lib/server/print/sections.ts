@@ -25,8 +25,15 @@ type BodyByKind =
 			kind: 'events';
 			events: { time: string; summary: string; people: string[] }[];
 			/** To-dos listed under the events — each with its due-window (today /
-			    tomorrow / overdue) and the people (TickTick tags) it's assigned to. */
-			tasks: { title: string; when: 'today' | 'tomorrow' | 'overdue'; people: string[] }[];
+			    tomorrow / overdue) and the people (TickTick tags) it's assigned to.
+			    `daysLate` rides along for overdue tasks (drives the 1-bell vs
+			    2-bells urgency icon in BriefSheet). */
+			tasks: {
+				title: string;
+				when: 'today' | 'tomorrow' | 'overdue';
+				people: string[];
+				daysLate?: number;
+			}[];
 	  }
 	| { kind: 'chores'; rows: { person: string; chores: string }[] }
 	| {
@@ -126,7 +133,7 @@ function todaySection(d: BriefData, who: string): PrintSectionBody | null {
 	const tasks = d.familyTasks
 		.filter((t) => t.people.some((p) => p.toLowerCase() === who.toLowerCase()))
 		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
-		.map((t) => ({ title: t.title, when: t.when, people: t.people }));
+		.map((t) => ({ title: t.title, when: t.when, people: t.people, daysLate: t.daysLate }));
 	if (!events.length && !tasks.length) return null;
 	return { title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY', kind: 'events', events, tasks };
 }
@@ -154,7 +161,8 @@ function familyTodaySection(d: BriefData): PrintSectionBody | null {
 		.map((t) => ({
 			title: t.title,
 			when: t.when,
-			people: t.people.length ? t.people : ['Family']
+			people: t.people.length ? t.people : ['Family'],
+			daysLate: t.daysLate
 		}));
 	if (!events.length && !tasks.length) return null;
 	return {
@@ -180,7 +188,8 @@ function familySection(d: BriefData): PrintSectionBody | null {
 		.map((t) => ({
 			title: t.title,
 			when: t.when,
-			people: t.people.length ? t.people : ['Family']
+			people: t.people.length ? t.people : ['Family'],
+			daysLate: t.daysLate
 		}));
 	return tasks.length ? { title: 'FAMILY', kind: 'events', events: [], tasks } : null;
 }
