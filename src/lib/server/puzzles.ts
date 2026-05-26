@@ -3,30 +3,50 @@
  * but keep the answer around for the dashboard, an "answer" companion print,
  * or a reveal command later.
  *
- * Source: hand-curated classics for now (8 entries). To grow the pool,
- * append to puzzles.json -- shape is enforced by the Puzzle type below.
+ * Source: vendored from the curios content repo (`khalido/curios`) at
+ * `data/puzzles/puzzles.json` — refresh with `npm run sync:puzzles` and
+ * commit the result. Parallel to `data/quotes/literary.json` for the
+ * literary clock.
+ *
+ * Load is runtime via readFileSync (same pattern as quotes.ts) — relative
+ * to `process.cwd()` which is the repo root under both `vite dev` and the
+ * systemd unit (chota.service sets WorkingDirectory).
  */
-import puzzles from './puzzles.json';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { sydneyYMD } from '$lib/time';
 
+const PATH = resolve(process.cwd(), 'data/puzzles/puzzles.json');
+
 export interface Puzzle {
-	id: string;
-	q: string;
-	a: string;
+	question: string;
+	answer: string;
 	category: string;
+	/** Audience rating from curios — ordered kids < family < mature, plus unrated. */
+	rating: 'kids' | 'family' | 'mature' | 'unrated';
 	source: string;
+	/** Optional credit for puzzles drawn from a tradition (e.g. 'Tolkien-style'). */
+	attribution?: string;
+	lang?: string;
 }
 
-const POOL: Puzzle[] = puzzles as Puzzle[];
+let cached: Puzzle[] | null = null;
+
+function load(): Puzzle[] {
+	if (cached) return cached;
+	cached = JSON.parse(readFileSync(PATH, 'utf8')) as Puzzle[];
+	return cached;
+}
 
 /** Stable per-Sydney-day pick. Same puzzle for every reprint that day. */
 export function pickPuzzle(now: Date = new Date()): Puzzle {
+	const pool = load();
 	const ymd = sydneyYMD(now);
 	const seed = parseInt(ymd.slice(-2), 10) + parseInt(ymd.slice(5, 7), 10) * 31;
-	return POOL[seed % POOL.length];
+	return pool[seed % pool.length];
 }
 
 /** Diagnostic: full pool size (handy for /admin to confirm we loaded). */
 export function puzzleCount(): number {
-	return POOL.length;
+	return load().length;
 }

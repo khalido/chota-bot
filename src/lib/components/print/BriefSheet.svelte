@@ -178,7 +178,7 @@
 						{/if}
 						{#each s.tasks as t, i (`task-${i}`)}
 							<!-- items-center (not items-baseline) so the BellRing icon sits
-							     vertically centred with the SAVI/YASI chips on single-line tasks.
+							     vertically centred with the people-tag chips on single-line tasks.
 							     The .flex-1 span still wraps when the task title is long. -->
 							<li class="flex items-center gap-2">
 								<span class="flex-1">{t.title}</span>

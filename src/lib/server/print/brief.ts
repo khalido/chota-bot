@@ -26,7 +26,7 @@ import {
 	getUpcomingSchoolEvents,
 	getSchoolBreak
 } from '$lib/server/tools/schoolterms';
-import { pickPuzzle } from '$lib/server/puzzles';
+import { pickPuzzle, type Puzzle } from '$lib/server/puzzles';
 import { pickFunQuote, type FunQuote } from '$lib/server/funquotes';
 import {
 	sydneyDateLong,
@@ -100,7 +100,7 @@ export interface BriefData {
 	chores: { person: string; chores: string[] }[];
 	/** "Family" list tasks due on the brief's day or overdue, with assignees. */
 	familyTasks: FamilyTask[];
-	puzzle: { q: string; a: string };
+	puzzle: Puzzle;
 	/** A TV / comic-strip quote for the morning brief's QUOTE section. */
 	funQuote: FunQuote | null;
 	/** "Shopping" list items, shown in full. Empty if the list is empty/missing. */

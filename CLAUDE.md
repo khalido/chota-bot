@@ -35,6 +35,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 - **Vercel AI SDK + AI Gateway** — ToolLoopAgent live at `src/lib/server/agent/`; chat-debuggable at `/admin/agent`. Autonomous job-driving still ahead (see [`docs/agent.md`](docs/agent.md))
 - **shadcn-svelte** — UI primitives (Card, Tabs, Dialog, Sheet, Popover, Switch, Empty, Accordion, ButtonGroup, Button, Textarea, Separator) at `src/lib/components/ui/`
 - **LogTape** — structured logging at `$lib/server/log.ts` — see [`docs/logging.md`](docs/logging.md)
+- **Content** — quotes (literary-clock per-minute) + puzzles (daily) are vendored from the [`khalido/curios`](https://github.com/khalido/curios) content repo into `data/quotes/literary.json` and `data/puzzles/puzzles.json`. Refresh with `npm run sync:quotes` / `npm run sync:puzzles`, then commit the result.
 
 ## Where things live
 

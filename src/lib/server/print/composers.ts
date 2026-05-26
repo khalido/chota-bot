@@ -39,7 +39,7 @@ export function getPrintKinds(): readonly string[] {
 	return ['test', FAMILY_RECIPIENT, ...getRecipients()];
 }
 
-/** Title-cased recipient name for the masthead, e.g. `savi` → `Savi`. */
+/** Title-cased recipient name for the masthead, e.g. `kid1` → `Kid1`. */
 function recipientName(who: string): string {
 	return who[0].toUpperCase() + who.slice(1);
 }

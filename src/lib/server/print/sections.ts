@@ -209,7 +209,7 @@ function shortItem(s: string): string {
 }
 
 function puzzleSection(d: BriefData): PrintSectionBody {
-	return { title: 'PUZZLE', kind: 'puzzle', q: d.puzzle.q };
+	return { title: 'PUZZLE', kind: 'puzzle', q: d.puzzle.question };
 }
 
 /** A TV / comic-strip quote — a light note on the morning brief's fun tail. */
