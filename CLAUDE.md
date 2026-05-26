@@ -14,7 +14,7 @@ npm run lint       # prettier + eslint
 npm run build      # adapter-node → build/index.js
 ```
 
-The live dashboard runs on the kiosk box at **`http://sp5.local/`** (home LAN) — a Caddy reverse-proxy service maps port 80 → the app on :8000, so there's no port to type. Deploy is manual SSH-from-Mac (`npm run deploy`) — see [`docs/deploy.md`](docs/deploy.md).
+The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!_OS) — reach it portless at **`http://pop-os/`** on the LAN, or **`http://pop-os.<tailnet>.ts.net/`** over Tailscale. A Caddy reverse-proxy service maps port 80 → the app on :8000, so there's no port to type. Deploy is manual SSH-from-Mac (`npm run deploy`) — see [`docs/deploy.md`](docs/deploy.md).
 
 ## First-time setup
 
@@ -42,7 +42,10 @@ chota.config.ts          # per-family config (gitignored). Real names ONLY here.
 chota.config.example.ts  # committed reference shape — uses placeholder names
 
 src/
-  routes/                # pages (/, /clock, /weather, /lists, /morning, /admin, /print)
+  routes/                # pages (/, /clock, /weather, /lists, /morning, /print, /admin)
+                         # /admin has sub-routes: /admin/sentral (per-kid timetable
+                         # cache + manual refresh), /admin/logs (live tail of
+                         # data/logs/chota.log), /admin/jobs, /admin/print, /admin/agent
   lib/components/        # Svelte UI (Clock, Weather, Calendar, Bus, Lists, Chores, PrintMorning)
   lib/components/print/  # BriefSheet — the screenshot-target sheet for the printed briefs
   lib/server/

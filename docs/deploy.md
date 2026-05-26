@@ -257,12 +257,14 @@ ssh chota 'curl -s -X POST http://localhost:8000/api/print/test'   # printer smo
 ## Reverse proxy — portless URL
 
 The app listens on `:8000` (a non-privileged port). To reach the dashboard at
-`http://sp5.local/` with **no port** — the URL the family bookmarks — Caddy runs
-on `:80` and reverse-proxies to it. Caddy binds the privileged port via its own
-`CAP_NET_BIND_SERVICE`; the app itself never needs root.
+the box's hostname with **no port** — e.g. `http://pop-os/` on the LAN or
+`http://pop-os.<tailnet>.ts.net/` over Tailscale, whichever the family
+bookmarks — Caddy runs on `:80` and reverse-proxies to it. Caddy binds the
+privileged port via its own `CAP_NET_BIND_SERVICE`; the app itself never
+needs root.
 
 One-time install on the box — use the **official Caddy apt repo** (current +
-auto-updating via `apt upgrade`; the Ubuntu/Mint repo copy lags badly):
+auto-updating via `apt upgrade`; the Ubuntu repo copy lags badly):
 
 ```bash
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
@@ -271,6 +273,10 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo 
 sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update && sudo apt install caddy
 ```
+
+(`setup_linux.sh` in `khalido/dotfiles` already installs Caddy with its
+default Caddyfile by default — on a box bootstrapped from that, only the
+`cp + reload` step below is needed.)
 
 The package installs + enables `caddy.service` (survives reboots, reads
 `/etc/caddy/Caddyfile`). Drop our config in and reload:
@@ -290,9 +296,13 @@ back. The Caddyfile isn't touched by `deploy.sh` — re-copy + reload only when
 
 Not Phase 1 blockers — wire when the need shows up.
 
-- **mDNS** — `avahi-daemon` (enabled by default on Mint) advertises the box on
-  the LAN, so `sp5.local` resolves with no central DNS. Nothing to set up as
-  long as the hostname is `sp5`.
+- **mDNS** — `avahi-daemon` (on Ubuntu/Pop!_OS, `apt install avahi-daemon`)
+  advertises the box on the LAN, so `<hostname>.local` resolves with no
+  central DNS. Mostly redundant on a tailnet-managed box (use the
+  `<hostname>.<tailnet>.ts.net` URL there), useful when off-tailnet on the
+  home LAN.
 - **Tailscale** — already on the box; reachable from any device on the tailnet
-  at `sp5.<tailnet>.ts.net`. `tailscale serve 8000` would add a portless HTTPS
-  URL over the tailnet if ever wanted.
+  at `<hostname>.<tailnet>.ts.net` (e.g. `pop-os.<tailnet>.ts.net/`).
+  `tailscale serve 8000` would add a portless HTTPS URL over the tailnet
+  with an auto-provisioned cert — alternative to running Caddy if you want
+  TLS over the tailnet without Let's Encrypt.
