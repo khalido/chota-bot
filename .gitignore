@@ -24,6 +24,12 @@ vite.config.ts.timestamp-*
 # SQLite
 *.db
 
+# drizzle-kit's generated migration SQL — recreated by `deploy.sh`'s fresh-DB
+# path (npx drizzle-kit generate) on each box, so tracking it would create
+# false-positive diffs after every deploy. Schema lives in
+# src/lib/server/db/auth.schema.ts (tracked).
+/drizzle/
+
 # Data — runtime state, all gitignored except data/quotes/ (vendored from
 # the curios repo via scripts/sync-quotes.mjs — deterministic, fine to track).
 # New tool-specific subdirs (data/sentral/, data/morning/, etc.) are auto-
