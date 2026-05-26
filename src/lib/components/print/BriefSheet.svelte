@@ -84,7 +84,7 @@
      section inherits it; only the per-section header chrome is shared, via
      the snippet above — section *bodies* lay out freely. -->
 <div
-	class="plex mx-auto w-[576px] bg-white px-6 py-6 text-[17px] leading-snug font-medium text-black"
+	class="plex mx-auto w-[576px] bg-white px-6 pt-0 pb-6 text-[17px] leading-snug font-medium text-black"
 >
 	<BriefHeader {who} {date} />
 
@@ -256,7 +256,10 @@
 						</div>
 					{/if}
 				{:else if s.kind === 'puzzle'}
-					<div class="border-2 border-black p-3 leading-relaxed">{s.q}</div>
+					<!-- Border was border-2 solid black — too dominant on a 576px brief.
+					     1px dashed reads as a "tear here" cue without competing with
+					     the puzzle text itself. -->
+					<div class="border border-dashed border-black p-3 leading-relaxed">{s.q}</div>
 				{:else if s.kind === 'fact'}
 					<p class="leading-relaxed">{s.text}</p>
 					{#if s.image}
@@ -265,9 +268,11 @@
 					{/if}
 				{:else if s.kind === 'quote'}
 					<!-- The attribution rides the same line as the quote, wrapping only
-					     if it doesn't fit — italic + grey so it reads as a footnote. -->
+					     if it doesn't fit. Italic-but-black for thermal-print legibility —
+					     grey/FOOTNOTE-coloured italic dithers into noise and becomes hard
+					     to read at small sizes; the italic alone is plenty of distinction. -->
 					<p class="leading-relaxed whitespace-pre-wrap">
-						{s.lines.join('\n')}<span class="ml-2 text-[14px] italic" style:color={FOOTNOTE}
+						{s.lines.join('\n')}<span class="ml-2 text-[14px] italic"
 							>— {s.attribution}</span
 						>
 					</p>

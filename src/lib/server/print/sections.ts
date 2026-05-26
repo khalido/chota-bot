@@ -161,7 +161,9 @@ function familyTodaySection(d: BriefData): PrintSectionBody | null {
 		.map((t) => ({
 			title: t.title,
 			when: t.when,
-			people: t.people.length ? t.people : ['Family'],
+			// "Todos" chip on unassigned — matches the per-recipient `parentsFamily…`
+			// section above. "Family" was unclear for kids; "Todos" reads as "anyone".
+			people: t.people.length ? t.people : ['Todos'],
 			daysLate: t.daysLate
 		}));
 	if (!events.length && !tasks.length) return null;
@@ -188,10 +190,15 @@ function familySection(d: BriefData): PrintSectionBody | null {
 		.map((t) => ({
 			title: t.title,
 			when: t.when,
-			people: t.people.length ? t.people : ['Family'],
+			// "Todos" rather than "Family" on unassigned chips — kids parse it
+			// as "tasks anyone can do" more naturally than the word "Family".
+			people: t.people.length ? t.people : ['Todos'],
 			daysLate: t.daysLate
 		}));
-	return tasks.length ? { title: 'FAMILY', kind: 'events', events: [], tasks } : null;
+	// Section title is TODOS for the same reason — labels the section as
+	// "household to-dos" not "people in the family". FAMILY_RECIPIENT (the
+	// route identifier for the weekend whole-household brief) is unchanged.
+	return tasks.length ? { title: 'TODOS', kind: 'events', events: [], tasks } : null;
 }
 
 /** The shopping list — shown to everyone. The evening brief adds a "bought today" recap. */

@@ -265,11 +265,11 @@ describe('print pipeline', () => {
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
-			04 FAMILY
+			04 TODOS
 			overdue      Pack swimming gear  (Kid1)
 			overdue      Return library books  (Kid2)
 			             Sign the excursion form  (Kid1)
-			             Book the dentist  (Family)
+			             Book the dentist  (Todos)
 			tmrw         Bring library bag  (Kid1)
 
 			05 SHOPPING
@@ -313,7 +313,7 @@ describe('print pipeline', () => {
 			overdue      Pack swimming gear  (Kid1)
 			overdue      Return library books  (Kid2)
 			             Sign the excursion form  (Kid1)
-			             Book the dentist  (Family)
+			             Book the dentist  (Todos)
 			             Renew car rego  (Parent1)
 			tmrw         Bring library bag  (Kid1)
 
@@ -372,11 +372,11 @@ describe('print pipeline', () => {
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
-			04 FAMILY
+			04 TODOS
 			overdue      Pack swimming gear  (Kid1)
 			overdue      Return library books  (Kid2)
 			             Sign the excursion form  (Kid1)
-			             Book the dentist  (Family)
+			             Book the dentist  (Todos)
 			tmrw         Bring library bag  (Kid1)
 
 			05 SHOPPING
