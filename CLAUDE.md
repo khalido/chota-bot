@@ -56,6 +56,7 @@ src/
     preflight.ts         # startup presence check — required env vars + DB file
     chores.ts            # daily rotation lookup
     tools/               # weather, bus, calendar, sentral, ticktick, tmdb, apod, bootprint
+                         # quotes (kind-filtered random), clock-quotes (literary HH:MM)
     print/               # brief + weather-block + sections + composers + render + snapshot + printer
     jobs/                # croner-scheduled jobs (auto-discovered; one file = one job)
     agent/               # ToolLoopAgent + prompts.ts + per-tool agent wrappers

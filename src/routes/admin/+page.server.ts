@@ -1,6 +1,6 @@
 import { collectTripReports } from '$lib/server/print/brief';
 import { getRecipients } from '$lib/server/print/sections';
-import { quoteForTime } from '$lib/server/quotes';
+import { quoteForTime } from '$lib/server/tools/clock-quotes';
 import { getConfig } from '$lib/server/config';
 import { getChores } from '$lib/server/chores';
 import { getWeather } from '$lib/server/tools/weather';

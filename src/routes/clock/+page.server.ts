@@ -1,4 +1,4 @@
-import { quoteForTime } from '$lib/server/quotes';
+import { quoteForTime } from '$lib/server/tools/clock-quotes';
 import { getWeather } from '$lib/server/tools/weather';
 import { logErr } from '$lib/server/log';
 import type { PageServerLoad } from './$types';
