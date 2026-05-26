@@ -27,7 +27,7 @@ import {
 	getSchoolBreak
 } from '$lib/server/tools/schoolterms';
 import { pickPuzzle, type Puzzle } from '$lib/server/puzzles';
-import { pickFunQuote, type FunQuote } from '$lib/server/funquotes';
+import { getQuote, type Quote } from '$lib/server/tools/quotes';
 import {
 	sydneyDateLong,
 	sydneyDateShort,
@@ -102,7 +102,7 @@ export interface BriefData {
 	familyTasks: FamilyTask[];
 	puzzle: Puzzle;
 	/** A TV / comic-strip quote for the morning brief's QUOTE section. */
-	funQuote: FunQuote | null;
+	funQuote: Quote | null;
 	/** "Shopping" list items, shown in full. Empty if the list is empty/missing. */
 	shoppingItems: string[];
 	/** Shopping items ticked off recently — the evening brief's "recently bought" recap. */
@@ -207,7 +207,7 @@ export async function gatherBrief({
 		chores: getChores({ now: ref }),
 		familyTasks,
 		puzzle: pickPuzzle(ref),
-		funQuote: pickFunQuote(ref),
+		funQuote: getQuote({ date: ref }),
 		shoppingItems,
 		boughtRecently,
 		fact: bootprint
