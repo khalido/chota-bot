@@ -349,6 +349,12 @@
 				>
 				— scheduler status + per-job last runs.
 			</p>
+			<p>
+				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('/admin/agent')}
+					>/admin/agent</a
+				>
+				— poke the ToolLoopAgent: tools registered, env health, per-step loop inspector.
+			</p>
 		</div>
 	</section>
 
