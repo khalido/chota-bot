@@ -35,16 +35,31 @@ patterns. Read these first, in this order:
 ```
 agent/
   index.ts             # the single ToolLoopAgent instance (+ thin event() wrapper around .generate())
+  prompts.ts           # buildSystemPrompt() — soul + style + today + snapshot, composed per call
   tools/               # one file per tool, basename matching the data lib it wraps
     weather.ts
     calendar.ts
     ...
   memory.ts            # later — SQLite-backed memory store (Stevens-shape; flat table to start)
-  prompts.ts           # later — shared system-prompt fragments per recipient
 ```
 
-Memory and prompts join when there's a real second use of them. Until then,
-inline whatever's needed.
+The system prompt has four layers (see `prompts.ts`):
+
+1. **SOUL** — `soul.md` at the repo root (gitignored, personalised). Falls
+   back to `soul.example.md` (committed). Identity + voice only — leave
+   tool / behaviour rules to STYLE.
+2. **STYLE** — audience (family), brevity ceiling, tool-use cue, "resolve
+   relative dates before calling calendar".
+3. **TODAY** — `Today is Monday 25 May 2026 (2026-05-25)`. Lets the model
+   compute "next Monday" itself.
+4. **SNAPSHOT** — today's calendar headlines + family-list state (open +
+   ticked-off-today). Best-effort: any one fetch failing drops just that
+   line, not the whole prompt.
+
+Rebuilt fresh every call. Prompt-caching can later split (SOUL + STYLE)
+from (TODAY + SNAPSHOT) using `SystemModelMessage[]`.
+
+Memory joins when there's a real second use of it.
 
 ## Tool conventions
 

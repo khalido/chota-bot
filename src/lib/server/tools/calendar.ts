@@ -31,7 +31,7 @@ export interface CalendarEvent {
 	htmlLink?: string;
 }
 
-export type CalendarRange = 'today' | 'tomorrow' | 'week' | 'next_week';
+export type CalendarRange = 'today' | 'tomorrow' | 'week' | 'next_week' | 'weekend';
 
 export interface GetCalendarOptions {
 	range?: CalendarRange;
@@ -63,6 +63,76 @@ export async function refreshCalendar(
 	range: CalendarRange = 'today',
 	customCalendarId?: string
 ): Promise<CalendarEvent[]> {
+	const { timeMin, timeMax } = rangeFor(range, new Date());
+	const events = await fetchEventsList(timeMin, timeMax, customCalendarId);
+	if (!customCalendarId) {
+		const now = new Date();
+		const key = cacheKey(range, now);
+		// Drop any older-day entries for this range so the map can't grow unbounded.
+		for (const k of cache.keys()) if (k.startsWith(`${range}:`) && k !== key) cache.delete(k);
+		cache.set(key, events);
+	}
+	log('calendar', `${events.length} events for range=${range}`);
+	return events;
+}
+
+/**
+ * Fetch events between two arbitrary Sydney-local moments. Bypasses the
+ * range-keyed cache — used by the agent-tool wrapper when the LLM passes a
+ * specific date like `2026-06-01`. Per-day calls aren't frequent enough to
+ * need their own cache.
+ */
+export async function getCalendarBetween(
+	start: Date,
+	end: Date,
+	customCalendarId?: string
+): Promise<CalendarEvent[]> {
+	const events = await fetchEventsList(start, end, customCalendarId);
+	log(
+		'calendar',
+		`${events.length} events between ${start.toISOString()} and ${end.toISOString()}`
+	);
+	return events;
+}
+
+export interface SearchEventsOptions {
+	/** Phrase to match (case-insensitive substring on event summary). */
+	query: string;
+	/** Forward search window in days from `now`. Default 60. */
+	days?: number;
+	/** Override config.calendar.id (e.g. for testing). */
+	calendarId?: string;
+	/** Anchor for the window. Defaults to `new Date()`. */
+	now?: Date;
+}
+
+/**
+ * Find events whose summary contains `query` (case-insensitive substring),
+ * within a forward window from `now`. Used by the agent tool for "when is
+ * the next X" questions.
+ *
+ * Substring match keeps the implementation simple — the agent expands
+ * abbreviations ("vb" → "volleyball") at the prompt layer before calling,
+ * so we don't need fuzzy matching here.
+ */
+export async function searchEvents(opts: SearchEventsOptions): Promise<CalendarEvent[]> {
+	const { query, days = 60, calendarId, now = new Date() } = opts;
+	const q = query.trim().toLowerCase();
+	if (!q) return [];
+	const start = now;
+	const end = new Date(now.getTime() + days * 86_400_000);
+	const events = await fetchEventsList(start, end, calendarId);
+	const matches = events.filter((e) => e.summary.toLowerCase().includes(q));
+	log('calendar', `search "${query}" over ${days}d → ${matches.length}/${events.length} matches`);
+	return matches;
+}
+
+/** Shared core: auth + Google API call + transform. No caching, no logging. */
+async function fetchEventsList(
+	timeMin: Date,
+	timeMax: Date,
+	customCalendarId?: string
+): Promise<CalendarEvent[]> {
 	const calendarId = customCalendarId ?? getConfig().calendar?.id;
 	if (!calendarId) {
 		throw new Error(
@@ -79,8 +149,6 @@ export async function refreshCalendar(
 	client.setCredentials({ access_token: accessToken });
 
 	const cal = google.calendar({ version: 'v3', auth: client });
-	const { timeMin, timeMax } = rangeFor(range, new Date());
-
 	const res = await cal.events.list({
 		calendarId,
 		timeMin: timeMin.toISOString(),
@@ -90,16 +158,7 @@ export async function refreshCalendar(
 		maxResults: 250
 	});
 
-	const events = (res.data.items ?? []).map(toEvent);
-	if (!customCalendarId) {
-		const now = new Date();
-		const key = cacheKey(range, now);
-		// Drop any older-day entries for this range so the map can't grow unbounded.
-		for (const k of cache.keys()) if (k.startsWith(`${range}:`) && k !== key) cache.delete(k);
-		cache.set(key, events);
-	}
-	log('calendar', `${events.length} events for range=${range}`);
-	return events;
+	return (res.data.items ?? []).map(toEvent);
 }
 
 /** Lists all calendars the connected user has access to. Helper for picking calendar.id. */
@@ -179,6 +238,26 @@ function rangeFor(range: CalendarRange, now: Date): { timeMin: Date; timeMax: Da
 			const daysToNextMon = 8 - (dayMap[sydneyDayOfWeek(now)] ?? 1);
 			const start = addDays(now, daysToNextMon);
 			const end = addDays(start, 6);
+			return { timeMin: startOfSydneyDay(start), timeMax: endOfSydneyDay(end) };
+		}
+		case 'weekend': {
+			// The closest upcoming Sat 00:00 → Sun 23:59. If today is already
+			// the weekend, start from today (so "what's on this weekend" on
+			// Sat morning still includes Sat afternoon + Sun).
+			const dayMap: Record<string, number> = {
+				Mon: 1,
+				Tue: 2,
+				Wed: 3,
+				Thu: 4,
+				Fri: 5,
+				Sat: 6,
+				Sun: 7
+			};
+			const todayDay = dayMap[sydneyDayOfWeek(now)] ?? 1;
+			const daysToSat = todayDay >= 6 ? 0 : 6 - todayDay;
+			const daysToSun = 7 - todayDay;
+			const start = daysToSat === 0 ? now : addDays(now, daysToSat);
+			const end = addDays(now, daysToSun);
 			return { timeMin: startOfSydneyDay(start), timeMax: endOfSydneyDay(end) };
 		}
 	}

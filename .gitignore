@@ -34,6 +34,12 @@ vite.config.ts.timestamp-*
 # Per-family config (root, gitignored). chota.config.example.ts is committed.
 /chota.config.ts
 
+# Personalised agent personality (root, gitignored). soul.example.md is the
+# public template; copy it to soul.md to write your family's flavour. The
+# agent falls back to the example when soul.md is absent, so a fresh clone
+# still works.
+/soul.md
+
 # Private notes (account IDs, project numbers, anything you'd rather not push)
 /docs/private.md
 /docs/private/

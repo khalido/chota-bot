@@ -60,6 +60,8 @@ export interface EnrichedTitle {
 	posterUrl: string | null;
 	overview: string;
 	voteAverage: number;
+	/** TMDB's relevance/popularity score — used to pick movie-vs-TV when both match. */
+	popularity: number;
 	providers: WatchProvider[];
 	/** TMDB watch page link, fallback when no AU providers. */
 	watchLink: string | null;
@@ -114,6 +116,7 @@ export async function enrichMovie(query: string, year?: number): Promise<Enriche
 		posterUrl: top.posterUrl,
 		overview: top.overview,
 		voteAverage: top.voteAverage,
+		popularity: top.popularity,
 		providers: providers?.providers ?? [],
 		watchLink: providers?.link ?? null
 	};
@@ -135,6 +138,7 @@ export async function enrichTv(query: string, year?: number): Promise<EnrichedTi
 		posterUrl: top.posterUrl,
 		overview: top.overview,
 		voteAverage: top.voteAverage,
+		popularity: top.popularity,
 		providers: providers?.providers ?? [],
 		watchLink: providers?.link ?? null
 	};
