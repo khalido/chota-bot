@@ -63,6 +63,9 @@ export interface FamilyTask {
 	/** `today` = due on the brief's day; `tomorrow` = due the next day;
 	 *  `overdue` = past due and still open. */
 	when: 'today' | 'tomorrow' | 'overdue';
+	/** Whole calendar-days past due (Sydney-local) — only set when `when === 'overdue'`.
+	 *  Drives the print-sheet urgency icon (one bell → two bells past 2 days). */
+	daysLate?: number;
 }
 
 /**
@@ -180,7 +183,8 @@ export async function gatherBrief({
 			const when = taskWhen(t.dueDate, ref);
 			if (!when) return [];
 			const people = parseTaskPeople(t.title, t.tags, config.family ?? []);
-			return [{ title: t.title.trim(), people, when }];
+			const daysLate = when === 'overdue' ? daysSince(t.dueDate, ref) : undefined;
+			return [{ title: t.title.trim(), people, when, daysLate }];
 		}
 	);
 
@@ -229,6 +233,23 @@ function taskWhen(dueDate: string | undefined, ref: Date): 'today' | 'tomorrow' 
 	if (due === sydneyYMD(new Date(ref.getTime() + 86_400_000))) return 'tomorrow';
 	if (due < day) return 'overdue';
 	return null;
+}
+
+/**
+ * Calendar-days between a task's due date and the brief's reference day, both
+ * in Sydney-local. Returns 0 for not-yet-overdue (we only call this for
+ * already-overdue tasks). Driving the urgency icon: 1 day = one bell, >2 days
+ * = two bells.
+ */
+function daysSince(dueDate: string | undefined, ref: Date): number {
+	if (!dueDate) return 0;
+	const d = new Date(dueDate);
+	if (Number.isNaN(d.getTime())) return 0;
+	// Parse both YMDs back to UTC midnights for a clean integer-day diff —
+	// avoids the DST hour-shift that subtracting raw Dates would smuggle in.
+	const dueMs = Date.parse(`${sydneyYMD(d)}T00:00:00Z`);
+	const refMs = Date.parse(`${sydneyYMD(ref)}T00:00:00Z`);
+	return Math.max(0, Math.round((refMs - dueMs) / 86_400_000));
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
