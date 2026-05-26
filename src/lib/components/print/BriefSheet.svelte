@@ -181,22 +181,30 @@
 							     The .flex-1 span still wraps when the task title is long. -->
 							<li class="flex items-center gap-2">
 								<span class="flex-1">{t.title}</span>
-								{#if t.when === 'overdue'}
-									<!-- Overdue → BellRing icon. One bell up to 2 days late;
-									     two bells (visual escalation) once it's been overdue more
-									     than 2 days. size 24 + strokeWidth 2.5 keep the line
-									     weight legible after the 203dpi ESC/POS dither pass. -->
+								{#if t.when === 'today' || t.when === 'overdue'}
+									<!-- BellRing as a due-urgency indicator (no bell on tmrw —
+									     that's still text). Escalation ramp:
+									       today              → 1 bell  (the day it's due)
+									       overdue 1 day      → 1 bell  (just missed it)
+									       overdue 2+ days    → 2 bells (visual ramp = late)
+									     size 24 + strokeWidth 2.5 keep the line weight legible
+									     after the 203dpi ESC/POS dither pass. -->
+									{@const late = t.daysLate ?? 0}
 									<span
-										aria-label={`overdue${t.daysLate ? ` by ${t.daysLate} day${t.daysLate === 1 ? '' : 's'}` : ''}`}
+										aria-label={t.when === 'today'
+											? 'due today'
+											: `overdue by ${late} day${late === 1 ? '' : 's'}`}
 										class="flex shrink-0 items-center -space-x-1"
 									>
 										<BellRing class="stroke-black" size={24} strokeWidth={2.5} />
-										{#if (t.daysLate ?? 0) > 2}
+										{#if late >= 2}
 											<BellRing class="stroke-black" size={24} strokeWidth={2.5} />
 										{/if}
 									</span>
 								{:else if t.when === 'tomorrow'}
-									<!-- "today" tasks skip the chip; only "tomorrow" gets a text chip. -->
+									<!-- "tomorrow" tasks are early — no urgency indicator, just
+									     an outlined tmrw chip so it's clear which lines aren't
+									     for today. -->
 									<span
 										class="shrink-0 rounded border border-black px-1.5 text-[13px] font-semibold uppercase"
 										>tmrw</span
