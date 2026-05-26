@@ -17,6 +17,7 @@
 </svelte:head>
 
 <BriefSheet
+	who={data.who}
 	date={data.date}
 	sections={data.sections}
 	closing={data.closing}

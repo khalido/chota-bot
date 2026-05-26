@@ -29,8 +29,8 @@
 </svelte:head>
 
 <BriefSheet
+	who={data.who}
 	date={data.date}
-	mark={data.mark}
 	sections={data.sections}
 	closing={data.closing}
 	printedAt={data.printedAt}

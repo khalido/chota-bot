@@ -105,8 +105,8 @@
 				</div>
 				<div class="shadow-lg">
 					<BriefSheet
+						who={b.who}
 						date={data.date}
-						mark={b.mark}
 						sections={b.sections}
 						closing={data.closing}
 						printedAt={data.printedAt}
