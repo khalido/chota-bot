@@ -48,7 +48,7 @@ Browser (Surface Pro 5 kiosk, Chromium fullscreen)
     ├─ /lists     ← TickTick lists fullscreen
     ├─ /morning   ← Morning brief preview
     ├─ /admin     ← Raw debug dumps (trips, chores, quote, config), /admin/jobs
-    └─ /print/<who>?bare=1   ← screenshot target for the morning print
+    └─ /print/<who>          ← screenshot target for the morning print (rendered bare)
   Web Audio (MediaRecorder for voice — Phase 3)
         │ HTTP/SSE
         ▼
@@ -145,7 +145,7 @@ End state: 06:45 every weekday, the printer fires with weather + bus + chores + 
 
 What changed from the original M0/M1/M2 plan:
 - **Restructured the brief into a GUS-style sheet** — `CHOTA` masthead, numbered sections (`01 WEATHER`, `02 TODAY`, …), 12-hour compact times, left-aligned. The old shape (text rules, all-caps, no sections) is in git history.
-- **Two render paths** — plain text via `composeText('morning')` for the always-works fallback; HTML→image via `agent-browser` screenshotting `/print/<who>?bare=1` for the production "designed" path. See "Two render paths" below.
+- **Two render paths** — plain text via `composeText('morning')` for the always-works fallback; HTML→image via `agent-browser` screenshotting `/print/<who>` (rendered bare; the layout hides the dashboard nav for this route) for the production "designed" path. See "Two render paths" below.
 - **Multi-recipient prints** — family brief + per-kid briefs (kids weekdays only). Each recipient is a `/print/<who>` route; the morning-print job loops over enabled recipients and prints in sequence.
 - **Better-auth Google OAuth** wired (replaces planned manual `googleapis` token flow) for the calendar tool.
 - **Job runner** is per-file `defineJob()` not a DB-polling tick.
@@ -212,7 +212,7 @@ The agent never edits the body. Its job is to add a final useful sentence — us
 The morning content is gathered once by `gatherMorning()` → `MorningData` (raw weather lines, calendar events, bus trips, chores, due-soon tasks, puzzle, shopping, per-kid Sentral schedule). Two renderers consume it:
 
 1. **Plain text** (`composeText('morning')` → string → `printText()`) — ASCII, the canonical debuggable form. `printText` word-wraps each line to the active built-in font's column width. The simple, always-works fallback.
-2. **HTML → image** (the "designed" path) — `/print/<who>` is a SvelteKit route styled with Tailwind + IBM Plex Mono (self-hosted in `static/fonts/`, Medium weight to survive the thermal head), built to fixed `576px` width (the 80mm head @ 203dpi). `agent-browser` screenshots it: `set viewport 576 <h>`, `open <url>?bare=1`, `screenshot --full <path>` → PNG → `printPng()` (which feeds it to `node-thermal-printer`'s `printImageBuffer` for dither + ESC/POS raster). `?bare=1` strips the dashboard nav so the screenshot is clean. Production morning print uses this. Gotcha: `agent-browser screenshot --full` doesn't auto-extend past the viewport height — `eval document.body.scrollHeight` first and size the viewport to it.
+2. **HTML → image** (the "designed" path) — `/print/<who>` is a SvelteKit route styled with Tailwind + IBM Plex Mono (self-hosted in `static/fonts/`, Medium weight to survive the thermal head), built to fixed `576px` width (the 80mm head @ 203dpi). `agent-browser` screenshots it: `set viewport 576 <h>`, `open <url>`, `screenshot --full <path>` → PNG → `printPng()` (which feeds it to `node-thermal-printer`'s `printImageBuffer` for dither + ESC/POS raster). The route is rendered bare by the layout (no nav) so the screenshot is clean — pathname IS the contract, no query flag. Production morning print uses this. Gotcha: `agent-browser screenshot --full` doesn't auto-extend past the viewport height — `eval document.body.scrollHeight` first and size the viewport to it.
 
 There's also a parallel `render.ts` that hand-draws the receipt with `@napi-rs/canvas` (no browser) — kept as a fast fallback and for the `test` ruler print.
 
@@ -221,7 +221,7 @@ Why HTML→image: any typeface, CSS boxes/rules/icons, "just write lines and let
 ### Multi-recipient prints + component model
 
 - **Recipients, not multi-user.** No per-user auth or data isolation — everyone sees everything in `/admin`. Each recipient is a named print config; the system maintains all the per-person content internally. Currently: `family` (the original Daily Shout) + per-kid briefs from `chota.config.ts`.
-- **Routes:** `/print` shows all configured recipient briefs side by side. `/print/<who>` (e.g. `/print/family`, `/print/<kid>`) is the individual print-target page; `agent-browser` screenshots each `?bare=1` and prints it.
+- **Routes:** `/print` shows all configured recipient briefs side by side (admin view, has nav). `/print/<who>` (e.g. `/print/family`, `/print/<kid>`) is the individual print-target page — always rendered bare (no nav); `agent-browser` screenshots each one and prints it.
 - **`/admin` toggles** who gets a printout (and eventually which components each recipient's brief includes).
 - **Component library** — eventually ~12 print components: weather, today's calendar, bus, chores, school timetable, shopping, due-soon, puzzle, joke, math, quote, … Each recipient config picks which. Per-kid "surprise slot": pick N candidate components and the print renders one at random each day.
 - **The print job** loops over enabled recipients, renders each, prints in sequence (the printer mutex serialises them).

@@ -7,8 +7,13 @@ import type { PageServerLoad } from './$types';
 
 /**
  * One family member's print brief — `/print/<who>` (everyone in chota.config.ts
- * gets one). Household sections for all; a kid also gets their school timetable.
- * Use `?bare=1` for the clean screenshot/print render (drops the dashboard nav).
+ * gets one, plus `family` for the weekend whole-family sheet). Household
+ * sections for all; a kid also gets their school timetable.
+ *
+ * **Always rendered bare** (no dashboard nav). The +layout.svelte nav-hide
+ * triggers on this path so what you see in a browser is what agent-browser
+ * captures for the thermal printer — no `?bare=1` flag, the route IS the
+ * contract. The multi-person preview WITH nav lives at `/print` (no `[who]`).
  *
  * `?day=tomorrow` shifts the whole brief one day ahead — the evening print's
  * "tomorrow" sheet (weather, school, events, chores, shopping; no puzzle/fact).

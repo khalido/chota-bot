@@ -74,10 +74,11 @@
 <!-- The receipt body. 576px = the 80mm thermal head; black ink on white only
      (gray fills dither badly). Text is bumped up a notch from screen sizes —
      thermal dot-matrix gets hard to read when it's small. `mx-auto` only
-     matters when shown under the dashboard nav; the screenshot path (`?bare=1`)
-     makes the viewport 576px. Typography is set once here (.plex / font-medium /
-     text-[17px]) so every section inherits it; only the per-section header
-     chrome is shared, via the snippet above — section *bodies* lay out freely. -->
+     matters when shown under the dashboard nav (the /print preview); the
+     screenshot path renders /print/<who> bare so the viewport is 576px exactly.
+     Typography is set once here (.plex / font-medium / text-[17px]) so every
+     section inherits it; only the per-section header chrome is shared, via
+     the snippet above — section *bodies* lay out freely. -->
 <div
 	class="plex mx-auto w-[576px] bg-white px-6 py-6 text-[17px] leading-snug font-medium text-black"
 >

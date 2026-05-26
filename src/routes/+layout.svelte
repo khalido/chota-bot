@@ -41,7 +41,17 @@
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
-{#if page.url.pathname !== '/clock' && page.url.searchParams.get('bare') !== '1'}
+<!--
+  Routes that suppress the dashboard nav:
+    - /clock          — ambient clock view (idle-fallback from the kiosk)
+    - /print/<who>    — single-person printed sheet; rendered bare so
+                        agent-browser screenshots it pixel-clean for the
+                        thermal printer. /print itself (the multi-person
+                        preview) keeps the nav for admin use.
+  This used to be gated on `?bare=1` — the query-string contract is now a
+  pathname contract, so the URL self-documents the rendering mode.
+-->
+{#if page.url.pathname !== '/clock' && !page.url.pathname.match(/^\/print\/[^/]+$/)}
 	<nav class="border-b border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 		<div class="mx-auto flex max-w-5xl gap-1 px-4">
 			{#each tabs as tab (tab.href)}

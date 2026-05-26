@@ -4,10 +4,16 @@ import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { bootJobs, stopJobs } from '$lib/server/scheduler';
 import { configureLogging, shutdownLogging } from '$lib/server/log';
+import { runPreflight } from '$lib/server/preflight';
 
 // Runs once at server startup (not during build) — env vars are available.
 export const init: ServerInit = async () => {
 	await configureLogging();
+	// Preflight runs after logging is configured (so findings land in the
+	// journald + file sinks) but before bootJobs (so a missing DB is named in
+	// the logs before better-auth or a job throws against it). Findings are
+	// logged as WARN; chota keeps running degraded.
+	runPreflight();
 	await bootJobs();
 
 	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
