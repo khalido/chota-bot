@@ -1,14 +1,14 @@
 # Chota
 
-Family kiosk + thermal printer running on a Surface Pro 5 w/Linux, MUNBYN ITPP098P over USB.
+Family kiosk + thermal printer. Runs on a ThinkPad X230 (Pop!_OS 24.04) with a MUNBYN ITPP098P over USB. (Hardware lineage: SP5 → SP5 LCD died May 2026 → X230. `chota.service` and the deploy pipeline don't care which box, only `/etc/hostname` does.)
 
-**Status:** Phase 1 shipped. The thermal printer fires at 06:45 every day — per-person briefs Mon–Fri (with weather + bus + chores + per-kid School schedule), one whole-family sheet Sat+Sun. Phase 2 = agent loop; Phase 3 = voice.
+**Status:** Phase 1 shipped. The thermal printer fires at 06:45 every day — per-person briefs Mon–Fri (with weather + bus + chores + per-kid School schedule), one whole-family sheet Sat+Sun. Phase 2 = autonomous agent loop (ToolLoopAgent is wired + chat-debuggable at `/admin/agent`, but isn't yet driving jobs on its own); Phase 3 = voice.
 
 ## Day-to-day
 
 ```bash
 npm run dev        # http://localhost:8000/  (vite.config.ts pins the port)
-npm test           # vitest --run (102 tests, fast)
+npm test           # vitest --run (105 tests, fast)
 npm run check      # svelte-check (type errors)
 npm run lint       # prettier + eslint
 npm run build      # adapter-node → build/index.js
@@ -32,7 +32,8 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 - **Vitest** unit tests + inline-snapshot tests for print formats
 - **croner** auto-discovered jobs (one file per job in `src/lib/server/jobs/`) — see [`docs/jobs.md`](docs/jobs.md)
 - **node-thermal-printer + node-usb (libusb)** — see [`docs/printers.md`](docs/printers.md)
-- **Vercel AI SDK + AI Gateway** — agent runtime (planned; see [`docs/agent.md`](docs/agent.md))
+- **Vercel AI SDK + AI Gateway** — ToolLoopAgent live at `src/lib/server/agent/`; chat-debuggable at `/admin/agent`. Autonomous job-driving still ahead (see [`docs/agent.md`](docs/agent.md))
+- **shadcn-svelte** — UI primitives (Card, Tabs, Dialog, Sheet, Popover, Switch, Empty, Accordion, ButtonGroup, Button, Textarea, Separator) at `src/lib/components/ui/`
 - **LogTape** — structured logging at `$lib/server/log.ts` — see [`docs/logging.md`](docs/logging.md)
 
 ## Where things live
@@ -48,12 +49,15 @@ src/
                          # data/logs/chota.log), /admin/jobs, /admin/print, /admin/agent
   lib/components/        # Svelte UI (Clock, Weather, Calendar, Bus, Lists, Chores, PrintMorning)
   lib/components/print/  # BriefSheet — the screenshot-target sheet for the printed briefs
+  lib/components/ui/     # shadcn-svelte primitives (Card, Tabs, Dialog, ...)
   lib/server/
     config.ts            # loads chota.config.ts → getConfig() / findKid()
+    preflight.ts         # startup presence check — required env vars + DB file
     chores.ts            # daily rotation lookup
     tools/               # weather, bus, calendar, sentral, ticktick, tmdb, apod, bootprint
     print/               # brief + weather-block + sections + composers + render + snapshot + printer
     jobs/                # croner-scheduled jobs (auto-discovered; one file = one job)
+    agent/               # ToolLoopAgent + prompts.ts + per-tool agent wrappers
     db/                  # Drizzle schema + client
     auth.ts              # better-auth config
     log.ts               # LogTape structured logging
@@ -67,7 +71,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 ## Conventions
 
 - **Don't put real family names anywhere except `chota.config.ts`.** Tests, docs, deploy scripts, comments — all use placeholders (`Kid1/Kid2/Kid3`, `Parent1/Parent2`). Real names get pulled from config at runtime.
-- **New tool:** one file in `src/lib/server/tools/<domain>.ts`. Routes/jobs import directly. The agent registry will live in `agent/tools.ts` once the agent lands.
+- **New tool:** one file in `src/lib/server/tools/<domain>.ts` (the raw fetch + caching). For agent exposure, add a thin wrapper at `src/lib/server/agent/tools/<domain>.ts` and register it in `agent/index.ts > tools: { … }`.
 - **New print format:** one file in `src/lib/server/print/<kind>.ts` + composer registration in `composers.ts` + button in `routes/admin/print/+page.svelte`.
 - **New job:** drop a TS file in `src/lib/server/jobs/`, call `defineJob(name, cron, fn)` at module top. Auto-discovered — see [`src/lib/server/jobs/CLAUDE.md`](src/lib/server/jobs/CLAUDE.md).
 - **Per-family data:** add a typed field to `ChotaConfig` in `src/lib/config.ts`, fill in both `chota.config.example.ts` and your real `chota.config.ts`. No JSON files, no zod — TypeScript catches shape mismatches at compile time.
@@ -91,6 +95,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 
 - **Language:** TypeScript · **Package Manager:** npm
 - **Add-ons:** prettier, eslint, tailwindcss, mcp (Svelte), vitest (unit), drizzle (sqlite + better-sqlite3), better-auth (scaffolded with the password preset; Google OAuth wired on top — see Auth note above)
+- **UI library:** shadcn-svelte (Nova style, neutral base) layered on top of Tailwind. Components are vendored into `src/lib/components/ui/` via `npx shadcn-svelte@latest add <name>`.
 
 ---
 
