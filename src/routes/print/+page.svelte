@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import BriefSheet from '$lib/components/print/BriefSheet.svelte';
 	import type { PageData } from './$types';
 
@@ -7,6 +9,15 @@
 
 	let printing = $state<string | null>(null);
 	let result = $state<string | null>(null);
+
+	// Re-run +page.server.ts.load() every minute. Tools return cached data
+	// (warmed by the *-refresh jobs), so this is cheap — keeps the preview
+	// fresh as weather / bus / calendar tick over through the day. Same
+	// pattern as the main dashboard at /.
+	onMount(() => {
+		const refresh = setInterval(() => invalidateAll(), 60_000);
+		return () => clearInterval(refresh);
+	});
 
 	async function print(who: string) {
 		printing = who;
