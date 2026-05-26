@@ -184,22 +184,25 @@
 								{#if t.when === 'today' || t.when === 'overdue'}
 									<!-- BellRing as a due-urgency indicator (no bell on tmrw —
 									     that's still text). Escalation ramp:
-									       today              → 1 bell  (the day it's due)
-									       overdue 1 day      → 1 bell  (just missed it)
-									       overdue 2+ days    → 2 bells (visual ramp = late)
-									     size 24 + strokeWidth 2.5 keep the line weight legible
-									     after the 203dpi ESC/POS dither pass. -->
+									       today / 1-day late → 1 bell
+									       2 days late        → 2 bells
+									       …                   → +1 bell per day
+									       8+ days late       → 8 bells (clamped — past that the
+									                                     row gets silly wide)
+									     size 22 + strokeWidth 2.5 keep the line weight legible
+									     after the 203dpi ESC/POS dither pass; -space-x-1
+									     overlaps the bells slightly so 8 still fits on the row. -->
 									{@const late = t.daysLate ?? 0}
+									{@const bells = Array.from({ length: Math.max(1, Math.min(8, late)) })}
 									<span
 										aria-label={t.when === 'today'
 											? 'due today'
 											: `overdue by ${late} day${late === 1 ? '' : 's'}`}
 										class="flex shrink-0 items-center -space-x-1"
 									>
-										<BellRing class="stroke-black" size={24} strokeWidth={2.5} />
-										{#if late >= 2}
-											<BellRing class="stroke-black" size={24} strokeWidth={2.5} />
-										{/if}
+										{#each bells as _, i (i)}
+											<BellRing class="stroke-black" size={22} strokeWidth={2.5} />
+										{/each}
 									</span>
 								{:else if t.when === 'tomorrow'}
 									<!-- "tomorrow" tasks are early — no urgency indicator, just
