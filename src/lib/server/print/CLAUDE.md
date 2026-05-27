@@ -16,9 +16,11 @@ The daily-brief → thermal-print pipeline, in four stages:
    drives the USB thermal printer.
 
 `composers.ts` orchestrates — `composeText`/`composeImage` per "kind"; it's the
-entry point routes and jobs import. `weather-block.ts` is weather *formatting*
+entry point routes and jobs import. `weather-block.ts` is weather _formatting_
 (the data/cache layer is `tools/weather.ts`). `wrap.ts` is shared text wrapping.
 
-Every recipient is one family member from `chota.config.ts` — there is no
-generic "family" sheet. A kid's brief gains a SCHOOL section; everyone else's
-is just the household sections.
+Most recipients are a single family member from `chota.config.ts` — a kid's
+brief gains a SCHOOL section, everyone else's is just the household sections.
+The weekend swaps this out: Sat + Sun print one whole-household `FAMILY_RECIPIENT`
+sheet (slug `'family'`) instead of one-per-person, with every event + every open
+todo on a single page and no SCHOOL.
