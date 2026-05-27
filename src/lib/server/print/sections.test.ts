@@ -74,7 +74,7 @@ const DATA: BriefData = {
 		{ person: 'Kid1', chores: ['Walk and feed the dog'] },
 		{ person: 'Kid2', chores: ['Empty + load the dishwasher'] }
 	],
-	familyTasks: [
+	todos: [
 		{ title: 'Sign the excursion form', people: ['Kid1'], when: 'today' },
 		{ title: 'Pack swimming gear', people: ['Kid1'], when: 'overdue' },
 		{ title: 'Return library books', people: ['Kid2'], when: 'overdue' },
@@ -95,7 +95,7 @@ const DATA: BriefData = {
 	fact: {
 		text: 'Earth is the only planet in the solar system not named after a Greek or Roman god.'
 	},
-	closing: 'Have a good day, kids -- Chota'
+	closing: ''
 };
 
 const KID1_SCHEDULE: SchedulePeriod[] = [
@@ -153,29 +153,29 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
+
+			04 TODOS
 			overdue      Pack swimming gear  (Kid1)
 			             Sign the excursion form  (Kid1)
 			tmrw         Bring library bag  (Kid1)
 
-			04 CHORES
+			05 CHORES
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
-			05 SHOPPING
+			06 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
 			Salt for the salt g…
 
-			06 PUZZLE
+			07 PUZZLE
 			A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?
 
-			07 QUOTE
+			08 QUOTE
 			Ah, duck cake!
 			— Bandit, Bluey
 
-			08 DID YOU KNOW
+			09 DID YOU KNOW
 			Earth is the only planet in the solar system not named after a Greek or Roman god.
-
-			Have a good day, kids -- Chota
 
 			printed Wed 13th May, 6:45am"
 		`);
@@ -210,29 +210,29 @@ describe('print pipeline', () => {
 			8:30-9am     Drop car for service
 			3:30-4:15pm  Kid1 lesson  (Kid1)
 			all day      Bin night
+
+			04 TODOS
 			overdue      Pack swimming gear  (Kid1)
 			             Sign the excursion form  (Kid1)
 			tmrw         Bring library bag  (Kid1)
 
-			04 CHORES
+			05 CHORES
 			Kid1: Walk and feed the dog
 			Kid2: Empty + load the dishwasher
 
-			05 SHOPPING
+			06 SHOPPING
 			Choc, Hot Choc Powder, Coriander,
 			Salt for the salt g…
 
-			06 PUZZLE
+			07 PUZZLE
 			A 3x3x3 cube is painted red, then cut into 27 small cubes. How many have NO red face?
 
-			07 QUOTE
+			08 QUOTE
 			Ah, duck cake!
 			— Bandit, Bluey
 
-			08 DID YOU KNOW
+			09 DID YOU KNOW
 			Earth is the only planet in the solar system not named after a Greek or Roman god.
-
-			Have a good day, kids -- Chota
 
 			printed Wed 13th May, 6:45am"
 		`);
@@ -282,8 +282,6 @@ describe('print pipeline', () => {
 			07 QUOTE
 			Ah, duck cake!
 			— Bandit, Bluey
-
-			Have a good day, kids -- Chota
 
 			printed Wed 13th May, 6:45am"
 		`);
@@ -335,8 +333,6 @@ describe('print pipeline', () => {
 			07 DID YOU KNOW
 			Earth is the only planet in the solar system not named after a Greek or Roman god.
 
-			Have a good day, kids -- Chota
-
 			printed Wed 13th May, 6:45am"
 		`);
 	});
@@ -385,8 +381,6 @@ describe('print pipeline', () => {
 
 			Recently bought:
 			Oat milk, Bananas
-
-			Have a good day, kids -- Chota
 
 			printed Wed 13th May, 6:45am"
 		`);

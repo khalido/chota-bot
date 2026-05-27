@@ -119,23 +119,57 @@ function weatherSection(d: BriefData): PrintSectionBody | null {
 	};
 }
 
-/**
- * One person's day: the shared calendar events, then that person's own "Family"
- * list to-dos under them — overdue ones flagged and sorted first. null when the
- * recipient has neither an event nor a task.
- */
-function todaySection(d: BriefData, who: string): PrintSectionBody | null {
-	const events = d.events.map((e) => ({
+/** That person's own todos for the day — overdue first, then today, then tomorrow. */
+function ownTodos(d: BriefData, who: string) {
+	return d.todos
+		.filter((t) => t.people.some((p) => p.toLowerCase() === who.toLowerCase()))
+		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
+		.map((t) => ({ title: t.title, when: t.when, people: t.people, daysLate: t.daysLate }));
+}
+
+/** The shared calendar events for the day, with parsed people chips. */
+function dayEvents(d: BriefData) {
+	return d.events.map((e) => ({
 		time: e.isAllDay ? 'all day' : sydneyTimeRange(e.start, e.end),
 		summary: e.summary,
 		people: parseEventPeople(e.summary, d.family)
 	}));
-	const tasks = d.familyTasks
-		.filter((t) => t.people.some((p) => p.toLowerCase() === who.toLowerCase()))
-		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
-		.map((t) => ({ title: t.title, when: t.when, people: t.people, daysLate: t.daysLate }));
+}
+
+/**
+ * A parent's day: shared calendar events with their own todos folded in under
+ * them — overdue ones flagged and sorted first. null when the recipient has
+ * neither an event nor a task. Kids' briefs split these two into separate
+ * TODAY + TODOS sections (`todayEventsSection` + `myTodosSection`) for clarity.
+ */
+function todaySection(d: BriefData, who: string): PrintSectionBody | null {
+	const events = dayEvents(d);
+	const tasks = ownTodos(d, who);
 	if (!events.length && !tasks.length) return null;
 	return { title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY', kind: 'events', events, tasks };
+}
+
+/**
+ * A kid's day: just the shared calendar events, no tasks — paired with
+ * `myTodosSection` below so events and to-dos sit in their own boxes on the
+ * kid's sheet. Easier for a kid to scan "what's happening" separately from
+ * "what do I have to do". null when there are no events.
+ */
+function todayEventsSection(d: BriefData): PrintSectionBody | null {
+	const events = dayEvents(d);
+	if (!events.length) return null;
+	return { title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY', kind: 'events', events, tasks: [] };
+}
+
+/**
+ * A kid's own to-dos for the day — overdue first, then today, then tomorrow.
+ * The kid-side counterpart to the parents-only `todosSection` (which shows
+ * every kid's tasks for parent overview). null when this kid has nothing.
+ */
+function myTodosSection(d: BriefData, who: string): PrintSectionBody | null {
+	const tasks = ownTodos(d, who);
+	if (!tasks.length) return null;
+	return { title: 'TODOS', kind: 'events', events: [], tasks };
 }
 
 /** The whole-household chore rota — shown in full on every person's sheet. */
@@ -146,8 +180,8 @@ function choresSection(d: BriefData): PrintSectionBody | null {
 
 /**
  * The whole-family TODAY/TOMORROW — the weekend sheet's centre block. Every
- * calendar event (already shared) plus every open `familyTasks` task regardless
- * of assignee, each with its chips. Unassigned tasks get a "Family" chip.
+ * calendar event (already shared) plus every open `todos` item regardless of
+ * assignee, each with its chips. Unassigned tasks get a "Todos" chip.
  */
 function familyTodaySection(d: BriefData): PrintSectionBody | null {
 	const events = d.events.map((e) => ({
@@ -155,14 +189,14 @@ function familyTodaySection(d: BriefData): PrintSectionBody | null {
 		summary: e.summary,
 		people: parseEventPeople(e.summary, d.family)
 	}));
-	const tasks = d.familyTasks
+	const tasks = d.todos
 		.slice()
 		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
 		.map((t) => ({
 			title: t.title,
 			when: t.when,
-			// "Todos" chip on unassigned — matches the per-recipient `parentsFamily…`
-			// section above. "Family" was unclear for kids; "Todos" reads as "anyone".
+			// "Todos" chip on unassigned — matches the per-recipient `todosSection`
+			// below. "Family" was unclear for kids; "Todos" reads as "anyone".
 			people: t.people.length ? t.people : ['Todos'],
 			daysLate: t.daysLate
 		}));
@@ -176,15 +210,15 @@ function familyTodaySection(d: BriefData): PrintSectionBody | null {
 }
 
 /**
- * Parents-only overview of the kids' "Family" list tasks for the day — one line
- * per task with its overdue flag and assignee chips, the same layout TODAY uses
- * for events. Unassigned tasks get a "Family" chip; a parent's own tasks are
- * left out (they read those in their own TODAY section). Overdue tasks sort
- * first. null when nothing is assigned to a kid or unassigned.
+ * Parents-only overview of the kids' todos for the day — one line per task with
+ * its overdue flag and assignee chips, the same layout TODAY uses for events.
+ * Unassigned tasks get a "Todos" chip; a parent's own tasks are left out (they
+ * read those in their own TODAY section). Overdue tasks sort first. null when
+ * nothing is assigned to a kid or unassigned.
  */
-function familySection(d: BriefData): PrintSectionBody | null {
+function todosSection(d: BriefData): PrintSectionBody | null {
 	const kidSet = new Set(d.kids.map((k) => k.toLowerCase()));
-	const tasks = d.familyTasks
+	const tasks = d.todos
 		.filter((t) => t.people.length === 0 || t.people.some((p) => kidSet.has(p.toLowerCase())))
 		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
 		.map((t) => ({
@@ -195,9 +229,9 @@ function familySection(d: BriefData): PrintSectionBody | null {
 			people: t.people.length ? t.people : ['Todos'],
 			daysLate: t.daysLate
 		}));
-	// Section title is TODOS for the same reason — labels the section as
-	// "household to-dos" not "people in the family". FAMILY_RECIPIENT (the
-	// route identifier for the weekend whole-household brief) is unchanged.
+	// Section title is TODOS — labels the section as "household to-dos" not
+	// "people in the family". FAMILY_RECIPIENT (the route identifier for the
+	// weekend whole-household brief) is a separate concept and unchanged.
 	return tasks.length ? { title: 'TODOS', kind: 'events', events: [], tasks } : null;
 }
 
@@ -256,14 +290,15 @@ function tailSections(d: BriefData, isParent: boolean): (PrintSectionBody | null
 }
 
 /**
- * One person's brief. Everyone gets weather + their day (events + their own
- * Family tasks) + the whole-household chores + the shopping list; a kid also
- * gets their school day (with their bus line) right after weather, while a
- * parent gets the parents-only FAMILY overview of the kids' tasks. The SCHOOL
- * slot holds the timetable on a school day, or — during the holidays, for
- * everyone — a countdown to school coming back. The morning brief also gets a
- * puzzle + quote (+ a did-you-know fact for kids); the evening one drops that
- * tail (`tailSections`).
+ * One person's brief. Everyone gets weather + the whole-household chores + the
+ * shopping list. A kid also gets their school day (with their bus line) right
+ * after weather, then a TODAY section (events) and a separate TODOS section
+ * (their own to-dos) — split so each box does one thing. A parent gets a
+ * merged TODAY (events + their own todos) plus the parents-only TODOS overview
+ * of the kids' tasks further down. The SCHOOL slot holds the timetable on a
+ * school day, or — during the holidays, for everyone — a countdown to school
+ * coming back. The morning brief also gets a puzzle + quote (+ a did-you-know
+ * fact for kids); the evening one drops that tail (`tailSections`).
  *
  * (Later, when each person has their own calendar, the events fed in here
  * become per-recipient; for now the calendar + chores are shared.)
@@ -291,9 +326,10 @@ export function recipientToSections(
 	return numberSections([
 		weatherSection(d),
 		scheduleSection(schedule, busLine, d.schoolWeek, d.schoolUpcoming) ?? schoolBreakSection(d),
-		todaySection(d, who),
+		isParent ? todaySection(d, who) : todayEventsSection(d),
+		isParent ? null : myTodosSection(d, who),
 		choresSection(d),
-		isParent ? familySection(d) : null,
+		isParent ? todosSection(d) : null,
 		shoppingSection(d),
 		...tailSections(d, isParent)
 	]);
@@ -379,8 +415,12 @@ export function sectionsToText(
 		}
 		lines.push('');
 	}
-	lines.push(closing);
-	lines.push('');
+	// Closing line is opt-in — rendered only when something filled it in (no
+	// static default; #19 will). Skipping the push keeps the footer tight.
+	if (closing) {
+		lines.push(closing);
+		lines.push('');
+	}
 	lines.push(`printed ${printedAt}`);
 	return lines.join('\n');
 }

@@ -38,11 +38,16 @@ import {
 import { logErr } from '$lib/server/log';
 import { weatherBlock } from './weather-block';
 
-const DEFAULT_CLOSING = 'Have a good day, kids';
+// Empty default — the static "Have a good day, kids" closing was dropped (it
+// added a dashed-line footer + a line of fixed text that didn't earn its space).
+// The field/param/prop stay wired so #19 (agent-generated per-recipient closing)
+// can drop straight back in — when `closing` is non-empty, both renderers emit it.
+const DEFAULT_CLOSING = '';
 
 export interface BriefInputs {
 	now?: Date;
-	/** Closing line, e.g. one written by the agent. Defaults to a static line. */
+	/** Closing line, e.g. one written by the agent. Defaults to empty — no
+	 *  closing rendered. #19 (agent-generated per-recipient closing) will fill. */
 	closing?: string;
 	/**
 	 * `'tomorrow'` shifts the whole brief one day ahead — weather, calendar,
@@ -53,10 +58,12 @@ export interface BriefInputs {
 }
 
 /**
- * One task off the TickTick "Family" list, surfaced on the brief — resolved to
- * the people it's assigned to and windowed against the brief's day.
+ * One task off the TickTick "Family" list, surfaced on the brief as a TODOS
+ * item — resolved to the people it's assigned to and windowed against the
+ * brief's day. (The TickTick list is still literally named "Family"; we render
+ * it under the TODOS heading because kids parse "todos" as "anyone can do".)
  */
-export interface FamilyTask {
+export interface Todo {
 	title: string;
 	/** Family-member names this task is assigned to; empty = unassigned. */
 	people: string[];
@@ -98,8 +105,9 @@ export interface BriefData {
 	/** When school is out: days until it's back + the resume date. null in term. */
 	schoolBreak: { resumesLabel: string; days: number } | null;
 	chores: { person: string; chores: string[] }[];
-	/** "Family" list tasks due on the brief's day or overdue, with assignees. */
-	familyTasks: FamilyTask[];
+	/** TickTick "Family"-list tasks due on the brief's day or overdue, with
+	 *  assignees. Rendered on the brief under the TODOS heading. */
+	todos: Todo[];
 	puzzle: Puzzle;
 	/** A TV / comic-strip quote for the morning brief's QUOTE section. */
 	funQuote: Quote | null;
@@ -119,7 +127,7 @@ export async function gatherBrief({
 }: BriefInputs = {}): Promise<BriefData> {
 	const config = getConfig();
 	const tomorrow = day === 'tomorrow';
-	// Every date-keyed lookup (calendar, chores, school bus, masthead, family tasks)
+	// Every date-keyed lookup (calendar, chores, school bus, masthead, todos)
 	// pivots on `ref` — `now` for the morning brief, tomorrow for the evening one.
 	const ref = tomorrow ? new Date(now.getTime() + 86_400_000) : now;
 
@@ -175,18 +183,17 @@ export async function gatherBrief({
 	const boughtRecently = tomorrow
 		? (familyLists.find(listIs('shopping'))?.done ?? []).map((t) => t.title)
 		: [];
-	// The "Family" list — shared family to-dos. Each task is windowed against the
-	// brief's day and resolved to its assignees (a person tag, else a name in the
-	// title); tasks outside the window or without a due date are dropped.
-	const familyTasks: FamilyTask[] = (familyLists.find(listIs('family'))?.tasks ?? []).flatMap(
-		(t) => {
-			const when = taskWhen(t.dueDate, ref);
-			if (!when) return [];
-			const people = parseTaskPeople(t.title, t.tags, config.family ?? []);
-			const daysLate = when === 'overdue' ? daysSince(t.dueDate, ref) : undefined;
-			return [{ title: t.title.trim(), people, when, daysLate }];
-		}
-	);
+	// The TickTick "Family" list — shared family to-dos, rendered on the brief
+	// under the TODOS heading. Each task is windowed against the brief's day and
+	// resolved to its assignees (a person tag, else a name in the title); tasks
+	// outside the window or without a due date are dropped.
+	const todos: Todo[] = (familyLists.find(listIs('family'))?.tasks ?? []).flatMap((t) => {
+		const when = taskWhen(t.dueDate, ref);
+		if (!when) return [];
+		const people = parseTaskPeople(t.title, t.tags, config.family ?? []);
+		const daysLate = when === 'overdue' ? daysSince(t.dueDate, ref) : undefined;
+		return [{ title: t.title.trim(), people, when, daysLate }];
+	});
 
 	const wx = weather ? weatherBlock(weather, day, now) : { lines: null, icon: null };
 
@@ -205,7 +212,7 @@ export async function gatherBrief({
 		schoolUpcoming,
 		schoolBreak,
 		chores: getChores({ now: ref }),
-		familyTasks,
+		todos,
 		puzzle: pickPuzzle(ref),
 		funQuote: getQuote({ date: ref }),
 		shoppingItems,

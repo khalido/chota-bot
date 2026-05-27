@@ -285,8 +285,12 @@
 		</section>
 	{/each}
 
-	<div class="mt-7 border-t-2 border-dashed border-black pt-3 text-center font-semibold">
-		{closing.replace(' -- ', ' — ')}
-	</div>
-	<p class="mt-2 text-center text-[11px]" style:color={FOOTNOTE}>printed {printedAt}</p>
+	{#if closing}
+		<!-- Closing line opt-in — rendered only when something filled it in (no
+		     static default; #19 will). The dashed top rule rides along with it. -->
+		<div class="mt-7 border-t-2 border-dashed border-black pt-3 text-center font-semibold">
+			{closing.replace(' -- ', ' — ')}
+		</div>
+	{/if}
+	<p class="mt-4 text-center text-[11px]" style:color={FOOTNOTE}>printed {printedAt}</p>
 </div>
