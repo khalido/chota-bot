@@ -60,9 +60,14 @@
 		(first ? line.replace(/^\[\s*(.+?)\s*\]\s*/, '$1  ') : line).replace(/^->\s/, '→ ');
 </script>
 
-{#snippet sectionHeader(n: number, title: string)}
+{#snippet sectionHeader(n: number, title: string, subhead = false)}
 	<div class="flex items-center gap-3">
-		<h2 class="text-xl font-bold tracking-wide whitespace-nowrap">{title}</h2>
+		<!-- subhead: one notch smaller (text-lg vs text-xl) so a section that
+		     reads as a child of the one above (kids' TODOS under TODAY) is
+		     visually subordinate without losing its own numbered header. -->
+		<h2 class="{subhead ? 'text-lg' : 'text-xl'} font-bold tracking-wide whitespace-nowrap">
+			{title}
+		</h2>
 		<div class="h-0 flex-1 border-b-2 border-dashed border-black"></div>
 		<span class="text-sm tabular-nums" style:color={FOOTNOTE}>{pad2(n)}</span>
 	</div>
@@ -90,7 +95,7 @@
 
 	{#each sections as s (s.n)}
 		<section class="mt-5">
-			{@render sectionHeader(s.n, s.title)}
+			{@render sectionHeader(s.n, s.title, s.subhead)}
 			<div class="mt-2">
 				{#if s.kind === 'weather'}
 					{@const Icon = weatherIcon(s.icon)}

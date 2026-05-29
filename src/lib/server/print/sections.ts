@@ -71,7 +71,13 @@ type BodyByKind =
 			attribution: string;
 	  };
 
-export type PrintSectionBody = { title: string } & BodyByKind;
+/**
+ * `subhead`: render the section's header one notch smaller — for a section
+ * that reads as a child of the one above it (kids' TODOS under TODAY) rather
+ * than a peer. Structural still a separate numbered section; only the HTML
+ * renderer's header size changes (the ASCII renderer ignores it).
+ */
+export type PrintSectionBody = { title: string; subhead?: boolean } & BodyByKind;
 export type PrintSection = PrintSectionBody & { n: number };
 
 /**
@@ -165,11 +171,13 @@ function todayEventsSection(d: BriefData): PrintSectionBody | null {
  * A kid's own to-dos for the day — overdue first, then today, then tomorrow.
  * The kid-side counterpart to the parents-only `todosSection` (which shows
  * every kid's tasks for parent overview). null when this kid has nothing.
+ * `subhead`: sits directly under TODAY on the sheet, so it reads as TODAY's
+ * to-do list rather than a peer section — smaller header.
  */
 function myTodosSection(d: BriefData, who: string): PrintSectionBody | null {
 	const tasks = ownTodos(d, who);
 	if (!tasks.length) return null;
-	return { title: 'TODOS', kind: 'events', events: [], tasks };
+	return { title: 'TODOS', subhead: true, kind: 'events', events: [], tasks };
 }
 
 /** The whole-household chore rota — shown in full on every person's sheet. */
