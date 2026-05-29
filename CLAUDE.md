@@ -91,6 +91,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/tools.md`](docs/tools.md) — tool roadmap (built + planned + API keys checklist).
 - [`docs/agent.md`](docs/agent.md) — agent integration spec (pre-implementation).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot design (Phase 3, pre-implementation).
+- [`docs/dial.md`](docs/dial.md) — physical USB dial + buttons + e-ink print controller (pre-implementation).
 - [`docs/logging.md`](docs/logging.md) — LogTape structured logging: design + what shipped.
 
 ---
