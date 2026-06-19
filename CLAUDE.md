@@ -88,6 +88,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/deploy.md`](docs/deploy.md) — the deploy ritual + first-time bootstrap on the kiosk box.
 - [`docs/jobs.md`](docs/jobs.md) — job system, cron patterns, hardening.
 - [`docs/printers.md`](docs/printers.md) — thermal printer primer + per-printer USB/driver notes.
+- [`docs/dock.md`](docs/dock.md) — Raspberry Pi 5 dual-screen box (two screens + dials/switches panel via a Pico). Pre-implementation; hardware ordered.
 - [`docs/tools.md`](docs/tools.md) — tool roadmap (built + planned + API keys checklist).
 - [`docs/agent.md`](docs/agent.md) — agent integration spec (pre-implementation).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot design (Phase 3, pre-implementation).
