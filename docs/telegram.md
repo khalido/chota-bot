@@ -1,32 +1,44 @@
 # Telegram bot
 
-**Status: planned, Phase 3.** Lands after the agent loop + voice transcription are stable. Document captures the decisions so when we build it the choices are pre-made.
+**Status: basic text path shipped (June 2026); voice + streaming still Phase 3.** `src/lib/server/telegram/bot.ts` now boots a long-polling bot from `hooks.server.ts`: whitelist middleware + `/start` onboarding + `message:text` → `runAgent()` → reply. Voice → Whisper, streaming via Rich Messages, and Mini Apps remain ahead. This doc captures the decisions; the shipped skeleton is the minimum-viable sketch below, made real.
+
+> **Bot API target: 10.1** (released 11 Jun 2026 — see [changelog](https://core.telegram.org/bots/api-changelog)). Covered by `grammy@^1.44.0` (pulls `@grammyjs/types@3.28.0`, which lists "support Bot API 10.1"). The headline 10.1 feature — **Rich Messages** with `sendRichMessageDraft` for _streaming structured AI replies_ — is squarely on chota's path and changes our streaming plan (see §Decisions). 10.0 (8 May 2026) is also covered.
 
 ## Decisions
 
-- **Wrapper: [gramio](https://gramio.dev)** (`gramio` on npm). TypeScript-first with type propagation through the entire chain (no manual annotations), built-in formatting (no manual `parse_mode`), companion packages for retry / sessions / scenes / i18n / test, runs on Node + Bun + Deno. **Tracks the Bot API closely** — gramio v0.10.0 shipped same-day as Telegram's Bot API 10.0 release (2026-05-08). Pre-1.0 = breaking changes possible at minor bumps; that's an accepted risk for a Phase 3 project that hasn't started.
-- **Long polling, not webhooks.** Box is behind home NAT — webhooks need a public HTTPS endpoint Telegram can POST to (port 443/80/88/8443 only). Polling is outbound TCP, works through NAT for free. Family-scale traffic doesn't need the throughput webhook offers. (Tailscale Funnel could expose a webhook URL, considered and explicitly ruled out — adds infra surface for zero gain at our scale. We reserve Funnel for hosting Mini Apps later, which genuinely needs public HTTPS.)
+- **Wrapper: [grammY](https://grammy.dev)** (`grammy` on npm — **in `package.json` at ^1.44.0**, bumped from ^1.43.0 in June 2026 to land Bot API 10.1; this superseded the original gramio pick, see table below). The de-facto TypeScript standard: mature 1.x (no pre-1.0 churn), the largest plugin ecosystem (`@grammyjs/auto-retry`, stream plugin, sessions, menus), excellent docs. Trade-off accepted: it lags new Bot API releases by days-to-weeks where gramio ships same-day — at family scale, bleeding-edge Bot API features matter less than stability. _(Doc updated June 2026 — it previously still said gramio while grammy sat in package.json.)_
+- **Long polling, not webhooks** ([grammY deployment types](https://grammy.dev/guide/deployment-types) · [getting started](https://grammy.dev/guide/getting-started#getting-started-on-node-js)). `bot.start()` runs an outbound `getUpdates` loop inside the existing Node process — outbound TCP, works through home NAT for free, no public URL, no second service. Webhooks need a public HTTPS endpoint Telegram can POST to (port 443/80/88/8443 only); family-scale traffic doesn't need the throughput they offer. (Tailscale Funnel could expose a webhook URL — considered and explicitly ruled out, adds infra surface for zero gain at our scale. Reserve Funnel for hosting Mini Apps later, which genuinely needs public HTTPS.)
 - **Whitelist by chat ID.** Family members' Telegram user/chat IDs in `chota.config.ts > telegram.allowedChatIds`. First-message-from-anyone-else is silently dropped. No "LLM moderation" for inbound — see §Anti-patterns.
-- **Streaming via `sendMessageDraft` (Bot API 9.5).** Telegram natively supports live-edited messages as the LLM streams in. gramio doesn't have a stream-plugin equivalent of `@grammy/stream` (yet) — we'll write a small ~50-line throttled-edit helper around `bot.api.sendMessageDraft(...)` that consumes Vercel AI SDK's `textStream`. Pair with `@gramio/auto-retry` for rate-limit resilience.
+- **Streaming via Rich Messages — `sendRichMessageDraft` (Bot API 10.1, Jun 2026).** _Revised from the earlier `sendMessageDraft` (9.5) plan._ 10.1's headline feature is **Rich Messages**: Telegram now has a first-class type for "send/stream a structured AI reply." `sendRichMessageDraft()` streams partial rich messages _as the model generates_, and `editMessageText()` accepts a `rich_message` parameter to finalise. Rich blocks map cleanly onto an agent's structured output — `RichBlockSectionHeading`, `RichBlockList`, `RichBlockTable`, `RichBlockPreformatted` (code), `RichBlockBlockQuotation`, `RichBlockDetails` (collapsible), `RichBlockMathematicalExpression`, and notably `RichBlockThinking` (a fold-away reasoning block — a clean home for the agent's tool-call trace without cluttering the answer). With grammY 1.44 these are typed methods on `bot.api`. Implementation: a ~50-line throttled helper consuming Vercel AI SDK's `textStream`, emitting draft updates on a throttle, finalising with `editMessageText`. Check the [official stream plugin](https://grammy.dev/plugins/stream) for whether it now wraps the rich-draft methods before hand-rolling. Pair with `@grammyjs/auto-retry` for rate-limit resilience.
+  - _Fallback:_ plain Markdown via `sendMessage` + throttled `editMessageText` still works everywhere and is the right first cut — ship that, add `sendRichMessageDraft` once the basic loop is proven. Rich Messages are private-chat only (fine — family bot).
 - **Voice transcription via Groq Whisper, direct.** Telegram voice messages arrive as OGG/OPUS. Groq's Whisper API accepts OGG natively — no ffmpeg conversion. 20 MB Telegram download limit = ~15-20 min audio, plenty.
 
 ## Considered alternatives (and why not)
 
-| | Verdict | Why |
-|---|---|---|
-| **grammy** (~1.26M weekly downloads) | Strong runner-up | The de-facto standard for several years. 1.x mature, larger plugin ecosystem (incl. `@grammy/stream` we'd write ourselves on gramio). Loses on Bot API responsiveness — Bot API 10.0 support was still in PR review (#904, #905) two weeks after Telegram's release, while gramio shipped same-day. If gramio's pre-1.0 churn becomes a problem, this is the easy fallback. |
-| **telegraf** | Skip | TS rewrite produced types "too complex to understand." Last release ~2 years ago, lags Bot API. |
-| **node-telegram-bot-api** | Hard skip | JS-first, no real types, internal deprecation warnings, no middleware model. Past 50 lines you fight it. |
-| **Webhooks via Tailscale Funnel** | Skip for the bot | Adds infra surface for zero gain at family scale. Reserve Funnel for Mini Apps hosting (see Future). |
+|                                   | Verdict                   | Why                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **gramio**                        | Original pick, superseded | TypeScript-first, tracks the Bot API fastest (10.0 support shipped same-day vs grammY's weeks-later PR). Lost on maturity: pre-1.0 with breaking changes at minor bumps, and a far smaller plugin ecosystem. The same-day-API-support advantage doesn't matter for a family bot; stability does. Easy to revisit if grammY ever stalls. |
+| **telegraf**                      | Skip                      | TS rewrite produced types "too complex to understand." Last release ~2 years ago, lags Bot API.                                                                                                                                                                                                                                         |
+| **node-telegram-bot-api**         | Hard skip                 | JS-first, no real types, internal deprecation warnings, no middleware model. Past 50 lines you fight it.                                                                                                                                                                                                                                |
+| **Webhooks via Tailscale Funnel** | Skip for the bot          | Adds infra surface for zero gain at family scale. Reserve Funnel for Mini Apps hosting (see Future).                                                                                                                                                                                                                                    |
+
+## Multi-box / gift-box model (June 2026)
+
+If chota boxes are ever built for other families (see `next.md` §The box), the Telegram story scales with **zero shared infrastructure**: each box gets its own bot from BotFather, its own `TELEGRAM_BOT_TOKEN` in that box's `.env`, and its own family's chat IDs in its `chota.config.ts`. Long polling means no public URL, no tunnel, no per-box cloud component — the box only dials out.
+
+Explicitly considered and rejected: a Cloudflare Worker per box receiving webhooks. The Worker still has to deliver updates to the box, which means either the box polls the Worker (then poll Telegram directly and delete the Worker) or a cloudflared tunnel into the box (a daemon + account binding + outage surface per box). That pattern earns its keep at hundreds of bots with central filtering; not here.
+
+Support access to a gifted box is a separate concern from Telegram entirely — the answer is Tailscale (box joins a shared tailnet; SSH over that), same as our own deploy path.
 
 ## Telegram features that matter for chota
 
-| Feature | Bot API | Use |
-|---|---|---|
-| **`sendMessageDraft` streaming** | 9.5 (Mar 2026) | Live "agent typing" UX during LLM streaming. Private chats only — fine, family bot. |
-| **Forum / message threads** | stable + private chat threads in 9.3 | Optional later: per-kid topic, per-concern topic ("weather", "school"). Defer until conversation volume warrants. |
-| **Voice messages** | longstanding | Voice → Whisper → agent. The main Phase 3 input mode. |
-| **Mini Apps** (HTML5 webapps in chat) | 8.0 (Nov 2024) — full-screen + sensors | Future kid mini-apps surface. See §Future. |
+| Feature                                    | Bot API                                    | Use                                                                                                                                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rich Messages — `sendRichMessageDraft`** | **10.1 (Jun 2026)**                        | **The streaming-reply primitive.** Stream a structured AI answer (headings, lists, tables, code, collapsible `RichBlockDetails`/`RichBlockThinking`) live as the model generates. Supersedes `sendMessageDraft` for our use. Private chats only — fine, family bot. |
+| **`sendMessageDraft` streaming**           | 9.5 (Mar 2026); empty-text allowed in 10.0 | The plain-text predecessor to Rich Messages. Still a valid simpler fallback for a first cut.                                                                                                                                                                        |
+| **Forum / message threads**                | stable + private chat threads in 9.3       | Optional later: per-kid topic, per-concern topic ("weather", "school"). Defer until conversation volume warrants.                                                                                                                                                   |
+| **Voice messages**                         | longstanding                               | Voice → Whisper → agent. The main Phase 3 input mode.                                                                                                                                                                                                               |
+| **Mini Apps** (HTML5 webapps in chat)      | 8.0 (Nov 2024) — full-screen + sensors     | Future kid mini-apps surface. See §Future.                                                                                                                                                                                                                          |
 
 ## Voice → agent pipeline (sketch)
 
@@ -43,42 +55,59 @@
 
 Not for use as-is — just to anchor the shape when implementation lands.
 
-```ts
-import { Bot } from 'gramio';
-import { autoRetry } from '@gramio/auto-retry';
-import { runAgent } from '$lib/server/agent';   // when this exists
-import { transcribeVoice } from '$lib/server/tools/transcribe';
-import { getConfig } from '$lib/server/config';
+Reflects the agent that exists _today_ (`chotaAgent` — a `ToolLoopAgent` — and the `runAgent()` event wrapper in `src/lib/server/agent/index.ts`). `transcribeVoice` is Phase-3 and not built yet.
 
-const bot = new Bot(env.TELEGRAM_BOT_TOKEN).extend(autoRetry());
+```ts
+import { Bot } from 'grammy';
+import { autoRetry } from '@grammyjs/auto-retry';
+import { chotaAgent, runAgent } from '$lib/server/agent';
+import { getConfig } from '$lib/server/config';
+import { env } from '$env/dynamic/private';
+
+const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
+bot.api.config.use(autoRetry());
 
 // Whitelist — drop updates from anyone not in chota.config
 const allowed = new Set(getConfig().telegram?.allowedChatIds ?? []);
 bot.use(async (ctx, next) => {
-  if (!ctx.chat || !allowed.has(ctx.chat.id)) return;  // silent drop
-  await next();
+	if (!ctx.chat || !allowed.has(ctx.chat.id)) return; // silent drop
+	await next();
 });
 
-bot.command('start', (ctx) => ctx.send("Hey, I'm Chota."));
+bot.command('start', (ctx) => ctx.reply("Hey, I'm Chota."));
 
-bot.on('message', async (ctx) => {
-  if (ctx.message.voice) {
-    const file = await ctx.bot.api.getFile({ file_id: ctx.message.voice.file_id });
-    const url = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-    const ogg = await fetch(url).then((r) => r.arrayBuffer());
-    const text = await transcribeVoice(ogg);
-    return handleText(ctx, text);
-  }
-  if (ctx.message.text) return handleText(ctx, ctx.message.text);
+bot.on('message:voice', async (ctx) => {
+	const file = await ctx.getFile(); // download immediately — URL is short-lived
+	const url = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+	const ogg = await fetch(url).then((r) => r.arrayBuffer());
+	return handleText(ctx, await transcribeVoice(ogg)); // transcribeVoice: Phase 3, TODO
 });
 
-async function handleText(ctx, text: string) {
-  const { textStream } = await runAgent({ prompt: text, stream: true });
-  await streamReply(ctx, textStream);   // ~50-line helper around sendMessageDraft
+bot.on('message:text', (ctx) => handleText(ctx, ctx.message.text));
+
+// First cut — non-streaming. runAgent() forwards to chotaAgent.generate() and
+// emits the agent.run wide event. Swap to the streaming path once it's proven.
+async function handleText(ctx, prompt: string) {
+	const { text } = await runAgent({ prompt });
+	await ctx.reply(text);
 }
 
-bot.start();   // long polling
+// Streaming path (later) — chotaAgent.stream() → throttled sendRichMessageDraft.
+// async function handleTextStreaming(ctx, prompt: string) {
+//   const { textStream } = chotaAgent.stream({ prompt });
+//   await streamReply(ctx, textStream);   // ~50-line throttled sendRichMessageDraft helper
+// }
+
+bot.start(); // long polling — outbound getUpdates loop, NAT-friendly
 ```
+
+## Day-one requirements & gotchas (messaging mechanics)
+
+- **Outbound alerts need no SDK and no polling.** `sendMessage` is one authenticated HTTPS POST (token + chat_id). A 5-line `notify()` helper in `tools/` covers "morning-print failed → parent's phone" and can ship long before the bot proper. This is the right first Telegram feature.
+- **Bots can't DM first.** Each family member must press _Start_ on the bot once before it can message them — the consent handshake. Group alternative: add the bot to a family group (group chat IDs are negative); note BotFather's _privacy mode_ hides non-command group messages from the bot by default.
+- **One poller per token.** Two processes calling `getUpdates` on the same token (dev machine + the box) → 409 conflicts and eaten messages. Gate `bot.start()` behind `KIOSK=true` like the print jobs, and use a separate throwaway dev token when developing handlers.
+- **Capturing chat IDs for the whitelist:** log `ctx.chat.id` from incoming messages briefly, or have each person message @userinfobot; values go in `chota.config.ts > telegram.allowedChatIds`.
+- **Runtime shape:** one file (`src/lib/server/telegram/bot.ts`), booted from `hooks.server.ts` like `bootJobs()`. Long polling is an async loop in the existing Node process — no second service, no port.
 
 ## Anti-patterns
 
@@ -97,6 +126,7 @@ When the agent loop + voice are stable, the Mini Apps surface opens up something
 A Telegram Mini App is just an HTML page the bot tells Telegram to open. Telegram passes context (user identity, theme, viewport) into the page via `window.Telegram.WebApp` (vanilla) or via the official SDK [`@tma.js/sdk`](https://docs.telegram-mini-apps.com/packages/tma-js-sdk) (typed TS, the way to go for our stack).
 
 What the SDK gives you:
+
 - **`initData`** — signed payload with the user's Telegram identity (id, name, language) + a HMAC-SHA256 hash. **You verify the hash server-side** with your bot token to prove the request came from Telegram and isn't a forged URL hit.
 - **Theme params** — Telegram's current colour scheme (light/dark + accent), so apps blend in
 - **Viewport** — current height, expand/collapse state, safe-area insets (handy on mobile)
@@ -123,18 +153,18 @@ Would grow into a small arcade of kid-built things over time. **Defer until Phas
 
 ## What lands when (rough)
 
-| | Lands when | Why |
-|---|---|---|
-| Decision: gramio | Now (this doc) | Pre-made so Phase 3 doesn't re-litigate |
-| Bot skeleton + whitelist + `/start` | Phase 3, with voice | Same surface |
-| Voice → Whisper → agent | Phase 3 | The killer Telegram feature for kids |
-| Streaming replies | Phase 3 | ~50-line `streamReply()` helper around `sendMessageDraft` |
-| Forum topics for organising chats | Phase 4+ | Only if conversation volume warrants |
-| Mini Apps + coding-agent arcade | Phase 4+ | Wait for Phase 3 to settle, then explore |
+|                                                  | Lands when                                             | Why                                                                                                                                 |
+| ------------------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Decision: grammY                                 | Done — `grammy@^1.44.0` in package.json (Bot API 10.1) | Pre-made so Phase 3 doesn't re-litigate                                                                                             |
+| Bot skeleton + whitelist + `/start` + text→agent | **Next — wanted now**                                  | Smallest useful surface: long polling, whitelist middleware, `runAgent()` per message. Voice + streaming can follow.                |
+| Voice → Whisper → agent                          | Phase 3                                                | The killer Telegram feature for kids                                                                                                |
+| Streaming replies                                | Phase 3                                                | ~50-line `streamReply()` helper around `sendRichMessageDraft` (Bot API 10.1 Rich Messages); plain `editMessageText` as the fallback |
+| Forum topics for organising chats                | Phase 4+                                               | Only if conversation volume warrants                                                                                                |
+| Mini Apps + coding-agent arcade                  | Phase 4+                                               | Wait for Phase 3 to settle, then explore                                                                                            |
 
 ## Sources
 
-- [gramio docs](https://gramio.dev) · [comparison vs other frameworks](https://gramio.dev/comparison) · [plugins overview](https://gramio.dev/plugins/overview)
-- [grammy docs](https://grammy.dev) (runner-up reference) · [stream plugin](https://grammy.dev/plugins/stream) (the pattern we'll mirror in our `streamReply()` helper)
-- [Telegram Bot API changelog](https://core.telegram.org/bots/api-changelog)
+- [grammY docs](https://grammy.dev) · [getting started (Node.js)](https://grammy.dev/guide/getting-started#getting-started-on-node-js) · [deployment types (long polling vs webhooks)](https://grammy.dev/guide/deployment-types) · [stream plugin](https://grammy.dev/plugins/stream) · [auto-retry](https://grammy.dev/plugins/auto-retry)
+- [gramio docs](https://gramio.dev) (superseded original pick — revisit if grammY stalls)
+- [Telegram Bot API changelog](https://core.telegram.org/bots/api-changelog) — [Bot API 10.1, 11 Jun 2026 (Rich Messages)](https://core.telegram.org/bots/api-changelog#june-11-2026)
 - [Telegram Mini Apps](https://core.telegram.org/bots/webapps) · [`@tma.js/sdk` docs](https://docs.telegram-mini-apps.com/packages/tma-js-sdk)

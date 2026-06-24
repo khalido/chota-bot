@@ -1,289 +1,224 @@
 # Agent
 
-[Vercel AI SDK](https://ai-sdk.dev/docs/introduction) is our **sole** agent runtime. Pi-coding-agent was originally in the plan but dropped — our agent calls typed tool wrappers and writes notes, it never writes/runs code. One SDK, one mental model.
+[Vercel AI SDK](https://ai-sdk.dev/docs) (`ai` v6) is chota's **sole** agent runtime. Pi-coding-agent was originally in the plan but dropped — our agent calls typed tool wrappers and writes notes, it never writes/runs code. One SDK, one mental model.
+
+> **This doc tracks shipped code.** The agent is built and chat-debuggable at `/admin/agent`. The source of truth is `src/lib/server/agent/` + its `CLAUDE.md`; this doc is the reasoning behind it. When the two disagree, the code wins — fix the doc.
+>
+> **Before touching agent code, load the `ai-sdk` skill** (`.agents/skills/ai-sdk/`). Its first rule: _do not trust internal knowledge of the AI SDK_ — the API moved through v5→v6 and training data is stale. Verify against `node_modules/ai/docs/` and **always fetch live model IDs from the gateway** (`curl -s https://ai-gateway.vercel.sh/v1/models | jq -r '.data[].id'`), never from memory.
 
 ## Stack decision
 
-| Concern | Choice | Why |
-|---|---|---|
-| Runtime | `ai` package | Already needed for kiosk UI streaming. Active development, current API. |
-| Provider routing | AI Gateway via `gateway('deepseek/deepseek-v4-flash')` | One key, multi-provider. Cost attribution via tags |
-| Default model | `deepseek/deepseek-v4-flash` | Cheap, fast, good enough for tool-calling jobs |
-| Heavy job model | `deepseek/deepseek-v4-pro` | Dreaming/consolidation only |
-| Memory | JSONL via custom tool | See §"Memory tool" below |
-| Sandbox | None | Tools are typed wrappers, not arbitrary code execution |
+| Concern          | Choice                                                                     | Why                                                                                                                                        |
+| ---------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime          | `ai` v6 — the **`ToolLoopAgent`** class                                    | One reusable agent definition for kiosk UI streaming, Telegram, and job loops. Handles the tool loop, context, and stop conditions for us. |
+| Provider routing | AI Gateway (plain model-slug string, e.g. `'google/gemini-3.5-flash'`)     | One `AI_GATEWAY_API_KEY`, per-task model swap, spend caps, provider fallback. No per-provider SDK except Groq Whisper (voice, Phase 3).    |
+| Default model    | a fast/cheap Gemini Flash slug (**fetch the current ID from the gateway**) | Good enough for tool-calling family jobs; cheap enough to run often. Shipped value lives in `MODEL` in `agent/index.ts`.                   |
+| Heavy job model  | a stronger slug, dreaming/consolidation only                               | Reasoning-heavy nightly pass; worth the cost once a day.                                                                                   |
+| Memory           | not built yet — custom JSONL tool when it lands                            | See §Memory below for the three options + our lean.                                                                                        |
+| Sandbox          | None                                                                       | Tools are typed wrappers, not arbitrary code execution. See §Sandboxing in `plan.md`.                                                      |
 
-## The one primitive: `generateText`
+## The one primitive: `ToolLoopAgent`
+
+We define **one** agent instance (`chotaAgent`) and import it everywhere an LLM is needed. This is the AI SDK's recommended shape — define once, reuse, type-safe.
 
 ```ts
-import { generateText, gateway, stepCountIs, tool } from 'ai';
+// src/lib/server/agent/index.ts  (abridged — read the real file)
+import { google } from '@ai-sdk/google';
+import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
+import { buildSystemPrompt } from './prompts';
+import { weatherTool } from './tools/weather';
+// …calendar, ticktick, tmdb
 
-const { text, steps, usage } = await generateText({
-  model: gateway('deepseek/deepseek-v4-flash'),
-  system: '...',
-  prompt: '...',
-  tools: { ticktick, tmdb, memory },
-  stopWhen: stepCountIs(10),
-  abortSignal: AbortSignal.timeout(90_000),
-  providerOptions: {
-    gateway: { only: ['anthropic'], tags: ['chota', 'job-news'] }
-  }
+export const MODEL = 'google/gemini-3.5-flash'; // gateway slug — verify against the gateway
+
+export const chotaAgent = new ToolLoopAgent({
+	id: 'chota',
+	model: MODEL,
+	// `instructions` is rebuilt per call by prepareCall (see below) — the
+	// value passed at construction is overridden.
+	prepareCall: async ({ ...settings }) => ({
+		...settings,
+		instructions: await buildSystemPrompt()
+	}),
+	tools: {
+		weather: weatherTool,
+		calendar: calendarTool,
+		ticktick: ticktickTool,
+		tmdb: tmdbTool,
+		// Gemini's native web grounding — same-provider tool, so search + answer
+		// come back in one step. `google_search` is the required key name.
+		google_search: google.tools.googleSearch({})
+	}
 });
+
+export type ChotaAgentUIMessage = InferAgentUIMessage<typeof chotaAgent>;
 ```
 
-The SDK auto-loops tool calls back into the model. **Don't** write `while (hasToolCalls)` — `stopWhen` handles termination.
+Use it three ways:
 
-## Tools — current shape (v5+)
+- **`chotaAgent.generate({ prompt })`** — one-shot. Returns `{ text, steps, totalUsage, … }`. The SDK auto-loops tool calls; you never write `while (hasToolCalls)`.
+- **`chotaAgent.stream({ prompt })`** — streaming. Returns `{ textStream, … }` for the kiosk `useChat` and the Telegram `sendRichMessageDraft` helper.
+- **`createAgentUIStreamResponse({ agent, uiMessages })`** — a ready-made SvelteKit/route response for the chat UI.
+
+### `prepareCall` builds the prompt per call
+
+`buildSystemPrompt()` (`prompts.ts`) composes four layers fresh on every call: **SOUL** (identity/voice from `soul.md`), **STYLE** (audience, brevity, tool-use cues), **TODAY** (Sydney date so the model can resolve "next Monday"), **SNAPSHOT** (today's calendar + family-list state, best-effort — one failed fetch drops one line, not the prompt). Rebuilding the static parts every call is wasteful; when prompt-caching lands, split SOUL+STYLE (cacheable head) from TODAY+SNAPSHOT (per-call tail) as `SystemModelMessage[]`.
+
+For runtime inputs that should be type-checked (e.g. "which family member is this for", a chat session id), use **`callOptionsSchema` + `prepareCall({ options })`** rather than threading globals — `options` becomes a required, typed argument to `generate()`/`stream()`.
+
+## The `runAgent()` wrapper — observability, not control flow
+
+`runAgent()` is a _thin_ wrapper around `chotaAgent.generate(...)` whose only job is to emit one `agent.run` wide event (model, tokens in/out, steps, outcome, duration) to LogTape → OTel/PostHog. It is **not** a re-implementation of the loop — the `ToolLoopAgent` already owns that.
+
+```ts
+export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) {
+	const ev = event('agent', 'run {model}', { model: MODEL });
+	try {
+		const result = await chotaAgent.generate(args);
+		ev.set('tokens_in', result.totalUsage.inputTokens ?? 0)
+			.set('tokens_out', result.totalUsage.outputTokens ?? 0)
+			.set('steps', result.steps.length)
+			.done();
+		return result;
+	} catch (err) {
+		ev.fail(err);
+		throw err;
+	}
+}
+```
+
+Every surface (Telegram handler, job loop, admin endpoint) calls `runAgent()` so cost/usage is captured in one place. Streaming paths can wrap `.stream(...)` the same way when they land.
+
+## Tools — current shape (v6)
+
+One file per tool in `agent/tools/`, basename matching the data lib it wraps in `$lib/server/tools/`. The tool file adds the LLM-facing `description` + `inputSchema` + any response shaping; the data lib owns the fetch, caching, and stale-ok behaviour.
 
 ```ts
 import { tool } from 'ai';
 import { z } from 'zod';
 
-const memory = tool({
-  description: 'Read, write, search, or delete entries in long-term memory.',
-  inputSchema: z.object({           // NOT `parameters` — that's the v3/v4 name
-    op: z.enum(['search', 'add', 'delete', 'update']),
-    query: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    content: z.string().optional(),
-    id: z.string().optional()
-  }),
-  outputSchema: z.object({           // optional but useful for tool-chained output
-    records: z.array(z.object({ id: z.string(), content: z.string() })).optional(),
-    id: z.string().optional()
-  }),
-  execute: async ({ op, query, tags, content, id }, { abortSignal }) => {
-    // propagate abortSignal to any fetch inside
-  }
+export const memory = tool({
+	description: 'Read, write, search, or delete entries in long-term memory.',
+	inputSchema: z.object({
+		// NOT `parameters` — that's the v3/v4 name
+		op: z.enum(['search', 'add', 'delete', 'update']),
+		query: z.string().optional(),
+		tags: z.array(z.string()).optional(),
+		content: z.string().optional(),
+		id: z.string().optional()
+	}),
+	execute: async ({ op, query, tags, content, id }, { abortSignal }) => {
+		// propagate abortSignal to any fetch inside; return a small scalar object
+	}
 });
 ```
 
-Notes:
-- **`inputSchema` not `parameters`**. v5 rename. Old `parameters:` silently mistypes
-- `outputSchema` optional. Use when wrong output shape would corrupt downstream tool calls
-- `execute` receives `{ abortSignal }` as second arg — propagate to fetches inside
+Rules (also in `agent/CLAUDE.md`):
 
-## Tool errors don't throw (v5 change)
+- **`inputSchema`, not `parameters`** — v5 rename, silently mistypes if wrong.
+- **`execute` returns a small, scalar-shaped object** — slice/shape before returning. The LLM sees this back as a tool result; smaller is cheaper.
+- **`execute` receives `{ abortSignal }`** as its second arg — propagate it to fetches so the agent's timeout actually cancels work.
+- **Argument-free tools use `inputSchema: z.object({})`.**
+- **Tool errors don't throw (v5+ change).** A thrown error in `execute` lands as a `tool-error` content part inside `result.steps`, not as a caught exception. Inspect explicitly:
 
-In v4, a thrown error in `execute` would surface as `ToolExecutionError`. **In v5, errors land as `tool-error` content parts inside `result.steps`.** You must inspect them explicitly:
-
-```ts
-const toolErrors = result.steps.flatMap((step) =>
-  step.content
-    .filter((part) => part.type === 'tool-error')
-    .map((part) => ({ toolName: part.toolName, error: part.error }))
-);
-if (toolErrors.length) log('agent', 'tool errors:', toolErrors);
-```
-
-## The minimal `runAgent()` wrapper
-
-Ship this wrapper when the first agent job lands. Bakes in all the safety caps from day one (per opus advice + croner research).
-
-```ts
-// src/lib/server/agent/index.ts
-import { generateText, gateway, stepCountIs } from 'ai';
-import type { Tool } from 'ai';
-import { log, logErr } from '$lib/server/log';
-
-export interface RunAgentOptions {
-  prompt: string;
-  system?: string;
-  tools: Record<string, Tool>;
-  /** Defaults to haiku. Use sonnet for the dreaming job. */
-  model?: string;
-  /** Defaults to 10. Cheap jobs can go lower. */
-  maxSteps?: number;
-  /** Caller-provided cancellation. Composed with internal 90s timeout. */
-  signal?: AbortSignal;
-  /** Gateway tags for cost attribution: shows in usage dashboard. */
-  tags?: string[];
-}
-
-export interface RunAgentResult {
-  text: string;
-  inputTokens: number;
-  outputTokens: number;
-  stepCount: number;
-  toolErrors: { toolName: string; error: unknown }[];
-}
-
-export async function runAgent({
-  prompt,
-  system,
-  tools,
-  model = 'deepseek/deepseek-v4-flash',
-  maxSteps = 10,
-  signal,
-  tags = []
-}: RunAgentOptions): Promise<RunAgentResult> {
-  const timeout = AbortSignal.timeout(90_000);
-  const abortSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-
-  const result = await generateText({
-    model: gateway(model),
-    system,
-    prompt,
-    tools,
-    stopWhen: stepCountIs(maxSteps),
-    abortSignal,
-    providerOptions: {
-      gateway: { only: ['anthropic'], tags: ['chota', ...tags] }
-    }
-  });
-
-  const toolErrors = result.steps.flatMap((step) =>
-    step.content
-      .filter((p): p is typeof p & { type: 'tool-error' } => p.type === 'tool-error')
-      .map((p) => ({ toolName: p.toolName, error: p.error }))
+  ```ts
+  const toolErrors = result.steps.flatMap((s) =>
+  	s.content
+  		.filter((p) => p.type === 'tool-error')
+  		.map((p) => ({ toolName: p.toolName, error: p.error }))
   );
-  if (toolErrors.length) logErr('agent', 'tool errors:', toolErrors);
+  ```
 
-  log('agent', `${model} steps=${result.steps.length} in=${result.usage.inputTokens} out=${result.usage.outputTokens} tags=${tags.join(',')}`);
+- **Don't reach for the DB / external APIs directly from a tool** — call the matching `$lib/server/tools/` lib.
 
-  return {
-    text: result.text,
-    inputTokens: result.usage.inputTokens ?? 0,
-    outputTokens: result.usage.outputTokens ?? 0,
-    stepCount: result.steps.length,
-    toolErrors
-  };
-}
-```
+## Loop control
 
-Call from a job:
+`ToolLoopAgent` defaults to `stopWhen: stepCountIs(20)` — a runaway-loop backstop. Tune per need:
 
-```ts
-const { text, toolErrors } = await runAgent({
-  prompt: 'Search Exa for kid-friendly news this week. Pick 3, summarise.',
-  tools: { exa, ticktick, memory },
-  maxSteps: 8,
-  tags: ['job-weekly-news']
-});
-```
+- `stepCountIs(n)` — hard step cap.
+- `hasToolCall('name')` — stop once a specific tool fires.
+- `isLoopFinished()` — no cap; let the model stop naturally. **Use with caution** — unbounded cost.
+- Custom `StopCondition` — e.g. a token-budget guard that sums `steps[].usage` and stops past a cost threshold.
 
-## Memory tool (when we land it)
+Combine with an array (stops on the first to match). For wall-clock safety pass `abortSignal: AbortSignal.timeout(ms)` to `generate()` and compose a caller signal with `AbortSignal.any([caller, timeout])`. `prepareStep` can swap model/tools/messages between steps (e.g. cheap model for early steps, stronger for synthesis) — reach for it only when a single model genuinely underperforms.
 
-Per the [Vercel cookbook](https://ai-sdk.dev/cookbook/guides/custom-memory-tool). One tool with a `op` discriminator (`search` / `add` / `update` / `delete`). Single JSONL file `data/memory/family.jsonl`. Records:
+## Memory (when we land it)
+
+The AI SDK documents [three memory approaches](https://ai-sdk.dev/docs/agents/memory):
+
+| Approach                  | Effort | Lock-in            | Notes                                                                                                                                                                                |
+| ------------------------- | ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Provider-defined tool** | Low    | Yes (per provider) | e.g. Anthropic's `memory_20250818` tool — Claude is _trained_ to use it; you implement `execute` (view/create/str_replace/insert/delete/rename) against any backend. Tied to Claude. |
+| **Memory provider**       | Low    | Yes (per service)  | Letta / Mem0 wrap an external memory service behind the SDK interface. Operational sidecar/account.                                                                                  |
+| **Custom tool**           | High   | **None**           | One `tool()` with an `op` discriminator over our own JSONL store. Full control, no lock-in.                                                                                          |
+
+**Our lean: the custom tool**, per the [Vercel custom-memory cookbook](https://ai-sdk.dev/cookbook/guides/custom-memory-tool) — but keep the Anthropic memory tool in mind if we ever pin to Claude, since "trained to use it" is a real quality edge. Single JSONL file `data/memory/family.jsonl`:
 
 ```jsonl
-{"id":"mem_abc","created":"2026-05-11T03:00:00Z","tags":["kid2","sport"],"content":"..."}
+{
+	"id": "mem_abc",
+	"created": "2026-05-11T03:00:00Z",
+	"tags": [
+		"kid2",
+		"sport"
+	],
+	"content": "…"
+}
 ```
 
-The `family.jsonl` long-term file + dated session logs + nightly dreaming consolidation are the two-layer pattern. See §Sessions and the dreaming section further down.
+Structured records give stable IDs (clean edits), free metadata (timestamps, tags), atomic appends, and lossless tag filtering; the `content` field is still free prose. Held back from Phase 2 because nightly rewrites are the highest-corruption-risk path — settle the single-writer lock + injection boundaries first (see `plan.md` Phase 3).
 
 ## Sessions: simplified, not raw
 
-`generateText` returns a `steps` array with full message history — user prompt, tool calls + JSON results, intermediate assistant text. Storing those raw is **expensive** to keep and **noisy** to feed back to the dreaming agent.
-
-Instead, after every `runAgent()` call, we extract a 5-field simplified record and append to today's session log:
+`generate()` returns a `steps` array with full message history — storing it raw is expensive and noisy to feed back to the dreaming pass. After each `runAgent()` call, extract a 5-field record and append to today's session log:
 
 ```jsonl
 // data/memory/sessions/2026-05-11.jsonl
-{"id":"ses_abc","at":"2026-05-11T10:30:00Z","job":"weekly-news","input":"Search news for...","tools":{"exa.search":3,"exa.fetch":2,"ticktick.add_task":1},"output":"Added 3 articles to Notes","tokens":{"in":4800,"out":720},"steps":7,"errors":[]}
+{"id":"ses_abc","at":"…","job":"weekly-news","input":"Search news for…","tools":{"google_search":3,"ticktick":1},"output":"Added 3 articles","tokens":{"in":4800,"out":720},"steps":7,"errors":[]}
 ```
 
-Where:
-- `input` — the prompt we passed to the agent (or the user's request if voice/chat)
-- `tools` — count of each tool name called: `{ "exa.search": 3, "exa.fetch": 2 }`. Just counts, not arguments — those become noise at consolidation time
-- `output` — `result.text` from `generateText`
-- `tokens`, `steps`, `errors` — metadata from the result
+`tools` is **counts only** (`{ "google_search": 3 }`), not arguments — those are noise at consolidation time. Build the counts by walking `result.steps[].content` for `tool-call` parts. The simplification belongs inside `runAgent()` so callers don't think about session logging. ~200 chars/session vs 10K+ raw.
 
-Dreaming agent reads these (plus `family.jsonl`) and produces an updated memory. Way less context than feeding raw transcripts. ~200 chars/session vs 10K+ raw.
+## Dreaming — Anthropic's "never modify the input" pattern
 
-The simplification happens in `runAgent()` itself — caller doesn't need to know about session logging:
+Inspired by [Anthropic's Dreams pattern](https://platform.claude.com/docs/en/managed-agents/dreams): a dream reads the existing memory + recent session summaries and writes a _fresh, reorganized_ store — duplicates merged, stale entries replaced, new insights surfaced. **The input store is never modified**, so a bad output is discarded, not catastrophic. This is the key safety property (Sonnet rewriting `family.jsonl` was flagged as our highest-corruption-risk operation).
 
-```ts
-// Inside runAgent (sketch):
-const toolCounts: Record<string, number> = {};
-for (const step of result.steps) {
-  for (const part of step.content) {
-    if (part.type === 'tool-call') toolCounts[part.toolName] = (toolCounts[part.toolName] ?? 0) + 1;
-  }
-}
-await appendSessionLog({
-  job: tags[0] ?? 'unknown',
-  input: prompt,
-  output: result.text,
-  tools: toolCounts,
-  tokens: { in: result.usage.inputTokens, out: result.usage.outputTokens },
-  steps: result.steps.length,
-  errors: toolErrors.map((e) => e.toolName)
-});
-```
+Implementation:
 
-## Dreaming — adapt Anthropic's pattern
+1. **03:00 Sydney** — `dreaming.ts` job fires.
+2. **Read inputs (don't touch):** `family.jsonl` + last 1–2 days of session logs.
+3. **Write `family.jsonl.new`** via the heavy model (`stopWhen: stepCountIs(15)`), `memory.*` tools pointed at the `.new` file.
+4. **Atomic swap on success:** `mv family.jsonl.new family.jsonl` (POSIX rename is atomic).
+5. **On failure:** leave `.new` for inspection, alert in logs, original untouched.
+6. **Archive:** session logs >7 days gzipped to `archive/` (auditable, not deleted).
 
-Anthropic's [managed-agents Dreams API](https://platform.claude.com/docs/en/managed-agents/dreams) is the inspiration. We can't use it directly (we're on Vercel AI SDK + local files, not Managed Agents), but the pattern is what we want:
+Dreaming prompt: DEDUPE / PRUNE / SHARPEN / ADD / KEEP-if-unsure, biased toward retention; emit a one-paragraph change summary that becomes a morning-print line ("**Memory updated**: 3 new facts about Kid2, removed 2 stale events"). We keep the holistic rewrite (not model-emitted ops) because the atomic-swap makes it safe and the model reasons better over the whole file.
 
-> "A dream reads an existing memory store alongside past session transcripts, then produces a new, reorganized memory store: duplicates merged, stale or contradicted entries replaced with the latest value, and new insights surfaced."
->
-> **"The input store is never modified, so you can review the output and discard it if you don't like the result."**
+## Hardening — mandatory from day one
 
-The "never modify input" part is the key safety property — opencode flagged "Sonnet rewrites family.jsonl" as the highest-corruption-risk operation in our design. Anthropic's solution: write a fresh output, swap atomically only after success.
+1. **`stopWhen`** on every agent (the default `stepCountIs(20)` already applies — lower it for cheap jobs).
+2. **`AbortSignal.timeout(ms)`** wall-clock cap passed to `generate()`/`stream()`.
+3. **Per-tool fetch timeouts** in the data libs (`AbortSignal.timeout(10_000)`), wired through the tool's `{ abortSignal }`.
+4. **Inspect tool errors** — they're `tool-error` parts in `steps`, not thrown.
+5. **Log cost per call** — `result.totalUsage` is always present; `runAgent()` already emits it.
+6. **`AbortSignal.any([caller, timeout])`** to compose a caller signal with the internal timeout.
 
-Our implementation:
+Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), silent corruption (unread tool errors).
 
-1. **Daily 03:00 Sydney** — `dreaming.ts` job fires
-2. **Read inputs** (don't touch them):
-   - `data/memory/family.jsonl` (current memory)
-   - Last 1-2 days of `data/memory/sessions/YYYY-MM-DD.jsonl` (simplified sessions)
-3. **Write output** to `data/memory/family.jsonl.new` via the agent. Sonnet, `maxSteps: 15`, has `memory.add/update/delete` tools but pointed at the `.new` file
-4. **Atomic swap** after success: `mv family.jsonl.new family.jsonl` (POSIX rename is atomic). Old file gone.
-5. **On failure**: leave `.new` in place for inspection, alert in logs. Original untouched
-6. **Archive**: dated session logs older than 7 days get gzipped to `archive/` (not deleted — auditable)
+## Consumers
 
-The agent's prompt:
-```
-You're consolidating chota's family memory. Read the current memory and the
-last 24h of session summaries. Produce a refined memory file:
+- **`/admin/agent`** — chat UI for debugging the agent (built).
+- **Telegram** (Phase 3, planned) — `message:text` → `runAgent({ prompt })` → reply; streaming via `chotaAgent.stream()` → `sendRichMessageDraft`. See [`docs/telegram.md`](telegram.md).
+- **Jobs** (planned) — the morning-brief closing line is the first agent-driven job; a job calls `runAgent()` with job-specific tags. See [`docs/jobs.md`](jobs.md).
 
-1. DEDUPE: collapse multiple entries about the same fact
-2. PRUNE: remove stale entries (one-time events that already passed)
-3. SHARPEN: tighten verbose entries into single sentences
-4. ADD: noteworthy facts from sessions not yet in memory
-5. KEEP if unsure: bias toward retention
+## Gotchas (v6)
 
-Use memory.add + memory.delete (delete-then-add for edits). Output a one-paragraph
-summary of changes for the morning print.
-```
-
-That summary becomes a print section: "**Memory updated**: 3 new facts about Kid2, removed 2 stale events".
-
-### Why not "model emits ops"?
-
-Opencode floated emitting ops (`{add: ..., delete: id}`) instead of letting the agent rewrite. But with the atomic-swap pattern, the rewrite IS safe — the worst case is a bad output we discard. The ops approach adds protocol complexity and loses the agent's ability to reason holistically about the file. Stay with rewrite + safe swap.
-
-## Hardening that's mandatory from day one
-
-Per opus's review and croner research:
-
-1. **`stopWhen: stepCountIs(n)`** on every `generateText` — prevents infinite loops
-2. **`AbortSignal.timeout(90_000)`** wall-clock cap on `runAgent`
-3. **Per-tool fetch timeouts** already in our tool wrappers (`AbortSignal.timeout(10_000)`)
-4. **Tool errors are inspected** — not assumed-thrown (v5 behaviour change)
-5. **Cost logged per call** — `result.usage` is always present, log it
-6. **`AbortSignal.any`** to compose caller signal + internal timeout (Node 20+)
-
-Without these we get:
-- Loops that burn tokens overnight (no `stopWhen`)
-- Frozen ticks that wedge subsequent jobs (no timeout)
-- Silent data corruption from tool errors (not inspecting `steps`)
-
-## Gotchas to remember
-
-- **`inputSchema` not `parameters`** (v5 rename, silent failure if wrong)
-- **`CoreMessage` → `ModelMessage`** (renamed, only matters if we bridge UI ↔ server)
-- **`convertToCoreMessages` → `convertToModelMessages`** (same scope)
-- **Avoid `ToolLoopAgent` class** — `generateText` + `stopWhen` is simpler and explicit
-- **`gateway()` is bundled** — no `@ai-sdk/gateway` install needed since v5.0.36
-- **Plain model string works too** — `'deepseek/deepseek-v4-flash'` (or any provider/model id) auto-routes through Gateway when AI_GATEWAY_API_KEY is set
+- **`inputSchema` not `parameters`** (silent mistype).
+- **`CoreMessage` → `ModelMessage`**, **`convertToCoreMessages` → `convertToModelMessages`** (matter only when bridging UI ↔ server).
+- **Plain model-slug strings auto-route through AI Gateway** when `AI_GATEWAY_API_KEY` is set — no `@ai-sdk/gateway` import needed. `@ai-sdk/google` is imported only for the native `google_search` grounding tool, not for model routing.
+- **Don't hardcode model IDs from memory** — fetch current ones from the gateway.
+- **Provider-defined tools require a fixed key name** — `google_search` for Gemini grounding; the model won't recognise the tool under any other key.
 
 ## Future: Vercel Sandbox + bash-tool
 
-If/when we want jobs that benefit from the agent writing + running code (research tasks where iterating in code beats N LLM calls), evaluate:
-
-- [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox) — micro-VM, ephemeral
-- [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool) — bash with sandbox primitives
-
-For now, **deferred**. Our 10 typed tool wrappers cover everything we need.
+If we ever want jobs where the agent writes + runs code (research that iterates faster in code than in N LLM calls), evaluate [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox) + [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool). Deferred — our typed tool wrappers cover everything today.
