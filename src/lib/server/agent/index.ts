@@ -79,21 +79,26 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 	}
 }
 
+/** The resolved result of `chotaAgent.stream(...)` — exposes `fullStream`
+ *  (typed tool-call + text-delta parts), `textStream`, `totalUsage`, `steps`. */
+export type ChotaStreamResult = Awaited<ReturnType<typeof chotaAgent.stream>>;
+
 /**
  * Streaming sibling of `runAgent`. Starts `chotaAgent.stream(...)`, hands the
- * `textStream` to `consume` (e.g. the Telegram Rich-Message streamer), and
- * emits the same `agent.run` wide event once the caller has drained the stream
- * — usage + steps are only final after consumption. Observability stays here
- * so callers just consume text.
+ * whole stream result to `consume` (so the consumer can read `fullStream` for
+ * tool-call / text parts — e.g. the Telegram Rich-Message streamer that shows a
+ * "thinking" block while tools run), and emits the same `agent.run` wide event
+ * once the caller has drained the stream — usage + steps are only final after
+ * consumption. Observability stays here so callers just render.
  */
 export async function runAgentStream(
 	args: Parameters<typeof chotaAgent.stream>[0],
-	consume: (textStream: AsyncIterable<string>) => Promise<void>
+	consume: (result: ChotaStreamResult) => Promise<void>
 ) {
 	const ev = event('agent', 'run {model}', { model: MODEL, mode: 'stream' });
 	try {
 		const result = await chotaAgent.stream(args);
-		await consume(result.textStream);
+		await consume(result);
 		const usage = await result.totalUsage;
 		const steps = await result.steps;
 		ev.set('tokens_in', usage.inputTokens ?? 0)
