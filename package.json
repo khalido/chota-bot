@@ -75,5 +75,9 @@
 		"node-thermal-printer": "^4.6.0",
 		"usb": "^2.18.0",
 		"zod": "^4.4.3"
+	},
+	"overrides": {
+		"comment": "Force one @better-auth/core: the lagging @better-auth/cli (max 1.4.x, no 1.6 release) otherwise hoists core@1.4 to the top, which lacks the ./utils/host subpath that better-auth@1.6 imports at runtime — a 500 the typecheck can't see. Drop this once the CLI ships a 1.6.x.",
+		"@better-auth/core": "1.6.20"
 	}
 }
