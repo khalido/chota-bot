@@ -51,6 +51,11 @@ export interface FamilyMember {
 	/** All names this person goes by in calendar event titles. Include the
 	 *  canonical name. Whole-word, case-insensitive match. */
 	aliases: string[];
+	/** Whether this person gets an auto-printed weekday brief (the 06:45
+	 *  `morning-print` job). Defaults to true. Set false to keep someone as a
+	 *  valid on-demand / `/print/<who>` recipient (and calendar-tag target)
+	 *  without a daily sheet — e.g. parents who don't want a morning printout. */
+	autoPrint?: boolean;
 }
 
 export interface WeatherThresholds {
