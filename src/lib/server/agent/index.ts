@@ -34,6 +34,15 @@ export const MODEL = 'google/gemini-3.5-flash';
 export const chotaAgent = new ToolLoopAgent({
 	id: 'chota',
 	model: MODEL,
+	// Gemini 3 thinking. `includeThoughts` makes Gemini return thought
+	// *summaries* — without it there are no `reasoning-*` stream parts at all,
+	// so the Telegram thinking-block has nothing to show. `thinkingLevel: 'low'`
+	// keeps reasoning cheap/fast for a family bot (gemini-3.5-flash supports
+	// minimal|low|medium|high). Forwarded to the Google provider via the
+	// gateway. A latency-sensitive job can override thinkingConfig per call.
+	providerOptions: {
+		google: { thinkingConfig: { thinkingLevel: 'low', includeThoughts: true } }
+	},
 	// `instructions` is unused at construction — `prepareCall` overrides
 	// it with the freshly-composed system prompt on every call.
 	prepareCall: async ({ ...settings }) => ({

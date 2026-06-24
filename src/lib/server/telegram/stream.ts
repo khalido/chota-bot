@@ -38,13 +38,25 @@ const TOOL_STATUS: Record<string, string> = {
 	google_search: 'Searching the web'
 };
 
+/** Escape for the `<tg-thinking>` HTML body (model reasoning is untrusted text). */
+const escapeHtml = (s: string) =>
+	s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** A compact one-line view of streaming reasoning — collapse whitespace and
+ *  show the tail so the status reads like a live thought, not a wall of text. */
+function compactThought(text: string, max = 140): string {
+	const flat = text.replace(/\s+/g, ' ').trim();
+	return flat.length > max ? `…${flat.slice(-max)}` : flat;
+}
+
 export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 	const chatId = ctx.chat?.id;
 	if (chatId === undefined) return;
 
 	const draftId = Date.now(); // non-zero, stable across this reply's updates
 	let acc = '';
-	let status = 'Thinking';
+	let reasoning = '';
+	let thinking = 'Thinking…'; // current <tg-thinking> body
 	let answering = false;
 	let lastFlush = 0;
 	let richOk = true;
@@ -60,7 +72,7 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 				await ctx.api.sendRichMessageDraft(chatId, draftId, { markdown: acc });
 			} else {
 				await ctx.api.sendRichMessageDraft(chatId, draftId, {
-					html: `<tg-thinking>${status}…</tg-thinking>`
+					html: `<tg-thinking>${escapeHtml(thinking)}</tg-thinking>`
 				});
 			}
 		} catch (err) {
@@ -73,10 +85,20 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 
 	for await (const part of result.fullStream) {
 		switch (part.type) {
-			// Earliest signal a tool is being called — update the thinking status.
+			// The model's thought summary (Gemini `includeThoughts`) — show it
+			// streaming in the thinking block as a live, compacted thought.
+			case 'reasoning-delta':
+				if (!answering) {
+					reasoning += part.text;
+					thinking = compactThought(reasoning);
+					await flush();
+				}
+				break;
+			// A tool is being called — a clearer status than raw reasoning, so
+			// override the block with the friendly tool phrase.
 			case 'tool-input-start':
 				if (!answering) {
-					status = TOOL_STATUS[part.toolName] ?? 'Thinking';
+					thinking = `${TOOL_STATUS[part.toolName] ?? 'Working on it'}…`;
 					await flush(true);
 				}
 				break;
