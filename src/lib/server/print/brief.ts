@@ -31,6 +31,7 @@ import { getQuote, type Quote } from '$lib/server/tools/quotes';
 import {
 	sydneyDateMedium,
 	sydneyDateShort,
+	sydneyDayOfWeek,
 	sydneyTimeCompact,
 	sydneyTimeOnDay,
 	sydneyYMD
@@ -93,6 +94,10 @@ export interface BriefData {
 	/** lucide-icon key for the condition (see `weatherGlyph`), or null. */
 	weatherIcon: string | null;
 	events: CalendarEvent[];
+	/** The upcoming/current weekend's shared family calendar (Sat+Sun), populated
+	 *  only on Fri & Sat morning briefs. Drives the kids' Friday "WEEKEND"
+	 *  lookahead and the Saturday whole-family sheet; undefined otherwise. */
+	weekendEvents?: CalendarEvent[];
 	family: FamilyMember[];
 	/** Kid names (config order) — lets the renderer tell parents from kids. */
 	kids: string[];
@@ -139,6 +144,19 @@ export async function gatherBrief({
 		logErr('brief', 'calendar lookup failed:', err);
 		return [] as CalendarEvent[];
 	});
+	// Weekend lookahead: on Fri & Sat morning briefs, also pull the shared
+	// family calendar for the upcoming Sat+Sun. `rangeFor('weekend')` gives
+	// Sat+Sun from Fri/Sat. Feeds the kids' Friday "WEEKEND" section and the
+	// Saturday whole-family sheet. Skipped the rest of the week + on the evening
+	// (tomorrow) brief, so most briefs make no extra calendar call.
+	const refDow = sydneyDayOfWeek(ref);
+	const weekendEvents =
+		!tomorrow && (refDow === 'Fri' || refDow === 'Sat')
+			? await getCalendar({ range: 'weekend' }).catch((err) => {
+					logErr('brief', 'weekend calendar lookup failed:', err);
+					return [] as CalendarEvent[];
+				})
+			: undefined;
 	const schoolBus = await collectSchoolBus(ref, tomorrow);
 	const schoolWeek = await getSchoolWeek(ref).catch((err) => {
 		logErr('brief', 'school week lookup failed:', err);
@@ -205,6 +223,7 @@ export async function gatherBrief({
 		weatherLines: wx.lines,
 		weatherIcon: wx.icon,
 		events,
+		weekendEvents,
 		family: config.family ?? [],
 		kids: config.kids.map((k) => k.name),
 		schoolBus,
