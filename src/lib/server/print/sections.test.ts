@@ -385,4 +385,55 @@ describe('print pipeline', () => {
 			printed Wed 13th May, 6:45am"
 		`);
 	});
+
+	// Weekend lookahead (gatherBrief populates `weekendEvents` on Fri & Sat only).
+	// Sat (Sydney) all-day + Sun 12–2pm, to prove the day prefix on each line.
+	const WEEKEND_EVENTS: CalendarEvent[] = [
+		{
+			id: 'w1',
+			summary: 'Soccer carnival',
+			start: new Date('2026-05-15T14:00:00Z'), // Sat 16 May 00:00 Sydney
+			end: new Date('2026-05-16T14:00:00Z'),
+			isAllDay: true
+		},
+		{
+			id: 'w2',
+			summary: 'Grandma visits',
+			start: new Date('2026-05-17T02:00:00Z'), // Sun 17 May 12:00 Sydney
+			end: new Date('2026-05-17T04:00:00Z'),
+			isAllDay: false
+		}
+	];
+
+	it('kid Friday brief — WEEKEND section lists family events day-prefixed', () => {
+		const sections = recipientToSections(
+			'kid1',
+			{ ...DATA, weekendEvents: WEEKEND_EVENTS },
+			KID1_SCHEDULE
+		);
+		const weekend = sections.find((s) => s.title === 'WEEKEND');
+		expect(weekend).toMatchObject({
+			kind: 'events',
+			events: [
+				{ time: 'Sat all day', summary: 'Soccer carnival' },
+				{ time: expect.stringMatching(/^Sun /), summary: 'Grandma visits' }
+			]
+		});
+	});
+
+	it('kid brief without weekendEvents has no WEEKEND section', () => {
+		const sections = recipientToSections('kid1', DATA, KID1_SCHEDULE);
+		expect(sections.find((s) => s.title === 'WEEKEND')).toBeUndefined();
+	});
+
+	it('family Saturday sheet — THIS WEEKEND spans Sat+Sun', () => {
+		const sections = recipientToSections('family', { ...DATA, weekendEvents: WEEKEND_EVENTS });
+		const block = sections.find((s) => s.title === 'THIS WEEKEND');
+		expect(block).toMatchObject({ kind: 'events' });
+		const times = block && block.kind === 'events' ? block.events.map((e) => e.time) : [];
+		expect(times.some((t) => t.startsWith('Sat'))).toBe(true);
+		expect(times.some((t) => t.startsWith('Sun'))).toBe(true);
+		// The plain TODAY block is replaced by the weekend one on the family sheet.
+		expect(sections.find((s) => s.title === 'TODAY')).toBeUndefined();
+	});
 });

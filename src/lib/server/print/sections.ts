@@ -15,7 +15,7 @@ import type { BriefData } from './brief';
 import type { SchedulePeriod } from '$lib/server/tools/sentral';
 import { getConfig } from '$lib/server/config';
 import { parseEventPeople } from '$lib/server/people';
-import { sydneyTimeRange } from '$lib/time';
+import { sydneyDayOfWeek, sydneyTimeRange } from '$lib/time';
 import { scheduleSection, schoolBreakSection } from './school-section';
 
 type BodyByKind =
@@ -158,6 +158,31 @@ function dayEvents(d: BriefData) {
 }
 
 /**
+ * Weekend events with a day prefix on the time ("Sat 9:00am", "Sun all day")
+ * so a multi-day list reads clearly without a separate per-day section kind.
+ * Empty when `gatherBrief` didn't populate `weekendEvents` (i.e. not Fri/Sat).
+ */
+function weekendEventRows(d: BriefData) {
+	return (d.weekendEvents ?? []).map((e) => ({
+		time: `${sydneyDayOfWeek(e.start)} ${e.isAllDay ? 'all day' : sydneyTimeRange(e.start, e.end)}`,
+		summary: e.summary,
+		people: parseEventPeople(e.summary, d.family)
+	}));
+}
+
+/**
+ * A kid's "what's on this weekend" — the shared family calendar for the
+ * upcoming Sat+Sun, each line prefixed with its day. Shown on the Friday
+ * morning brief (the only weekday `gatherBrief` populates `weekendEvents`).
+ * null when there's nothing on, or any other day.
+ */
+function weekendAheadSection(d: BriefData): PrintSectionBody | null {
+	const events = weekendEventRows(d);
+	if (!events.length) return null;
+	return { title: 'WEEKEND', kind: 'events', events, tasks: [] };
+}
+
+/**
  * A parent's day: shared calendar events with their own todos folded in under
  * them — overdue ones flagged and sorted first. null when the recipient has
  * neither an event nor a task. Kids' briefs split these two into separate
@@ -205,13 +230,14 @@ function choresSection(d: BriefData): PrintSectionBody | null {
  * The whole-family TODAY/TOMORROW — the weekend sheet's centre block. Every
  * calendar event (already shared) plus every open `todos` item regardless of
  * assignee, each with its chips. Unassigned tasks get a "Todos" chip.
+ *
+ * On the Saturday sheet `gatherBrief` populates `weekendEvents`, so the calendar
+ * block spans the whole weekend (Sat+Sun, day-prefixed) under a THIS WEEKEND
+ * heading instead of just Saturday. Todos stay scoped to the brief's day.
  */
 function familyTodaySection(d: BriefData): PrintSectionBody | null {
-	const events = d.events.map((e) => ({
-		time: e.isAllDay ? 'all day' : sydneyTimeRange(e.start, e.end),
-		summary: e.summary,
-		people: parseEventPeople(e.summary, d.family)
-	}));
+	const weekend = (d.weekendEvents?.length ?? 0) > 0;
+	const events = weekend ? weekendEventRows(d) : dayEvents(d);
 	const tasks = d.todos
 		.slice()
 		.sort((a, b) => taskRank(a.when) - taskRank(b.when))
@@ -225,7 +251,7 @@ function familyTodaySection(d: BriefData): PrintSectionBody | null {
 		}));
 	if (!events.length && !tasks.length) return null;
 	return {
-		title: d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY',
+		title: weekend ? 'THIS WEEKEND' : d.day === 'tomorrow' ? 'TOMORROW' : 'TODAY',
 		kind: 'events',
 		events,
 		tasks
@@ -351,6 +377,7 @@ export function recipientToSections(
 		scheduleSection(schedule, busLine, d.schoolWeek, d.schoolUpcoming) ?? schoolBreakSection(d),
 		isParent ? todaySection(d, who) : todayEventsSection(d),
 		isParent ? null : myTodosSection(d, who),
+		isParent ? null : weekendAheadSection(d),
 		choresSection(d),
 		isParent ? todosSection(d) : null,
 		shoppingSection(d),
