@@ -1,5 +1,6 @@
-// Weekday 06:45 Sydney print — one sheet per family member (everyone in
-// chota.config.ts). Mon–Fri only; the weekend brief is a separate
+// Weekday 06:45 Sydney print — one sheet per auto-print family member
+// (everyone in chota.config.ts whose `autoPrint` isn't false; parents can opt
+// out while staying on-demand recipients). Mon–Fri only; the weekend brief is a separate
 // `weekend-print` job (one family-wide sheet, no per-person split). A kid's
 // sheet carries their school timetable. Prints the designed image (a
 // screenshot of /print/<who>); composeImage falls back to the canvas renderer
@@ -11,7 +12,7 @@
 import { defineJob } from '$lib/server/scheduler';
 import { composeImage } from '$lib/server/print/composers';
 import { printPng } from '$lib/server/print/printer';
-import { getRecipients } from '$lib/server/print/sections';
+import { getAutoPrintRecipients } from '$lib/server/print/sections';
 import { event } from '$lib/server/log';
 import { env } from '$env/dynamic/private';
 
@@ -20,7 +21,7 @@ defineJob('morning-print', '45 6 * * 1-5', async () => {
 	// failure every morning at 06:45 — no thanks.
 	if (env.KIOSK !== 'true') return 'skipped (KIOSK env not set)';
 
-	const recipients = getRecipients();
+	const recipients = getAutoPrintRecipients();
 	const results: string[] = [];
 	for (const who of recipients) {
 		const ev = event('print', 'printed {who} ({source})', { who, source: 'morning-print' });

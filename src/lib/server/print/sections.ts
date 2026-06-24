@@ -93,6 +93,21 @@ export function getRecipients(): readonly string[] {
 	return roster.map((n) => n.toLowerCase());
 }
 
+/**
+ * Recipients the scheduled weekday `morning-print` job produces a sheet for:
+ * family members whose `autoPrint` isn't disabled (defaults on), lowercased.
+ * Falls back to all kids when no `family` roster is configured. On-demand
+ * prints and the `/print/<who>` routes use `getRecipients()` (everyone) —
+ * turning `autoPrint` off drops the daily sheet, not the person.
+ */
+export function getAutoPrintRecipients(): readonly string[] {
+	const config = getConfig();
+	if (config.family?.length) {
+		return config.family.filter((m) => m.autoPrint !== false).map((m) => m.name.toLowerCase());
+	}
+	return config.kids.map((k) => k.name.toLowerCase());
+}
+
 /** The whole-family weekend sheet's recipient slug — one print, not per-person. */
 export const FAMILY_RECIPIENT = 'family';
 
