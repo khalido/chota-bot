@@ -85,8 +85,9 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 
 	for await (const part of result.fullStream) {
 		switch (part.type) {
-			// The model's thought summary (Gemini `includeThoughts`) — show it
-			// streaming in the thinking block as a live, compacted thought.
+			// The model's thought summary, if it emits one (opportunistic — no
+			// provider flag forces it) — show it streaming in the thinking block
+			// as a live, compacted thought.
 			case 'reasoning-delta':
 				if (!answering) {
 					reasoning += part.text;
