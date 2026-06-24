@@ -1,71 +1,105 @@
 /**
- * Stream an agent reply into a Telegram chat using Bot API 10.1 Rich Messages.
+ * Stream an agent reply into a Telegram chat using Bot API 10.1 Rich Messages,
+ * with a native "thinking" status while the agent runs tools.
  *
- * The 10.1 streaming contract (https://core.telegram.org/bots/api#sendrichmessagedraft):
- *   - `sendRichMessageDraft` shows an EPHEMERAL ~30s live preview. Re-sending
- *     with the same `draft_id` animates the update — that's our "Chota typing".
- *   - The draft does NOT persist. Once generation is done you MUST call
- *     `sendRichMessage` with the full content to leave it in the chat.
+ * Streaming contract (https://core.telegram.org/bots/api#sendrichmessagedraft):
+ *   - `sendRichMessageDraft` shows an EPHEMERAL ~30s live preview; re-sending
+ *     with the same `draft_id` animates the update.
+ *   - The draft does NOT persist — once done you MUST `sendRichMessage` the
+ *     final content to leave it in the chat.
  *
- * The agent emits Markdown, and `InputRichMessage` takes a `markdown` string
- * directly — Telegram parses it into rich blocks server-side, so we never
- * hand-build RichBlock trees.
+ * We drive the agent's `fullStream` (not just textStream) so we can react to
+ * tool calls: while the model is calling a tool (e.g. the calendar), the draft
+ * shows a `<tg-thinking>` block ("Checking the calendar…") — the native Bot API
+ * 10.1 thinking status, which is draft-only. Once text starts arriving we
+ * switch the draft to the answer (Markdown). `InputRichMessage` takes a
+ * `markdown`/`html` string directly, so the agent's Markdown flows through with
+ * no hand-built block tree.
  *
- * Graceful fallback: if the rich methods error (e.g. a client/API that doesn't
- * support 10.1 yet), we stop streaming drafts and send one plain `reply` with
- * the final text. The family always gets an answer.
+ * Graceful fallback: if any rich method errors (a client/API that doesn't speak
+ * 10.1 yet), we stop streaming drafts and send one plain `reply` with the final
+ * text — the family always gets an answer.
  */
 import type { Context } from 'grammy';
-import { log, logErr } from '$lib/server/log';
+import type { ChotaStreamResult } from '$lib/server/agent';
+import { logErr } from '$lib/server/log';
 
 const SCOPE = 'telegram';
 /** Min gap between draft edits — keep clear of Telegram's edit rate limits. */
 const THROTTLE_MS = 1200;
 const EMPTY_REPLY = "I didn't have anything to say to that.";
 
-export async function streamRichReply(ctx: Context, textStream: AsyncIterable<string>) {
+/** Friendly "thinking" status per tool name. Falls back to a generic line. */
+const TOOL_STATUS: Record<string, string> = {
+	weather: 'Checking the weather',
+	calendar: 'Checking the calendar',
+	ticktick: 'Looking at the lists',
+	tmdb: 'Looking that up',
+	google_search: 'Searching the web'
+};
+
+export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 	const chatId = ctx.chat?.id;
 	if (chatId === undefined) return;
 
-	// draft_id must be non-zero and stable across this reply's updates.
-	const draftId = Date.now();
+	const draftId = Date.now(); // non-zero, stable across this reply's updates
 	let acc = '';
+	let status = 'Thinking';
+	let answering = false;
 	let lastFlush = 0;
 	let richOk = true;
 
-	const flushDraft = async () => {
+	/** Push the current state as a draft (thinking block, or the answer so far). */
+	const flush = async (force = false) => {
+		if (!richOk) return;
+		const now = Date.now();
+		if (!force && now - lastFlush < THROTTLE_MS) return;
+		lastFlush = now;
 		try {
-			await ctx.api.sendRichMessageDraft(chatId, draftId, { markdown: acc });
+			if (answering) {
+				await ctx.api.sendRichMessageDraft(chatId, draftId, { markdown: acc });
+			} else {
+				await ctx.api.sendRichMessageDraft(chatId, draftId, {
+					html: `<tg-thinking>${status}…</tg-thinking>`
+				});
+			}
 		} catch (err) {
-			// One failure means this client/API can't do rich drafts — stop
-			// trying and let the final plain reply carry the answer.
+			// One failure → this client/API can't do rich drafts. Stop trying;
+			// the final plain reply carries the answer.
 			richOk = false;
-			log(SCOPE, 'rich drafts unsupported, falling back to plain reply');
-			logErr(SCOPE, 'sendRichMessageDraft failed', err);
+			logErr(SCOPE, 'sendRichMessageDraft failed; falling back to plain reply', err);
 		}
 	};
 
-	for await (const chunk of textStream) {
-		acc += chunk;
-		const now = Date.now();
-		// First non-empty chunk flushes immediately (lastFlush=0); then throttle.
-		if (richOk && acc.trim() && now - lastFlush >= THROTTLE_MS) {
-			lastFlush = now;
-			await flushDraft();
+	for await (const part of result.fullStream) {
+		switch (part.type) {
+			// Earliest signal a tool is being called — update the thinking status.
+			case 'tool-input-start':
+				if (!answering) {
+					status = TOOL_STATUS[part.toolName] ?? 'Thinking';
+					await flush(true);
+				}
+				break;
+			case 'text-delta':
+				acc += part.text;
+				if (!answering && acc.trim()) {
+					answering = true;
+					await flush(true); // first answer text replaces the thinking block
+				} else {
+					await flush();
+				}
+				break;
 		}
 	}
 
 	const text = acc.trim() || EMPTY_REPLY;
-
 	if (richOk) {
 		try {
-			// Persist the final answer — the draft was ephemeral.
 			await ctx.api.sendRichMessage(chatId, { markdown: text });
 			return;
 		} catch (err) {
-			logErr(SCOPE, 'sendRichMessage failed, falling back to plain reply', err);
+			logErr(SCOPE, 'sendRichMessage failed; falling back to plain reply', err);
 		}
 	}
-
 	await ctx.reply(text);
 }
