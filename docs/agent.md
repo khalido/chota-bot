@@ -87,7 +87,49 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 }
 ```
 
-Every surface (Telegram handler, job loop, admin endpoint) calls `runAgent()` so cost/usage is captured in one place. Streaming paths can wrap `.stream(...)` the same way when they land.
+Every surface (Telegram handler, job loop, admin endpoint) calls `runAgent()` so cost/usage is captured in one place.
+
+`runAgentStream(args, consume)` is the **shipped** streaming sibling: it starts `chotaAgent.stream(...)`, hands the whole stream result to `consume` (so the consumer can read `fullStream` for tool-call + reasoning parts), and emits the same `agent.run` wide event after the stream drains. The Telegram bot uses it to render a Bot API 10.1 Rich Message — a `<tg-thinking>` block while tools run plus the model's reasoning **opportunistically** (we render `reasoning-*` parts if a model emits them but do **not** force provider thinking config like Gemini's `thinkingConfig`, so a model swap stays clean), then the streamed answer.
+
+### What to capture for analysis
+
+The result carries more than tokens. Worth keeping:
+
+- **`result.response.modelId`** — the model that _actually_ served the request. AI Gateway can fall back to a different provider/model than requested, so this is ground truth and ≠ the `MODEL` const. **Keep it.**
+- `result.totalUsage` (input/output tokens, cached/reasoning detail), `result.finishReason`, `result.steps.length`.
+- Skip `providerMetadata` (niche for now).
+
+Two homes: the `agent.run` **wide event** (LogTape → OTel/PostHog) is the analytics layer — enrich it with the actual `response.modelId` + `finishReason`; the `chat_message.metadata` JSON blob can carry a compact `{ model, in, out, finishReason, steps }` per assistant row for at-a-glance inspection in Drizzle Studio. _(Not yet wired — see Future / worklog.)_
+
+## Conversation history — light table, not a session transcript
+
+Shipped: a `chat_message` table (`db/chat.schema.ts`). Per turn the Telegram handler records the user message + the final reply **text only** — tool calls and thinking are scrubbed (their cost rides the wide event). It loads the last ~12 messages as context so replies feel continuous, and persists across deploys. Helpers live in `agent/history.ts` (`loadHistory`, `appendMessage`, `newTurnId`). Columns (`id`, `chatId`, `turnId`, `role`, `content`, `createdAt`, `metadata`) — `turnId` groups a user+assistant exchange; `metadata` is a JSON escape hatch. Compression (summarise + prune old turns) is deferred until volume warrants.
+
+> **Design principle (locked June 2026):** what defines the agent is `soul.md` (identity) + a well-maintained **memory store**. Messages are just light recent context. Full "sessions" — rich transcripts with every tool call + thought — are low-value and get messy fast, so we deliberately don't store them. Optimise soul + memory; keep history thin.
+
+## Agent organization — one now, more later
+
+Today there's **one** `ToolLoopAgent` (`agent/index.ts`). As agents are added we keep it flat and composition-first — **not** folder-per-agent (that's eve's multi-tenant shape; chota is one app with a few cooperating agents sharing capabilities):
+
+- **Shared `tools/` + (later) `skills/` libraries.** Each agent is a thin definition picking `model` + `instructions` + a _subset_ of tools + a _subset_ of skills. No per-agent tool/skill folders — select from the shared library.
+- **New agents are one file each** — e.g. `agent/dreaming.ts` (system-launched nightly memory consolidation: Sonnet, memory tools only, a _task prompt_, no skills).
+- **soul vs instructions:** the main agent has `soul.md` (personality/voice — what makes it _Chota_). A single-purpose job agent has _instructions_ (a task prompt). Don't give every agent a personality.
+
+### Subagents — the book-agent pattern (v7)
+
+The user always talks to the **main** agent; it can delegate to a subagent that does focused work and returns a result (e.g. a `book` subagent: search → read → summarise → links). Any agent (including `dreaming`) can serve as a subagent of the main one. Two ways:
+
+- **v6 today:** "agent-as-tool" — a tool whose `execute` runs a second `ToolLoopAgent.generate()` and returns its summary (~20 lines).
+- **v7 (the plan):** the AI SDK's native [subagents](https://ai-sdk.dev/v7/docs/agents/subagents) primitive. **We'll wait for v7-beta to mature, then upgrade and roll subagents out on v7** — same shape, less hand-rolling.
+
+## Skills — deferred, format decided
+
+Skills are markdown **procedures/knowledge** the agent loads on demand — distinct from tools (typed functions). The AI SDK has **no native skills** concept (it's a higher layer — [eve](https://vercel.com/eve), Claude's harness); our `ToolLoopAgent` is where we'd wire it. Researched against eve + the [agentskills.io](https://agentskills.io) spec; decided shape:
+
+- **Stage 1 (first):** flat `agent/skills/<name>.md` — frontmatter `description` (the trigger hint, listed in the system prompt) + a markdown body. Identity = filename. A `load_skill` tool returns the body (frontmatter stripped). Cache-friendly: only names + descriptions sit in the prompt; bodies load on demand. No sandbox — FS reads.
+- **Stage 2:** graduate to `skills/<name>/SKILL.md` + `references/*.md` (pulled on demand) when a skill grows.
+- **Stage 3 — `scripts/` deferred.** Skill scripts need a sandbox/bash runtime (both agentskills.io and eve assume one; eve never auto-runs them). Not appropriate for a family kiosk now; **revisit in the v7 era** (interesting sandbox products are emerging). The loader ignores `scripts/` if present.
+- Skills mostly belong to the **main** conversational agent; single-purpose job agents are prompt-driven. **Skip:** TS/module skills, dynamic skills, `allowed-tools` enforcement, per-agent scoping.
 
 ## Tools — current shape (v6)
 
@@ -168,7 +210,9 @@ The AI SDK documents [three memory approaches](https://ai-sdk.dev/docs/agents/me
 
 Structured records give stable IDs (clean edits), free metadata (timestamps, tags), atomic appends, and lossless tag filtering; the `content` field is still free prose. Held back from Phase 2 because nightly rewrites are the highest-corruption-risk path — settle the single-writer lock + injection boundaries first (see `plan.md` Phase 3).
 
-## Sessions: simplified, not raw
+## Session logs for dreaming — simplified, not raw
+
+> Distinct from the conversation history above: that's the chat context table; **this** is a per-_job-run_ summary log that feeds the dreaming pass. Still planned, not built.
 
 `generate()` returns a `steps` array with full message history — storing it raw is expensive and noisy to feed back to the dreaming pass. After each `runAgent()` call, extract a 5-field record and append to today's session log:
 
@@ -207,8 +251,8 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 
 ## Consumers
 
+- **Telegram** (shipped) — the main interactive surface. `message:text` → `runAgentStream({ messages })` → streamed Rich-Message reply with a thinking block + the message-history context above; `/print [who]` sends a brief PNG. Whitelisted + hardened. See [`docs/telegram.md`](telegram.md).
 - **`/admin/agent`** — chat UI for debugging the agent (built).
-- **Telegram** (Phase 3, planned) — `message:text` → `runAgent({ prompt })` → reply; streaming via `chotaAgent.stream()` → `sendRichMessageDraft`. See [`docs/telegram.md`](telegram.md).
 - **Jobs** (planned) — the morning-brief closing line is the first agent-driven job; a job calls `runAgent()` with job-specific tags. See [`docs/jobs.md`](jobs.md).
 
 ## Gotchas (v6)
@@ -219,6 +263,17 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 - **Don't hardcode model IDs from memory** — fetch current ones from the gateway.
 - **Provider-defined tools require a fixed key name** — `google_search` for Gemini grounding; the model won't recognise the tool under any other key.
 
-## Future: Vercel Sandbox + bash-tool
+## Future / worklog
 
-If we ever want jobs where the agent writes + runs code (research that iterates faster in code than in N LLM calls), evaluate [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox) + [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool). Deferred — our typed tool wrappers cover everything today.
+- **Upgrade to AI SDK v7** once the beta matures → adopt the native [subagents](https://ai-sdk.dev/v7/docs/agents/subagents) primitive (book-agent pattern above). On v6 we'd hand-roll agent-as-tool; the upgrade replaces that with first-class subagents.
+- **Wire the model/usage metadata capture** (§What to capture) — enrich the `agent.run` wide event with the actual `response.modelId` + `finishReason`, and store a compact `{ model, in, out, finishReason, steps }` blob on `chat_message` assistant rows.
+- **PostHog AI observability** ([posthog.com/ai-observability](https://posthog.com/ai-observability)) — we already ship events to PostHog via the OTel sink; PostHog's LLM-analytics adds per-generation cost/latency/trace dashboards on top. Low effort later + a useful pattern for other projects. (Captured in `~/code/ops/inbox.md`.)
+- **Sandbox + bash-tool / skill `scripts/`** — [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox), [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool). For jobs where the agent writes + runs code, and for executing skill `scripts/`. Revisit in the **v7 era** — interesting sandbox products are emerging. Deferred; typed tool wrappers cover everything today.
+- **Memory store + dreaming consolidation** (§Memory, §Dreaming) — the high-value durable layer; deferred behind the single-writer-lock + injection-boundary work.
+
+## References
+
+- [AI SDK docs](https://ai-sdk.dev/docs) · [building agents](https://ai-sdk.dev/docs/agents/building-agents) · [v7 subagents (beta)](https://ai-sdk.dev/v7/docs/agents/subagents) · [memory](https://ai-sdk.dev/docs/agents/memory)
+- [eve](https://vercel.com/eve) ([blog](https://vercel.com/blog/introducing-eve), source at `~/code/refs/eve`) — file-based agent + skills patterns we borrowed (skills format, `load_skill`, progressive disclosure). We skip its durable-execution + sandbox machinery.
+- [agentskills.io](https://agentskills.io) — the open Agent Skills format (SKILL.md + `references/`/`assets/`/`scripts/`, progressive disclosure) behind our deferred skills design.
+- [Anthropic managed-agents: Dreams](https://platform.claude.com/docs/en/managed-agents/dreams) — the never-modify-the-input pattern for the dreaming job.
