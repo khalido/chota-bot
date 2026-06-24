@@ -25,6 +25,7 @@ import { autoRetry } from '@grammyjs/auto-retry';
 import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
 import { runAgentStream } from '$lib/server/agent';
+import { loadHistory, appendMessage, newTurnId } from '$lib/server/agent/history';
 import { composeImage } from '$lib/server/print/composers';
 import { getRecipients, FAMILY_RECIPIENT } from '$lib/server/print/sections';
 import { streamRichReply } from './stream';
@@ -134,11 +135,19 @@ export async function bootBot(): Promise<void> {
 		}, 4500);
 		const run = (async () => {
 			try {
+				// Short-term context: record the user turn, load the recent window,
+				// stream the reply, then record the final reply text. Tools/thinking
+				// are not stored — just the conversation text.
+				const chatId = String(ctx.chat.id);
+				const turnId = newTurnId();
+				appendMessage(chatId, turnId, 'user', ctx.message.text);
 				// Stream the reply as a Bot API 10.1 Rich Message — a <tg-thinking>
 				// block while tools run, then the answer; plain-reply fallback.
-				await runAgentStream({ prompt: ctx.message.text }, (result) =>
-					streamRichReply(ctx, result)
+				const result = await runAgentStream({ messages: loadHistory(chatId) }, (r) =>
+					streamRichReply(ctx, r)
 				);
+				const reply = (await result.text).trim();
+				if (reply) appendMessage(chatId, turnId, 'assistant', reply);
 				ev.done();
 			} catch (err) {
 				logErr(SCOPE, 'agent failed', err);

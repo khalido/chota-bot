@@ -76,9 +76,13 @@ if echo "$CHANGED" | grep -q '^package-lock\.json$'; then
 	npm ci
 fi
 
-if echo "$CHANGED" | grep -qE '^(drizzle/|src/lib/server/db/auth\.schema\.ts$)'; then
-	echo "drizzle schema changed → drizzle-kit push"
-	npx drizzle-kit push
+if echo "$CHANGED" | grep -qE '^(drizzle/|src/lib/server/db/.*\.schema\.ts$)'; then
+	# --force: push renders an interactive review UI otherwise, which has no TTY
+	# over SSH. --force auto-approves (incl. data-loss statements) — fine here
+	# since schema changes are reviewed locally via `npm run db:push` first; a
+	# destructive change would need that local confirmation before it ships.
+	echo "drizzle schema changed → drizzle-kit push --force"
+	npx drizzle-kit push --force
 fi
 
 echo "Building…"
