@@ -9,7 +9,7 @@
  * Long-term facts (the deferred memory store) are a separate concern — this is
  * just a rolling window of recent turns. No compression yet; we trim by count.
  */
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { generateId, type ModelMessage } from 'ai';
 import { db } from '$lib/server/db';
 import { chatMessage } from '$lib/server/db/chat.schema';
@@ -36,8 +36,15 @@ export function loadHistory(chatId: string, limit = HISTORY_LIMIT): ModelMessage
 		.select({ role: chatMessage.role, content: chatMessage.content })
 		.from(chatMessage)
 		.where(eq(chatMessage.chatId, chatId))
-		.orderBy(desc(chatMessage.createdAt))
+		// rowid (insertion order) breaks ties on equal createdAt ms so the window
+		// is deterministic; createdAt leads so the (chatId, createdAt) index sorts.
+		.orderBy(desc(chatMessage.createdAt), desc(sql`rowid`))
 		.limit(limit)
 		.all();
-	return rows.reverse().map((r) => ({ role: r.role, content: r.content }));
+	const msgs = rows.reverse().map((r) => ({ role: r.role, content: r.content }) as ModelMessage);
+	// A turn whose reply was empty stores only a user row, so the limit window can
+	// start on an 'assistant' message — which some models reject. History must
+	// begin with a user message.
+	while (msgs.length && msgs[0].role === 'assistant') msgs.shift();
+	return msgs;
 }
