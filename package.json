@@ -62,6 +62,7 @@
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.79",
+		"@grammyjs/auto-retry": "^2.0.2",
 		"@logtape/file": "^2.0.9",
 		"@logtape/logtape": "^2.0.9",
 		"@logtape/otel": "^2.1.1",

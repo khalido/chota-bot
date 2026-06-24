@@ -21,6 +21,7 @@
  *   - text    — stream an AI reply as a Bot API 10.1 Rich Message
  */
 import { Bot, InputFile, InlineKeyboard, GrammyError, HttpError, type Context } from 'grammy';
+import { autoRetry } from '@grammyjs/auto-retry';
 import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
 import { runAgentStream } from '$lib/server/agent';
@@ -33,6 +34,11 @@ const SCOPE = 'telegram';
 
 /** Module-level singleton so HMR / double init never starts two pollers. */
 let bot: Bot | undefined;
+
+/** In-flight message handlers — `bot.stop()` doesn't wait for middleware, so we
+ *  drain these on shutdown to let a streaming agent run finish before the
+ *  process (and logging) goes down on a deploy SIGTERM. */
+const inFlight = new Set<Promise<void>>();
 
 function isAllowed(chatId: number | undefined): boolean {
 	if (chatId === undefined) return false;
@@ -68,6 +74,10 @@ export async function bootBot(): Promise<void> {
 	}
 
 	bot = new Bot(token);
+	// Retry any outgoing API call Telegram rate-limits (429), honouring
+	// retry_after. grammY's built-in retries only cover getMe/deleteWebhook —
+	// our sendRichMessageDraft/sendRichMessage/reply calls need this.
+	bot.api.config.use(autoRetry());
 
 	// Whitelist gate. `/start` always passes (onboarding); whitelisted chats
 	// pass; everyone else is dropped — with a chat-ID hint on a plain message so
@@ -115,16 +125,34 @@ export async function bootBot(): Promise<void> {
 
 	bot.on('message:text', async (ctx) => {
 		const ev = event(SCOPE, 'message', { chat: ctx.chat.id });
+		// The "typing…" status expires after 5s; the agent can take longer, so
+		// renew it until the run finishes (the thinking-block draft takes over
+		// once a tool fires or text streams).
+		await ctx.replyWithChatAction('typing');
+		const typing = setInterval(() => {
+			ctx.replyWithChatAction('typing').catch(() => {});
+		}, 4500);
+		const run = (async () => {
+			try {
+				// Stream the reply as a Bot API 10.1 Rich Message — a <tg-thinking>
+				// block while tools run, then the answer; plain-reply fallback.
+				await runAgentStream({ prompt: ctx.message.text }, (result) =>
+					streamRichReply(ctx, result)
+				);
+				ev.done();
+			} catch (err) {
+				logErr(SCOPE, 'agent failed', err);
+				ev.fail(err);
+				await ctx.reply("Sorry, I hit a snag and couldn't answer that one.");
+			} finally {
+				clearInterval(typing);
+			}
+		})();
+		inFlight.add(run);
 		try {
-			await ctx.replyWithChatAction('typing');
-			// Stream the reply as a Bot API 10.1 Rich Message — a <tg-thinking>
-			// block while tools run, then the answer; plain-reply fallback.
-			await runAgentStream({ prompt: ctx.message.text }, (result) => streamRichReply(ctx, result));
-			ev.done();
-		} catch (err) {
-			logErr(SCOPE, 'agent failed', err);
-			ev.fail(err);
-			await ctx.reply("Sorry, I hit a snag and couldn't answer that one.");
+			await run;
+		} finally {
+			inFlight.delete(run);
 		}
 	});
 
@@ -138,15 +166,35 @@ export async function bootBot(): Promise<void> {
 	});
 
 	// Fire-and-forget: bot.start() resolves only when polling stops, so we must
-	// NOT await it here or init would hang. onStart logs once polling is live.
-	void bot.start({
-		onStart: (info) => log(SCOPE, `polling as @${info.username}`)
+	// NOT await it here or init would hang. But we DO catch its rejection —
+	// getMe/deleteWebhook run before the loop and a 401 (bad token) or 409
+	// (another poller on this token) rejects here; without the catch that's a
+	// silent unhandled rejection that can crash the process.
+	const started = bot.start({
+		drop_pending_updates: true, // don't answer messages queued while we were down
+		onStart: async (info) => {
+			log(SCOPE, `polling as @${info.username}`);
+			await bot?.api
+				.setMyCommands([
+					{ command: 'start', description: 'Say hi / get your chat ID' },
+					{ command: 'print', description: 'Print a brief (e.g. /print savi)' }
+				])
+				.catch((err) => logErr(SCOPE, 'setMyCommands failed', err));
+		}
+	});
+	started.catch((err) => {
+		logErr(SCOPE, 'bot.start() failed — polling not running', err);
+		bot = undefined; // reset the singleton so a later bootBot() can retry
 	});
 }
 
-/** Stop long polling — wired to SIGTERM/SIGINT alongside the job scheduler. */
+/** Stop long polling — wired to SIGTERM/SIGINT alongside the job scheduler.
+ *  `bot.stop()` aborts getUpdates but doesn't wait for in-flight middleware, so
+ *  we drain any running handler (a streaming agent reply) before returning —
+ *  this runs before `shutdownLogging()`, so a mid-flight reply finishes first. */
 export async function stopBot(): Promise<void> {
 	if (!bot) return;
 	await bot.stop();
+	await Promise.allSettled(inFlight);
 	bot = undefined;
 }
