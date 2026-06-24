@@ -10,7 +10,7 @@ Hardware-readiness analysis for migrating chota from the X230 to a **Raspberry P
 
 **With both kiosk screens later (3 Chromium contexts): tight-but-fine, with mitigations.** Two persistent kiosk Chromiums (lid `/clock` + deck `/panel`) plus the screenshot Chromium is the worst case. Steady state lands around **1.4–2.0 GB used**, peaking ~2.2–2.5 GB during a print burst if both kiosks are awake. That leaves **1.5–2.5 GB headroom on 4 GB** — enough, but only because (a) inference is remote so there's no model in RAM, and (b) Chromium leaks must be capped with **nightly restart timers** and the screenshot must be **staggered off the kiosk peak**. Without those two mitigations a multi-day-uptime box will slowly drift into swap.
 
-**Do not buy 8 GB on RAM grounds.** Nothing here needs it. 8 GB would only be justified if a *local* LLM or heavy image pipeline ever moved on-box — not on the roadmap (the AI SDK calls out to Vercel AI Gateway / Gemini; see `src/lib/server/agent/index.ts`). The 4 GB the user already bought is the right call. The genuine Pi-5 risks are **power-rail / DSI hardware quirks**, not memory.
+**Do not buy 8 GB on RAM grounds.** Nothing here needs it. 8 GB would only be justified if a _local_ LLM or heavy image pipeline ever moved on-box — not on the roadmap (the AI SDK calls out to Vercel AI Gateway / Gemini; see `src/lib/server/agent/index.ts`). The 4 GB the user already bought is the right call. The genuine Pi-5 risks are **power-rail / DSI hardware quirks**, not memory.
 
 ---
 
@@ -18,18 +18,18 @@ Hardware-readiness analysis for migrating chota from the X230 to a **Raspberry P
 
 Inference is **remote** (`MODEL = 'google/gemini-3.5-flash'` via AI Gateway), so no model weights live on the box. SQLite is `better-sqlite3` (in-process, tiny). The only multi-hundred-MB resident is Chromium.
 
-| Component | Idle RAM | Peak RAM | CPU notes |
-|---|---|---|---|
-| Node server (adapter-node, SvelteKit) | ~120–180 MB | ~250 MB under request load | low; bursty on render |
-| better-sqlite3 (`data/home.db`) | in-process, ~5–20 MB | same | negligible; synchronous, no extra process |
-| croner jobs (refresh + print) | within Node | within Node | short ticks; weather/bus/sentral are I/O-bound fetches |
-| Telegram long-poll (grammy `getUpdates`) | within Node, ~few MB | same | one idle outbound HTTP loop; trivial |
-| LogTape (file sink) | within Node, ~few MB | same | negligible |
-| **agent-browser Chromium (screenshot)** | **~150–250 MB resident** (persistent session, never closed) | **~300–450 MB** during a render | **CPU spike**: page render + full-page screenshot. ~1–4s/brief, serialized |
-| Kiosk Chromium — lid `/clock` (later) | ~200–350 MB | ~400 MB; **grows ~50–150 MB/day** (leak) | low steady; per-minute clock repaint is cheap |
-| Kiosk Chromium — deck `/panel` (later) | ~180–300 MB | ~350 MB; same leak profile | low; mostly dark/off, SSE-driven wake |
-| labwc/wlroots (or X11) compositor (later) | ~60–120 MB | ~150 MB | low |
-| OS Lite baseline (kernel, systemd, Tailscale, Caddy, sshd) | ~150–250 MB | — | low |
+| Component                                                  | Idle RAM                                                    | Peak RAM                                 | CPU notes                                                                  |
+| ---------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------- |
+| Node server (adapter-node, SvelteKit)                      | ~120–180 MB                                                 | ~250 MB under request load               | low; bursty on render                                                      |
+| better-sqlite3 (`data/home.db`)                            | in-process, ~5–20 MB                                        | same                                     | negligible; synchronous, no extra process                                  |
+| croner jobs (refresh + print)                              | within Node                                                 | within Node                              | short ticks; weather/bus/sentral are I/O-bound fetches                     |
+| Telegram long-poll (grammy `getUpdates`)                   | within Node, ~few MB                                        | same                                     | one idle outbound HTTP loop; trivial                                       |
+| LogTape (file sink)                                        | within Node, ~few MB                                        | same                                     | negligible                                                                 |
+| **agent-browser Chromium (screenshot)**                    | **~150–250 MB resident** (persistent session, never closed) | **~300–450 MB** during a render          | **CPU spike**: page render + full-page screenshot. ~1–4s/brief, serialized |
+| Kiosk Chromium — lid `/clock` (later)                      | ~200–350 MB                                                 | ~400 MB; **grows ~50–150 MB/day** (leak) | low steady; per-minute clock repaint is cheap                              |
+| Kiosk Chromium — deck `/panel` (later)                     | ~180–300 MB                                                 | ~350 MB; same leak profile               | low; mostly dark/off, SSE-driven wake                                      |
+| labwc/wlroots (or X11) compositor (later)                  | ~60–120 MB                                                  | ~150 MB                                  | low                                                                        |
+| OS Lite baseline (kernel, systemd, Tailscale, Caddy, sshd) | ~150–250 MB                                                 | —                                        | low                                                                        |
 
 **Worst case — print burst while both kiosks awake (the 3-Chromium moment):**
 
@@ -44,7 +44,7 @@ screenshot Chromium  ~400 MB   ← the burst
                    ~1.65 GB used, ~2.35 GB free on 4 GB
 ```
 
-Even aged and unlucky this stays under ~2.5 GB. **The screenshot burst is the single biggest transient**, and it is the easiest to move out of the way (it runs at 06:45, when both kiosks should be at their *lowest* — lid dimmed/off overnight, deck dark). If anything the natural schedule already de-conflicts; just don't accidentally wake the kiosks for the print.
+Even aged and unlucky this stays under ~2.5 GB. **The screenshot burst is the single biggest transient**, and it is the easiest to move out of the way (it runs at 06:45, when both kiosks should be at their _lowest_ — lid dimmed/off overnight, deck dark). If anything the natural schedule already de-conflicts; just don't accidentally wake the kiosks for the print.
 
 **CPU:** Pi 5 (4× A76 @ 2.4GHz) handles a single full-page Chromium render comfortably — the burst is a few seconds of one-to-two busy cores, which is exactly why next.md insists on the **Active Cooler** (already bought). The morning job renders **serially**, one recipient at a time (`for (const who of recipients)` in `jobs/morning-print.ts` → `composeImage` → `briefToPng`, and snapshot.ts serializes via a promise chain). So even a 4-recipient weekday is ~4 sequential ~2–4s bursts, not a parallel spike. Good for 4 GB; no concurrency blow-up.
 
@@ -55,7 +55,7 @@ Even aged and unlucky this stays under ~2.5 GB. **The screenshot burst is the si
 1. **Chromium RAM leak on long-uptime kiosks (later phase).** The two persistent kiosk Chromiums grow over days (next.md already flags this). **Mitigation:** the `Restart=always` user service + a **nightly systemd restart timer** per kiosk (next.md's plan — keep it). Restart in the small hours when the lid is already off. This is mandatory for the screens phase, not optional.
 2. **Screenshot burst colliding with kiosk peak.** **Mitigation:** keep the 06:45 print scheduled when kiosks are dark/dimmed (already the case via the backlight schedule). Do **not** wake `/panel` or `/clock` to "show printing" at 06:45. If on-demand prints ever fire while both kiosks are bright, the box still fits — but treat 06:45 as the protected window.
 3. **agent-browser session never closed → permanent ~200 MB resident.** `snapshot.ts` drives one shared persistent browser and never calls `agent-browser close`. Harmless on the server-only box (plenty of free RAM, and a warm browser makes prints faster). **Optional mitigation if RAM ever tightens in the 3-Chromium era:** add a `close --all` after the morning batch (cold-start cost is ~1–2s on the next print) — or restart `chota.service` nightly, which drops the resident browser for free. Recommend the nightly service restart over per-call close: keeps prints warm during the day.
-4. **Swap on the SD card = wear + slowness.** A Pi swapping to microSD is both slow and burns write cycles. **Mitigation:** enable **zram** (compressed RAM swap — Pi OS has `zram-tools`; ~1–2 GB compressed zram costs no SD writes and absorbs the leak drift between nightly restarts). Set `vm.swappiness=10` so it only engages under real pressure. Avoid a large *disk* swapfile on the SD. With zram + nightly restarts, the box should never touch SD swap.
+4. **Swap on the SD card = wear + slowness.** A Pi swapping to microSD is both slow and burns write cycles. **Mitigation:** enable **zram** (compressed RAM swap — Pi OS has `zram-tools`; ~1–2 GB compressed zram costs no SD writes and absorbs the leak drift between nightly restarts). Set `vm.swappiness=10` so it only engages under real pressure. Avoid a large _disk_ swapfile on the SD. With zram + nightly restarts, the box should never touch SD swap.
 5. **Boot/missed-print if the box is down at 06:45.** Unchanged from today — `morning-print.ts` has no catch-up tick (it says so). Not a RAM issue, but the Pi's ~3W lets it stay on 24/7 cheaply, so just leave it running.
 6. **Chromium flags to set on the kiosks** (RAM/stability hygiene): keep next.md's `--kiosk --ozone-platform=wayland --noerrdialogs --no-first-run --disable-session-crashed-bubble --disk-cache-dir=/dev/null`. Add `--disable-gpu-shader-disk-cache` and consider `--memory-pressure-off` is **not** recommended (it tells Chromium to stop reclaiming under pressure — the opposite of what a 4 GB box wants; leave default memory pressure ON). For the deck `/panel`, since it's dark most of the time, that Chromium's working set stays small.
 7. **A2 SD card I/O as the real bottleneck (not RAM).** Build (`npm run build`) and `npm ci` native rebuilds are I/O-heavy. **Mitigation:** the A2-rated 32–64 GB card next.md already lists; consider booting from USB SSD later if build times annoy. Doesn't affect the running app's RAM.
@@ -69,10 +69,23 @@ Even aged and unlucky this stays under ~2.5 GB. **The screenshot burst is the si
 - [ ] **@napi-rs/canvas** — native (the canvas fallback renderer). Ships **prebuilt arm64 (`linux-arm64-gnu`) binaries** — should resolve without a source build. Confirm it loads; this is the fallback path when agent-browser is unavailable, so it must work on the new box.
 - [ ] **agent-browser → linux-arm64 Chromium** — `agent-browser install` pulls a linux-arm64 Chromium build. next.md already says: **run the screenshot path once by hand before trusting the 06:45.** Do exactly that (`curl -X POST localhost:8000/api/print/<who>` or the snapshot directly). This is the highest-risk arm64 piece because it's a large external download with its own platform matrix.
 - [ ] **node-thermal-printer** — pure JS, no native build; arch-agnostic.
-- [ ] **grammy / googleapis / ai / @ai-sdk/* / logtape / cheerio / zod** — pure JS; no arm64 concern.
+- [ ] **grammy / googleapis / ai / @ai-sdk/\* / logtape / cheerio / zod** — pure JS; no arm64 concern.
 - [ ] **Node via fnm** — `chota.service` hard-codes the fnm default-alias node path; install fnm + Node LTS on the Pi first (next.md first-boot step 4). Globals (`agent-browser`) are per-Node-version under fnm — reinstall after any Node upgrade (deploy.md §Updating Node).
-- [ ] **Headless: no display server needed for the screenshot.** agent-browser runs headless Chromium; the server-only Pi needs **no** labwc/X11 for the 06:45 print. The compositor is only for the *kiosk* screens phase. Don't install a desktop on the server-only box.
+- [ ] **Headless: no display server needed for the screenshot.** agent-browser runs headless Chromium; the server-only Pi needs **no** labwc/X11 for the 06:45 print. The compositor is only for the _kiosk_ screens phase. Don't install a desktop on the server-only box.
 - [ ] **drizzle-kit push** on first deploy (deploy.sh step 3) — pure JS, fine.
+
+---
+
+## Storage — SD card (size + speed) and the NVMe endgame
+
+**Recommendation: a 64 GB, A2 / U3 / V30 card — SanDisk Extreme or Samsung PRO Plus.**
+
+- **Size — 64 GB.** 32 GB technically fits (OS Lite ~3 GB + node_modules + the bundled agent-browser Chromium ~400 MB + a second kiosk-Chromium cache + SQLite + rotating logs + the sibling `curios` content), but it leaves little room as logs/data grow _and_ less spare area for wear-levelling. 64 GB is the sweet spot; 128 GB only if the price delta is trivial (a bigger card also wear-levels across more cells → longer life). Don't go bigger for capacity's sake — we need headroom, not space.
+- **Speed — A2 is the spec that matters, not the GB/s number.** A Pi boot disk's bottleneck is **random IOPS** (lots of small SQLite + log reads/writes), not sequential throughput. **A2** (App Performance Class 2) mandates high random IOPS and is the right class; U3/V30 (sequential) comes along for the ride and isn't the constraint. Buy a quality brand — **SanDisk Extreme** or **Samsung PRO Plus** (both A2/U3/V30) are the reliable Pi performers. Avoid no-name cards (the #1 cause of Pi corruption/instability).
+- **Endurance — the real long-term failure mode.** An always-on box writing SQLite + logs for years wears flash. We already blunt this: **zram** (no swap-to-SD — see Risks) and LogTape's **rotating** file sink (bounded log writes). If you want to optimise purely for write-lifespan, **Samsung PRO Endurance** is built for 24/7 writes — but it's tuned for sequential endurance and its random IOPS can trail the Extreme/PRO Plus, so for our DB-random-write profile a quality A2 all-rounder is the better pick.
+- **The durability endgame: boot from NVMe (or a USB-3 SSD).** The Pi 5 has a PCIe lane — an **NVMe SSD via a HAT** (or a USB-3.0 SSD) as the boot disk eliminates SD wear entirely and is much faster, the right answer for a box meant to run for years. Not needed for first boot or the parallel-run; treat it as the upgrade once the box is permanent (SD becomes recovery/boot-only). Worth leaving room for it in the box layout.
+
+**Net:** buy one **64 GB A2 (Extreme / PRO Plus)** now; enable zram on first boot (already in the plan); plan an NVMe/USB-SSD boot if/when the box becomes the permanent home.
 
 ---
 
@@ -86,27 +99,38 @@ Two Sonnet subagents independently checked next.md's picks against live product 
 - **Rev2.2 requirement: REAL and current.** Rev2.1-and-older boards make the Pi 5 misread the panel's capacitors as a short-circuit and refuse to power up; Rev2.2 fixes it (older boards can be salvaged by removing four marked caps, but don't — buy current stock, which ships Rev2.2). Per Waveshare's own wiki.
 - **22→15-pin adapter: REAL, not included.** Pi 5 DSI is 22-pin; this board is 15-pin. Buy the Waveshare "Pi5 display cable" separately (~**US$6–8**, i.e. a bit more than next.md's "~$5"; 200/300/500mm options).
 - **Backlight off via sysfs: confirmed, with a caveat.** `wlr-randr --off`/DPMS blanks the image but the DSI backlight glows — the reliable kill is `echo 0 > /sys/class/backlight/*/brightness`. **CORRECTION/FLAG:** the `bl_power` file next.md cites **could not be independently confirmed** for this board — plan on `brightness 0` as the off switch and verify `bl_power` on the actual hardware before depending on it. (next.md already notes the 100K→68K BL-resistor mod if minimum brightness still glows — that remains the documented fix.)
-- **Alternatives sanity-checked:** Waveshare 5" (C) 1024×600 — **US$54.95** (PiShop.us), no AU stockist (confirmed). Freenove FNK0078 — **US$39.99**, no Pi5 adapter in box + backlight undocumented (confirmed). DFRobot DFR0550-V2 — **US$49.90**, *does* include the Pi5 cable, optically bonded matte; no AU stockist (price confirmed, AU-absence likely). **Verdict: the (B) stays the pick** — AU stock + documented backlight beat the alternatives on convenience.
+- **Alternatives sanity-checked:** Waveshare 5" (C) 1024×600 — **US$54.95** (PiShop.us), no AU stockist (confirmed). Freenove FNK0078 — **US$39.99**, no Pi5 adapter in box + backlight undocumented (confirmed). DFRobot DFR0550-V2 — **US$49.90**, _does_ include the Pi5 cable, optically bonded matte; no AU stockist (price confirmed, AU-absence likely). **Verdict: the (B) stays the pick** — AU stock + documented backlight beat the alternatives on convenience.
 
 ### Lid — Waveshare 10.1" DSI LCD (C) — CONFIRMED, with two corrections
 
 - **Price/availability:** AU **$129.95**, in stock at Core Electronics (WS-23450). 1280×800 IPS, bare-PCB look. Confirmed. Plus the same 22→15-pin Pi5 cable (~US$8–12).
-- **Backlight overlay/sysfs: directionally right, exact node may differ.** Driver is merged into the Pi kernel (no separate install on Bookworm). **CORRECTION:** the backlight node may be the Waveshare-specific `/sys/waveshare/rpi_backlight/brightness` rather than `/sys/class/backlight/*/brightness` — the `*` wildcard *may* resolve it, but **discover the actual path on the hardware** before wiring the backlight-schedule job. Keep Pi OS current — a 6.1.74/6.1.77 kernel I2C regression on DSI displays was fixed later (PR #6050).
+- **Backlight overlay/sysfs: directionally right, exact node may differ.** Driver is merged into the Pi kernel (no separate install on Bookworm). **CORRECTION:** the backlight node may be the Waveshare-specific `/sys/waveshare/rpi_backlight/brightness` rather than `/sys/class/backlight/*/brightness` — the `*` wildcard _may_ resolve it, but **discover the actual path on the hardware** before wiring the backlight-schedule job. Keep Pi OS current — a 6.1.74/6.1.77 kernel I2C regression on DSI displays was fixed later (PR #6050).
 - **Power feed: CONFIRMED — needs aux 5V.** The 10.1" (C) takes **5V + I2C via a 4-pin GPIO header connection**, not the FFC alone (~520mA at full backlight, ~150mA backlight-off). next.md's "check the power feed" hunch is correct and the answer is yes — budget the 4-pin header wiring. (The header is free in the LCD-lid design, so fine.)
-- **Dual-DSI on Pi 5: possible, but UPGRADED RISK — 3.3V rail collapse.** The Pi 5 has two DSI/CSI combo ports, so 5" + 10.1" on separate ports is the plan. **But a real forum report shows the 3.3V rail can collapse to 0V with two DSI panels connected, depending on each panel's hardware revision** (the same over-current-detection family as the Rev2.2 issue). This is **more than next.md's "forfeits a camera port, fine"** — it's a *test-before-committing* item. Mitigation: buy current-revision boards (reduced 3.3V draw), and bring up each panel **individually first**, then together, watching for boot/rail failure. Have the X11 fallback ready regardless.
+- **Dual-DSI on Pi 5: possible, but UPGRADED RISK — 3.3V rail collapse.** The Pi 5 has two DSI/CSI combo ports, so 5" + 10.1" on separate ports is the plan. **But a real forum report shows the 3.3V rail can collapse to 0V with two DSI panels connected, depending on each panel's hardware revision** (the same over-current-detection family as the Rev2.2 issue). This is **more than next.md's "forfeits a camera port, fine"** — it's a _test-before-committing_ item. Mitigation: buy current-revision boards (reduced 3.3V draw), and bring up each panel **individually first**, then together, watching for boot/rail failure. Have the X11 fallback ready regardless.
 - **Kernel bug #7041: confirmed, but DOES NOT apply to dual-DSI.** #7041 ("labwc doesn't report wl_output for HDMI when a DSI/Touch2 panel is connected") is **DSI+HDMI only**. The proposed box is **dual-DSI, no HDMI**, so #7041 is **irrelevant** to the actual config. next.md is over-cautious here — keep the awareness, but it's not a blocker for the chosen topology. (Issue is marked closed on the tracker.)
-- **labwc per-output kiosk placement: confirmed flaky — keep the X11 fallback.** Multiple 2025–26 forum threads + labwc's own stance (it doesn't target kiosk) confirm per-output Chromium placement under labwc is unreliable. **The documented reliable path is X11 + xrandr + two Chromium windows with `--window-position` + per-instance `--user-data-dir`.** next.md's fallback is the right one; budget for it being the *primary* path, not the fallback.
+- **labwc per-output kiosk placement: confirmed flaky — keep the X11 fallback.** Multiple 2025–26 forum threads + labwc's own stance (it doesn't target kiosk) confirm per-output Chromium placement under labwc is unreliable. **The documented reliable path is X11 + xrandr + two Chromium windows with `--window-position` + per-instance `--user-data-dir`.** next.md's fallback is the right one; budget for it being the _primary_ path, not the fallback.
 - **10.1" as the ceiling: CONFIRMED.** Waveshare's only larger Pi DSI panel is an 11.9" but it's a **320×1480 portrait bar** (ticker), useless as a landscape literary clock. 10.1"/1280×800 is the practical landscape ceiling. next.md's size-ceiling call stands.
+
+### Other screen types — worth a look?
+
+Short answer: **no new screen _type_ is worth chasing — but the dual-DSI 3.3V risk makes the _topology_ worth reconsidering.** The categories are well-explored and the rule-outs still hold: **HDMI** (no clean backlight control on Pi 5 Bookworm — `ddcutil` broken, budget panels are OSD-only), **e-ink** (can't do the per-minute literary clock), **SPI** (too slow for the deck animations), **official Touch Display 2** (chunky bezel breaks the bare-PCB aesthetic), **USB-C portable monitor** (recreates the backlit dashboard the family already ignores). DSI remains the right pick for both.
+
+The one thing genuinely worth weighing is whether to run **two DSI panels at all**, given the 3.3V-rail risk. Two ways to sidestep it without new screen tech:
+
+1. **Single DSI (lid) + Pico-driven deck display.** Put only the **lid 10.1"** on the Pi's DSI (it's the panel that _needs_ scheduled dimming + drives the clock), and render the small deck selection screen on the **Pico** instead. You already own a **Pico Display Pack 2.8"** (next.md demoted it to the drawer) — revive it: the Pico is already the control surface over USB-serial, so the deck screen becomes a Pico-native readout (dial selection, simple animations in MicroPython/displayio). **One DSI on the Pi → the dual-DSI 3.3V risk disappears.** Trade-off: smaller deck screen, and animations are Pico-drawn rather than a Chromium `/panel` route (you lose the easy web-UI authoring for the deck, but the deck screen was always the least-important surface).
+2. **Defer the deck screen.** Ship the lid clock first on a single DSI; let the **LEDs + needle meter** carry selection feedback (they're in the idea pile and need no screen), and add the deck screen later — once dual-DSI is tested on the actual boards, or via the Pico above.
+
+**Recommendation:** keep both Waveshare DSI picks as the plan, but **test dual-DSI on the real boards before cutting the box** (gotcha #3). If the rail issue bites, fall back to **lid-DSI + Pico-deck** rather than shopping for a different panel — it reuses owned hardware and is the cleaner topology anyway.
 
 ### Verified screen BOM (current AU pricing)
 
-| Item | Source | Price | Note |
-|---|---|---|---|
-| Waveshare 5" DSI LCD (B) low-power, **Rev2.2** | Core Electronics (WS-21973) | **AU $69.95** | deck `/panel`; in stock |
-| Waveshare 10.1" DSI LCD (C) 1280×800 | Core Electronics (WS-23450) | **AU $129.95** | lid `/clock`; in stock |
-| 22→15-pin Pi5 DSI FPC cable ×2 | Waveshare / Amazon | **~AU $12–18 ea** | one per panel; **not included** — easy to forget |
-| 4-pin header jumper for 10.1" 5V/I2C feed | — | trivial | confirmed required for the 10.1" |
-| **Screens subtotal** | | **~AU $225–235** | |
+| Item                                           | Source                      | Price             | Note                                             |
+| ---------------------------------------------- | --------------------------- | ----------------- | ------------------------------------------------ |
+| Waveshare 5" DSI LCD (B) low-power, **Rev2.2** | Core Electronics (WS-21973) | **AU $69.95**     | deck `/panel`; in stock                          |
+| Waveshare 10.1" DSI LCD (C) 1280×800           | Core Electronics (WS-23450) | **AU $129.95**    | lid `/clock`; in stock                           |
+| 22→15-pin Pi5 DSI FPC cable ×2                 | Waveshare / Amazon          | **~AU $12–18 ea** | one per panel; **not included** — easy to forget |
+| 4-pin header jumper for 10.1" 5V/I2C feed      | —                           | trivial           | confirmed required for the 10.1"                 |
+| **Screens subtotal**                           |                             | **~AU $225–235**  |                                                  |
 
 ### Must-watch gotchas (the short list)
 
@@ -125,9 +149,9 @@ Two Sonnet subagents independently checked next.md's picks against live product 
 1. **Now:** add **2× 22→15-pin Pi5 DSI cables** to the next Core/Waveshare order (the most-likely-forgotten part). Confirm the 5" (B) listing shows **Rev2.2**.
 2. **On Pi arrival (server-only first):** complete the headless migration per next.md first-boot + deploy.md Phase 1. **Run the agent-browser screenshot path by hand** to validate the arm64 Chromium before trusting 06:45. Enable **zram** (`apt install zram-tools`, `vm.swappiness=10`). This phase needs **no screens and no desktop**.
 3. **Screen bring-up (later):** install the kiosk stack as an apt layer on OS Lite (labwc + Chromium user service per next.md). **Bring up each DSI panel individually, then together**, watching `dmesg`/boot for the 3.3V-rail failure. Discover the real backlight sysfs node on each panel and wire the **backlight-schedule job** (evening dim, night off) through the sudoers-gated helper.
-4. **If dual-DSI under labwc misbehaves** (per-output placement *or* rail issues): switch to **X11 + xrandr + two `--window-position` Chromium windows** — the proven path. Budget time for this; treat it as likely-needed, not exceptional.
+4. **If dual-DSI under labwc misbehaves** (per-output placement _or_ rail issues): switch to **X11 + xrandr + two `--window-position` Chromium windows** — the proven path. Budget time for this; treat it as likely-needed, not exceptional.
 5. **Add the two mitigations that make 4 GB safe with 3 Chromiums:** a **nightly Chromium/`chota.service` restart timer**, and keep the **06:45 print in the kiosk-dark window**. With those + zram, 4 GB has comfortable headroom.
 
 ---
 
-*Sources: codebase (`src/lib/server/print/snapshot.ts`, `jobs/morning-print.ts`, `agent/index.ts`, `telegram/bot.ts`, `package.json`); two Sonnet web-verification passes against Core Electronics, Waveshare wiki, PiShop, DFRobot/Freenove stores, raspberrypi/linux #7041 + #6050, and Pi forum threads on Wayland DSI backlight / dual-DSI rail / labwc kiosk placement (June 2026).*
+_Sources: codebase (`src/lib/server/print/snapshot.ts`, `jobs/morning-print.ts`, `agent/index.ts`, `telegram/bot.ts`, `package.json`); two Sonnet web-verification passes against Core Electronics, Waveshare wiki, PiShop, DFRobot/Freenove stores, raspberrypi/linux #7041 + #6050, and Pi forum threads on Wayland DSI backlight / dual-DSI rail / labwc kiosk placement (June 2026)._
