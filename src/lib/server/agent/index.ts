@@ -78,3 +78,31 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 		throw err;
 	}
 }
+
+/**
+ * Streaming sibling of `runAgent`. Starts `chotaAgent.stream(...)`, hands the
+ * `textStream` to `consume` (e.g. the Telegram Rich-Message streamer), and
+ * emits the same `agent.run` wide event once the caller has drained the stream
+ * — usage + steps are only final after consumption. Observability stays here
+ * so callers just consume text.
+ */
+export async function runAgentStream(
+	args: Parameters<typeof chotaAgent.stream>[0],
+	consume: (textStream: AsyncIterable<string>) => Promise<void>
+) {
+	const ev = event('agent', 'run {model}', { model: MODEL, mode: 'stream' });
+	try {
+		const result = await chotaAgent.stream(args);
+		await consume(result.textStream);
+		const usage = await result.totalUsage;
+		const steps = await result.steps;
+		ev.set('tokens_in', usage.inputTokens ?? 0)
+			.set('tokens_out', usage.outputTokens ?? 0)
+			.set('steps', steps.length)
+			.done();
+		return result;
+	} catch (err) {
+		ev.fail(err);
+		throw err;
+	}
+}

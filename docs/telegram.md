@@ -1,6 +1,6 @@
 # Telegram bot
 
-**Status: basic text path shipped (June 2026); voice + streaming still Phase 3.** `src/lib/server/telegram/bot.ts` now boots a long-polling bot from `hooks.server.ts`: whitelist middleware + `/start` onboarding + `message:text` → `runAgent()` → reply. Voice → Whisper, streaming via Rich Messages, and Mini Apps remain ahead. This doc captures the decisions; the shipped skeleton is the minimum-viable sketch below, made real.
+**Status: text path + streaming shipped (June 2026); voice still Phase 3.** `src/lib/server/telegram/bot.ts` boots a long-polling bot from `hooks.server.ts`: whitelist middleware + `/start` onboarding + `message:text` → `runAgentStream()` → reply **streamed live as a Bot API 10.1 Rich Message** (ephemeral `sendRichMessageDraft` previews, persisted with `sendRichMessage`; plain-reply fallback). Verified end-to-end against @ko_chota_bot. Voice → Whisper and Mini Apps remain ahead. This doc captures the decisions; the shipped code is the minimum-viable sketch below, made real.
 
 > **Bot API target: 10.1** (released 11 Jun 2026 — see [changelog](https://core.telegram.org/bots/api-changelog)). Covered by `grammy@^1.44.0` (pulls `@grammyjs/types@3.28.0`, which lists "support Bot API 10.1"). The headline 10.1 feature — **Rich Messages** with `sendRichMessageDraft` for _streaming structured AI replies_ — is squarely on chota's path and changes our streaming plan (see §Decisions). 10.0 (8 May 2026) is also covered.
 
@@ -9,8 +9,8 @@
 - **Wrapper: [grammY](https://grammy.dev)** (`grammy` on npm — **in `package.json` at ^1.44.0**, bumped from ^1.43.0 in June 2026 to land Bot API 10.1; this superseded the original gramio pick, see table below). The de-facto TypeScript standard: mature 1.x (no pre-1.0 churn), the largest plugin ecosystem (`@grammyjs/auto-retry`, stream plugin, sessions, menus), excellent docs. Trade-off accepted: it lags new Bot API releases by days-to-weeks where gramio ships same-day — at family scale, bleeding-edge Bot API features matter less than stability. _(Doc updated June 2026 — it previously still said gramio while grammy sat in package.json.)_
 - **Long polling, not webhooks** ([grammY deployment types](https://grammy.dev/guide/deployment-types) · [getting started](https://grammy.dev/guide/getting-started#getting-started-on-node-js)). `bot.start()` runs an outbound `getUpdates` loop inside the existing Node process — outbound TCP, works through home NAT for free, no public URL, no second service. Webhooks need a public HTTPS endpoint Telegram can POST to (port 443/80/88/8443 only); family-scale traffic doesn't need the throughput they offer. (Tailscale Funnel could expose a webhook URL — considered and explicitly ruled out, adds infra surface for zero gain at our scale. Reserve Funnel for hosting Mini Apps later, which genuinely needs public HTTPS.)
 - **Whitelist by chat ID.** Family members' Telegram user/chat IDs in `chota.config.ts > telegram.allowedChatIds`. First-message-from-anyone-else is silently dropped. No "LLM moderation" for inbound — see §Anti-patterns.
-- **Streaming via Rich Messages — `sendRichMessageDraft` (Bot API 10.1, Jun 2026).** _Revised from the earlier `sendMessageDraft` (9.5) plan._ 10.1's headline feature is **Rich Messages**: Telegram now has a first-class type for "send/stream a structured AI reply." `sendRichMessageDraft()` streams partial rich messages _as the model generates_, and `editMessageText()` accepts a `rich_message` parameter to finalise. Rich blocks map cleanly onto an agent's structured output — `RichBlockSectionHeading`, `RichBlockList`, `RichBlockTable`, `RichBlockPreformatted` (code), `RichBlockBlockQuotation`, `RichBlockDetails` (collapsible), `RichBlockMathematicalExpression`, and notably `RichBlockThinking` (a fold-away reasoning block — a clean home for the agent's tool-call trace without cluttering the answer). With grammY 1.44 these are typed methods on `bot.api`. Implementation: a ~50-line throttled helper consuming Vercel AI SDK's `textStream`, emitting draft updates on a throttle, finalising with `editMessageText`. Check the [official stream plugin](https://grammy.dev/plugins/stream) for whether it now wraps the rich-draft methods before hand-rolling. Pair with `@grammyjs/auto-retry` for rate-limit resilience.
-  - _Fallback:_ plain Markdown via `sendMessage` + throttled `editMessageText` still works everywhere and is the right first cut — ship that, add `sendRichMessageDraft` once the basic loop is proven. Rich Messages are private-chat only (fine — family bot).
+- **Streaming via Rich Messages — `sendRichMessageDraft` (Bot API 10.1, Jun 2026).** _Revised from the earlier `sendMessageDraft` (9.5) plan._ 10.1's headline feature is **Rich Messages**: Telegram now has a first-class type for "send/stream a structured AI reply." `sendRichMessageDraft()` streams partial rich messages _as the model generates_, and `editMessageText()` accepts a `rich_message` parameter to finalise. Rich blocks map cleanly onto an agent's structured output — `RichBlockSectionHeading`, `RichBlockList`, `RichBlockTable`, `RichBlockPreformatted` (code), `RichBlockBlockQuotation`, `RichBlockDetails` (collapsible), `RichBlockMathematicalExpression`, and notably `RichBlockThinking` (a fold-away reasoning block — a clean home for the agent's tool-call trace without cluttering the answer). With grammY 1.44 these are typed methods on `bot.api` (positional args: `sendRichMessageDraft(chat_id, draft_id, { markdown })`, `sendRichMessage(chat_id, { markdown })`). **Shipped** as `streamRichReply()` in `telegram/stream.ts`: a ~50-line throttled helper consuming the AI SDK `textStream`, emitting `sendRichMessageDraft` previews on a throttle and finalising once with `sendRichMessage` (the draft is an ephemeral ~30s preview and must be persisted). `InputRichMessage` accepts a `markdown` string directly, so the agent's Markdown goes straight through — no hand-built `RichBlock` tree. (`@grammyjs/auto-retry` for rate-limit resilience is still a TODO.)
+  - _Fallback:_ any rich-method error flips `streamRichReply` to a single plain `ctx.reply` of the final text — the family always gets an answer even on a client/API that doesn't speak 10.1 yet. Rich Messages are private-chat only (fine — family bot).
 - **Voice transcription via Groq Whisper, direct.** Telegram voice messages arrive as OGG/OPUS. Groq's Whisper API accepts OGG natively — no ffmpeg conversion. 20 MB Telegram download limit = ~15-20 min audio, plenty.
 
 ## Considered alternatives (and why not)
@@ -85,21 +85,17 @@ bot.on('message:voice', async (ctx) => {
 
 bot.on('message:text', (ctx) => handleText(ctx, ctx.message.text));
 
-// First cut — non-streaming. runAgent() forwards to chotaAgent.generate() and
-// emits the agent.run wide event. Swap to the streaming path once it's proven.
+// SHIPPED shape — streaming. runAgentStream() wraps chotaAgent.stream() and
+// emits the agent.run wide event; streamRichReply() pushes the live draft and
+// persists the final Rich Message. (See telegram/bot.ts + telegram/stream.ts.)
 async function handleText(ctx, prompt: string) {
-	const { text } = await runAgent({ prompt });
-	await ctx.reply(text);
+	await runAgentStream({ prompt }, (textStream) => streamRichReply(ctx, textStream));
 }
-
-// Streaming path (later) — chotaAgent.stream() → throttled sendRichMessageDraft.
-// async function handleTextStreaming(ctx, prompt: string) {
-//   const { textStream } = chotaAgent.stream({ prompt });
-//   await streamReply(ctx, textStream);   // ~50-line throttled sendRichMessageDraft helper
-// }
 
 bot.start(); // long polling — outbound getUpdates loop, NAT-friendly
 ```
+
+`streamRichReply` (the real one in `telegram/stream.ts`) is the ~50-line helper the table below promised: a non-zero `draft_id`, accumulate the `textStream`, throttle `sendRichMessageDraft(chatId, draftId, { markdown })` to ~1.2s, then `sendRichMessage(chatId, { markdown })` once to persist (the draft is an ephemeral ~30s preview). Any rich-method error flips it to a single plain `ctx.reply` — the family always gets an answer. The agent emits Markdown and `InputRichMessage` takes a `markdown` string, so there's no hand-built `RichBlock` tree.
 
 ## Day-one requirements & gotchas (messaging mechanics)
 
@@ -153,14 +149,14 @@ Would grow into a small arcade of kid-built things over time. **Defer until Phas
 
 ## What lands when (rough)
 
-|                                                  | Lands when                                             | Why                                                                                                                                 |
-| ------------------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Decision: grammY                                 | Done — `grammy@^1.44.0` in package.json (Bot API 10.1) | Pre-made so Phase 3 doesn't re-litigate                                                                                             |
-| Bot skeleton + whitelist + `/start` + text→agent | **Next — wanted now**                                  | Smallest useful surface: long polling, whitelist middleware, `runAgent()` per message. Voice + streaming can follow.                |
-| Voice → Whisper → agent                          | Phase 3                                                | The killer Telegram feature for kids                                                                                                |
-| Streaming replies                                | Phase 3                                                | ~50-line `streamReply()` helper around `sendRichMessageDraft` (Bot API 10.1 Rich Messages); plain `editMessageText` as the fallback |
-| Forum topics for organising chats                | Phase 4+                                               | Only if conversation volume warrants                                                                                                |
-| Mini Apps + coding-agent arcade                  | Phase 4+                                               | Wait for Phase 3 to settle, then explore                                                                                            |
+|                                                  | Lands when                                             | Why                                                                                                                                                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Decision: grammY                                 | Done — `grammy@^1.44.0` in package.json (Bot API 10.1) | Pre-made so Phase 3 doesn't re-litigate                                                                                                                                                                                               |
+| Bot skeleton + whitelist + `/start` + text→agent | **Done — June 2026**                                   | Long polling, whitelist middleware, `runAgentStream()` per message. `src/lib/server/telegram/bot.ts`.                                                                                                                                 |
+| Voice → Whisper → agent                          | Phase 3                                                | The killer Telegram feature for kids                                                                                                                                                                                                  |
+| Streaming replies                                | **Done — June 2026**                                   | `streamRichReply()` in `telegram/stream.ts`: throttled `sendRichMessageDraft` previews → `sendRichMessage` to persist, plain-reply fallback. Driven by `runAgentStream()` (wraps `chotaAgent.stream()` + the `agent.run` wide event). |
+| Forum topics for organising chats                | Phase 4+                                               | Only if conversation volume warrants                                                                                                                                                                                                  |
+| Mini Apps + coding-agent arcade                  | Phase 4+                                               | Wait for Phase 3 to settle, then explore                                                                                                                                                                                              |
 
 ## Sources
 

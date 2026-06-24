@@ -19,7 +19,8 @@
 import { Bot, GrammyError, HttpError } from 'grammy';
 import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
-import { runAgent } from '$lib/server/agent';
+import { runAgentStream } from '$lib/server/agent';
+import { streamRichReply } from './stream';
 import { event, log, logErr } from '$lib/server/log';
 
 const SCOPE = 'telegram';
@@ -68,8 +69,9 @@ export async function bootBot(): Promise<void> {
 		const ev = event(SCOPE, 'message', { chat: id });
 		try {
 			await ctx.replyWithChatAction('typing');
-			const { text } = await runAgent({ prompt: ctx.message.text });
-			await ctx.reply(text || "I didn't have anything to say to that.");
+			// Stream the reply as a Bot API 10.1 Rich Message (live draft →
+			// persisted final), falling back to a plain reply if unsupported.
+			await runAgentStream({ prompt: ctx.message.text }, (ts) => streamRichReply(ctx, ts));
 			ev.done();
 		} catch (err) {
 			logErr(SCOPE, 'agent failed', err);
