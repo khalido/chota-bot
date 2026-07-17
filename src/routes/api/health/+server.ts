@@ -109,7 +109,9 @@ function asText(sha: string, s: ReturnType<typeof snapshot>): string {
 		const last = j.last
 			? `${j.last.status === 'ok' ? 'ok ' : 'ERR'} · ${ago(j.last.agoMs)} ago`
 			: '—';
-		lines.push(`  ${j.name.padEnd(16)} ${j.pattern.padEnd(17)} next ${next.padEnd(7)} last ${last}`);
+		lines.push(
+			`  ${j.name.padEnd(16)} ${j.pattern.padEnd(17)} next ${next.padEnd(7)} last ${last}`
+		);
 	}
 	return lines.join('\n') + '\n';
 }

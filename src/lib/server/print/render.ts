@@ -169,7 +169,14 @@ function drawChotaMark(ctx: SKRSContext2D, rightEdge: number, bandTop: number, b
 	ctx.fill();
 
 	const inset = Math.max(2, Math.round(size * 0.06));
-	roundRectPath(ctx, x + inset, yTop + inset, size - inset * 2, size - inset * 2, Math.round(size * 0.16));
+	roundRectPath(
+		ctx,
+		x + inset,
+		yTop + inset,
+		size - inset * 2,
+		size - inset * 2,
+		Math.round(size * 0.16)
+	);
 	ctx.strokeStyle = '#ffffff';
 	ctx.lineWidth = Math.max(1.5, size * 0.035);
 	ctx.stroke();
@@ -193,7 +200,8 @@ function fourPointStar(ctx: SKRSContext2D, cx: number, cy: number, R: number, r:
 		const rad = i % 2 === 0 ? R : r;
 		const px = cx + Math.cos(a) * rad;
 		const py = cy + Math.sin(a) * rad;
-		i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+		if (i === 0) ctx.moveTo(px, py);
+		else ctx.lineTo(px, py);
 	}
 	ctx.closePath();
 }

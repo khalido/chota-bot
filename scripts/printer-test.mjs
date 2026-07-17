@@ -75,9 +75,7 @@ function checkVisibility() {
 		if (mode === 'visible') process.exit(1);
 		return false;
 	}
-	console.log(
-		`✓ Found at vendor=0x${VENDOR.toString(16)} product=0x${PRODUCT.toString(16)}\n`
-	);
+	console.log(`✓ Found at vendor=0x${VENDOR.toString(16)} product=0x${PRODUCT.toString(16)}\n`);
 	return true;
 }
 
@@ -142,12 +140,13 @@ async function runPrint() {
 	}
 
 	// 3. Find the bulk OUT endpoint (transferType 2 = LIBUSB_TRANSFER_TYPE_BULK)
-	const outEndpoint = iface.endpoints.find(
-		(ep) => ep.direction === 'out' && ep.transferType === 2
-	);
+	const outEndpoint = iface.endpoints.find((ep) => ep.direction === 'out' && ep.transferType === 2);
 	if (!outEndpoint) {
 		console.error('✗ No bulk OUT endpoint found on interface 0.');
-		console.error('  Endpoints found:', iface.endpoints.map((e) => `${e.direction}/type${e.transferType}`));
+		console.error(
+			'  Endpoints found:',
+			iface.endpoints.map((e) => `${e.direction}/type${e.transferType}`)
+		);
 		releaseAndClose(iface, device);
 		process.exit(1);
 	}

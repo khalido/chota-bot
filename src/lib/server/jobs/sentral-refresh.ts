@@ -15,12 +15,20 @@ import { configuredSentralKids, refreshTimetable } from '$lib/server/tools/sentr
 defineJob('sentral-refresh', '30 6,7,8,17 * * 1-5', async () => {
 	const kids = configuredSentralKids();
 	if (kids.length === 0) return 'no kids configured';
-	const results = await Promise.allSettled(kids.map((k) => refreshTimetable(k)));
-	return results
-		.map((r, i) =>
-			r.status === 'fulfilled'
-				? `${kids[i]}: ${r.value.events} events`
-				: `${kids[i]}: FAILED (${r.reason instanceof Error ? r.reason.message : r.reason})`
-		)
-		.join('; ');
+	// One kid at a time, with a short breather in between. The kids' session
+	// cookies expire on the same weekly cadence (sentral-login, Mondays), so a
+	// parallel run would fire concurrent SAML re-logins — serialized here, and
+	// belt-and-braces via the withBrowser() mutex inside loginSentral. The gap
+	// also keeps us a polite client of the school's Sentral instance.
+	const results: string[] = [];
+	for (const kid of kids) {
+		if (results.length > 0) await new Promise((r) => setTimeout(r, 3_000));
+		try {
+			const { events } = await refreshTimetable(kid);
+			results.push(`${kid}: ${events} events`);
+		} catch (err) {
+			results.push(`${kid}: FAILED (${err instanceof Error ? err.message : err})`);
+		}
+	}
+	return results.join('; ');
 });

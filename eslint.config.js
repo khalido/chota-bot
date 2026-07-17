@@ -37,8 +37,14 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// Allow intentionally-unused bindings when prefixed with _
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{ varsIgnorePattern: '^_', argsIgnorePattern: '^_' }
+			],
+			// App is served from / with no base path — plain hrefs are fine
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );

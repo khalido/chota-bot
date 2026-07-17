@@ -172,14 +172,61 @@ function weekendEventRows(d: BriefData) {
 
 /**
  * A kid's "what's on this weekend" — the shared family calendar for the
- * upcoming Sat+Sun, each line prefixed with its day. Shown on the Friday
+ * upcoming Sat+Sun, each line prefixed with its day, plus their own
+ * volleyball game + duty when fixtures are configured. Shown on the Friday
  * morning brief (the only weekday `gatherBrief` populates `weekendEvents`).
  * null when there's nothing on, or any other day.
  */
-function weekendAheadSection(d: BriefData): PrintSectionBody | null {
-	const events = weekendEventRows(d);
+function weekendAheadSection(d: BriefData, who: string): PrintSectionBody | null {
+	const events = [...weekendEventRows(d), ...volleyballRows(d, who)];
 	if (!events.length) return null;
 	return { title: 'WEEKEND', kind: 'events', events, tasks: [] };
+}
+
+/**
+ * Volleyball fixture rows — reuses the `events` row shape so both renderers
+ * work unchanged. One row for the game ("Court D1 vs BLACKTOWN …"), one for a
+ * duty roster ("Duty · Court D1" — the team must show up to staff that game
+ * too). `who` narrows to one kid (their own brief); omitted = every kid (the
+ * family sheet).
+ */
+function volleyballRows(d: BriefData, who?: string) {
+	return (d.volleyball ?? [])
+		.filter((v) => !who || v.kid.toLowerCase() === who.toLowerCase())
+		.flatMap((v) => {
+			const day = (date: string) => sydneyDayOfWeek(new Date(`${date}T12:00:00+10:00`));
+			const rows = [];
+			if (v.playing) {
+				// Opponent's ladder spot rides along when known: "(#3 of 14, 18pts)".
+				const rank = v.opponentRank
+					? ` (#${v.opponentRank.rank} of ${v.opponentRank.of}, ${v.opponentRank.points}pts)`
+					: '';
+				rows.push({
+					time: `${day(v.playing.date)} ${v.playing.time}`,
+					// `opponent` is always set when `playing` is (the tool resolves it);
+					// '?' surfaces a tool regression instead of masking it.
+					summary: `${v.playing.court} vs ${v.opponent ?? '?'}${rank}`,
+					people: [v.kid]
+				});
+			}
+			// duty-equals-playing dedup happens in the tool, so every consumer
+			// (this print, the agent) inherits it — duty here is a separate game.
+			if (v.duty) {
+				rows.push({
+					time: `${day(v.duty.date)} ${v.duty.time}`,
+					summary: `Duty · ${v.duty.court}`,
+					people: [v.kid]
+				});
+			}
+			return rows;
+		});
+}
+
+/** The weekend sheet's VOLLEYBALL section — every kid's game + duty. */
+function volleyballSection(d: BriefData): PrintSectionBody | null {
+	const events = volleyballRows(d);
+	if (!events.length) return null;
+	return { title: 'VOLLEYBALL', kind: 'events', events, tasks: [] };
 }
 
 /**
@@ -236,7 +283,10 @@ function choresSection(d: BriefData): PrintSectionBody | null {
  * heading instead of just Saturday. Todos stay scoped to the brief's day.
  */
 function familyTodaySection(d: BriefData): PrintSectionBody | null {
-	const weekend = (d.weekendEvents?.length ?? 0) > 0;
+	// Presence, not length: on the Friday-evening weekend sheet an EMPTY
+	// weekend calendar must not fall back to Friday's own events labelled
+	// TODAY — with no events and no todos the section just drops.
+	const weekend = d.weekendEvents !== undefined;
 	const events = weekend ? weekendEventRows(d) : dayEvents(d);
 	const tasks = d.todos
 		.slice()
@@ -363,6 +413,7 @@ export function recipientToSections(
 		return numberSections([
 			weatherSection(d),
 			familyTodaySection(d),
+			volleyballSection(d),
 			choresSection(d),
 			shoppingSection(d),
 			...tailSections(d, false)
@@ -377,7 +428,7 @@ export function recipientToSections(
 		scheduleSection(schedule, busLine, d.schoolWeek, d.schoolUpcoming) ?? schoolBreakSection(d),
 		isParent ? todaySection(d, who) : todayEventsSection(d),
 		isParent ? null : myTodosSection(d, who),
-		isParent ? null : weekendAheadSection(d),
+		isParent ? null : weekendAheadSection(d, who),
 		choresSection(d),
 		isParent ? todosSection(d) : null,
 		shoppingSection(d),

@@ -12,7 +12,9 @@ const TZ = 'Australia/Sydney';
 
 /** "Mon" | "Tue" | ... | "Sun" — short weekday in Sydney local. */
 export function sydneyDayOfWeek(d: Date = new Date()): DayOfWeek {
-	return new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short' }).format(d) as DayOfWeek;
+	return new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short' }).format(
+		d
+	) as DayOfWeek;
 }
 
 export function sydneyHour(d: Date = new Date()): number {

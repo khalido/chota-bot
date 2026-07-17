@@ -2,11 +2,11 @@
 
 **Status: chat + streaming + thinking + on-demand prints shipped (June 2026); voice still Phase 3.** `src/lib/server/telegram/bot.ts` boots a long-polling bot from `hooks.server.ts`. A whitelist middleware gates everything (except `/start` onboarding). Handlers: `/start` (greet + hand back the chat ID), `/print [who]` (sends a brief PNG — the same image the printer renders — with an inline-keyboard recipient picker when no arg), and `message:text` → `runAgentStream()` → reply **streamed live as a Bot API 10.1 Rich Message**. While the agent runs tools the draft shows a native **`<tg-thinking>` block** ("Checking the calendar…"); once text arrives it switches to the answer, persisted with `sendRichMessage` (plain-reply fallback). Verified end-to-end against @ko_chota_bot. Voice → Whisper and Mini Apps remain ahead. This doc captures the decisions; the shipped code is the minimum-viable sketch below, made real.
 
-> **Bot API target: 10.1** (released 11 Jun 2026 — see [changelog](https://core.telegram.org/bots/api-changelog)). Covered by `grammy@^1.44.0` (pulls `@grammyjs/types@3.28.0`, which lists "support Bot API 10.1"). The headline 10.1 feature — **Rich Messages** with `sendRichMessageDraft` for _streaming structured AI replies_ — is squarely on chota's path and changes our streaming plan (see §Decisions). 10.0 (8 May 2026) is also covered.
+> **Bot API available: 10.2** via `grammy@^1.45.0` (bumped July 2026; no code changes from 1.44). The code currently _uses_ the 10.1 surface — **Rich Messages** with `sendRichMessageDraft` for _streaming structured AI replies_ (see §Decisions). 10.2 additions relevant to us (ephemeral group replies, media inside rich messages) are catalogued in §grammY notes below. [Bot API changelog](https://core.telegram.org/bots/api-changelog).
 
 ## Decisions
 
-- **Wrapper: [grammY](https://grammy.dev)** (`grammy` on npm — **in `package.json` at ^1.44.0**, bumped from ^1.43.0 in June 2026 to land Bot API 10.1; this superseded the original gramio pick, see table below). The de-facto TypeScript standard: mature 1.x (no pre-1.0 churn), the largest plugin ecosystem (`@grammyjs/auto-retry`, stream plugin, sessions, menus), excellent docs. Trade-off accepted: it lags new Bot API releases by days-to-weeks where gramio ships same-day — at family scale, bleeding-edge Bot API features matter less than stability. _(Doc updated June 2026 — it previously still said gramio while grammy sat in package.json.)_
+- **Wrapper: [grammY](https://grammy.dev)** (`grammy` on npm — **in `package.json` at ^1.45.0**; ^1.43 → ^1.44 landed Bot API 10.1's Rich Messages, ^1.45 landed 10.2; this superseded the original gramio pick, see table below). The de-facto TypeScript standard: mature 1.x (no pre-1.0 churn), the largest plugin ecosystem (`@grammyjs/auto-retry`, stream plugin, sessions, menus), excellent docs. Trade-off accepted: it lags new Bot API releases by days-to-weeks where gramio ships same-day — at family scale, bleeding-edge Bot API features matter less than stability. _(Doc updated June 2026 — it previously still said gramio while grammy sat in package.json.)_
 - **Long polling, not webhooks** ([grammY deployment types](https://grammy.dev/guide/deployment-types) · [getting started](https://grammy.dev/guide/getting-started#getting-started-on-node-js)). `bot.start()` runs an outbound `getUpdates` loop inside the existing Node process — outbound TCP, works through home NAT for free, no public URL, no second service. Webhooks need a public HTTPS endpoint Telegram can POST to (port 443/80/88/8443 only); family-scale traffic doesn't need the throughput they offer. (Tailscale Funnel could expose a webhook URL — considered and explicitly ruled out, adds infra surface for zero gain at our scale. Reserve Funnel for hosting Mini Apps later, which genuinely needs public HTTPS.)
 - **Whitelist by chat ID.** Family members' Telegram user/chat IDs in `chota.config.ts > telegram.allowedChatIds`. First-message-from-anyone-else is silently dropped. No "LLM moderation" for inbound — see §Anti-patterns.
 - **Streaming via Rich Messages — `sendRichMessageDraft` (Bot API 10.1, Jun 2026).** _Revised from the earlier `sendMessageDraft` (9.5) plan._ 10.1's headline feature is **Rich Messages**: Telegram now has a first-class type for "send/stream a structured AI reply." `sendRichMessageDraft()` streams partial rich messages _as the model generates_, and `editMessageText()` accepts a `rich_message` parameter to finalise. Rich blocks map cleanly onto an agent's structured output — `RichBlockSectionHeading`, `RichBlockList`, `RichBlockTable`, `RichBlockPreformatted` (code), `RichBlockBlockQuotation`, `RichBlockDetails` (collapsible), `RichBlockMathematicalExpression`, and notably `RichBlockThinking` (a fold-away reasoning block — a clean home for the agent's tool-call trace without cluttering the answer). With grammY 1.44 these are typed methods on `bot.api` (positional args: `sendRichMessageDraft(chat_id, draft_id, { markdown })`, `sendRichMessage(chat_id, { markdown })`). **Shipped** as `streamRichReply()` in `telegram/stream.ts`, driven by the agent's **`fullStream`** (not just `textStream`) so it can react to tool calls: on a `tool-input-start` part it shows a `<tg-thinking>` draft ("Checking the calendar…" — the native thinking status, which is **draft-only**, sent as `html: '<tg-thinking>…</tg-thinking>'`); on `text-delta` it switches the draft to the accumulating Markdown answer; at the end it persists once with `sendRichMessage` (the draft is an ephemeral ~30s preview). `InputRichMessage` accepts a `markdown`/`html` string directly, so the agent's Markdown flows through — no hand-built `RichBlock` tree. Any rich-method error flips to a single plain `ctx.reply`.
@@ -107,6 +107,83 @@ bot.start(); // long polling — outbound getUpdates loop, NAT-friendly
 - **One poller per token.** Two processes calling `getUpdates` on the same token (dev machine + the box) → 409 conflicts and eaten messages. Gate `bot.start()` behind `KIOSK=true` like the print jobs, and use a separate throwaway dev token when developing handlers.
 - **Capturing chat IDs for the whitelist:** log `ctx.chat.id` from incoming messages briefly, or have each person message @userinfobot; values go in `chota.config.ts > telegram.allowedChatIds`.
 - **Runtime shape:** one file (`src/lib/server/telegram/bot.ts`), booted from `hooks.server.ts` like `bootJobs()`. Long polling is an async loop in the existing Node process — no second service, no port.
+
+## Family group (shared chat with the bot)
+
+Adding the bot to a family group works with the existing code — checklist:
+
+1. Create the group, add the bot, send one message; grab the group's chat ID
+   from the "not authorised" reply (it's negative, e.g. `-100123…`) and add it
+   to `chota.config.ts > telegram.allowedChatIds`.
+2. **Leave BotFather privacy mode ON** (the default). The bot then only sees
+   `/commands`, @-mentions, and replies to its own messages — so it never
+   burns tokens answering human-to-human chatter, and family small talk stays
+   out of the agent. Ask it things as `@<botname> what's on the volleyball?`.
+3. History is per-chat (`chat_message` keyed by chat ID), so the group gets
+   its own shared conversation memory; in groups each stored user turn is
+   prefixed with the sender's first name so the agent knows who asked.
+4. `/print` works in the group — the brief PNG lands where everyone sees it.
+
+Turning privacy mode OFF would deliver every group message to the bot; don't,
+until there's a mention-gate in the handler (see the next section for the
+idiomatic gate).
+
+## grammY notes (1.45 / Bot API 10.2, researched July 2026)
+
+Verified against grammy.dev + the release changelog. What matters for us:
+
+**Applied:**
+
+- `allowed_updates: ['message', 'callback_query']` on `bot.start()` — only
+  fetch what we handle. `message_reaction` and `chat_member` are NOT in the
+  default set; opt in explicitly if ever needed.
+- 1.45 = Bot API 10.2 support + a `fetch duplex` fix that removes a class of
+  Node upload errors on `replyWithPhoto(new InputFile(...))`. No breaking
+  changes from 1.44.
+
+**When the family group lands:**
+
+- **Mention/reply gate** (needed only if privacy mode is ever turned off —
+  with it ON, Telegram already filters to commands/mentions/replies). There is
+  no built-in "mentions me" filter query (`message:entities:mention:me` does
+  not exist); the idiomatic gate is:
+
+  ```ts
+  bot.on('message:text', async (ctx, next) => {
+  	if (ctx.chat.type === 'private') return next(); // always answer DMs
+  	const addressed =
+  		ctx.entities('mention').some((e) => e.text === `@${ctx.me.username}`) ||
+  		ctx.msg.reply_to_message?.from?.id === ctx.me.id;
+  	if (addressed) return next(); // else drop silently
+  });
+  ```
+
+- **Ephemeral replies (Bot API 10.2)** — messages visible only to one user in
+  a group (`receiver_user_id` on send methods). The clean way to answer one
+  person without spamming the whole family group. Evaluate when the group is
+  live.
+- **Reactions as status** — `ctx.react('🤔')` on receipt, `ctx.react('🫡')`
+  when answered (a second react replaces the first). Works in groups without
+  admin (only _receiving_ reaction updates needs admin + `allowed_updates`).
+  Less noisy in a shared group than a streaming draft; keep the full
+  thinking-draft for DMs.
+- **Draft-ID collision** — `stream.ts` seeds `draft_id` from `Date.now()`;
+  fine for one-at-a-time DMs, but two concurrent group runs could collide.
+  Seed from `ctx.message.message_id` once groups are live.
+
+**When voice lands:** `@grammyjs/files` (`hydrateFiles` transformer, installed
+alongside `autoRetry`) → `bot.on('message:voice')` → `ctx.getFile()` →
+`file.download()` (or `.getUrl()`, valid ≥1h — stream straight to Groq).
+Voice notes arrive as Opus `.oga`; Groq accepts them directly.
+
+**Deliberately skipped** (evaluated, not worth it at family scale):
+
+- `@grammyjs/runner` — for >500 updates/sec bots; worse, it confirms update
+  offsets before middleware finishes, which would break our `inFlight`
+  SIGTERM drain and could lose a streaming reply on deploy.
+- `conversations` (the agent loop owns turn-taking), `chat-members` (static
+  allowlist), `ratelimiter` (family-only), and the 10.2 rich-message `blocks`
+  tree (`markdown` string pass-through stays the right call).
 
 ## Anti-patterns
 

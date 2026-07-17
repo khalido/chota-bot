@@ -46,7 +46,7 @@ function isAllowed(chatId: number | undefined): boolean {
 	return (getConfig().telegram?.allowedChatIds ?? []).includes(chatId);
 }
 
-/** Title-case a recipient slug for display: `savi` → `Savi`, `family` → `Family`. */
+/** Title-case a recipient slug for display: `kid1` → `Kid1`, `family` → `Family`. */
 const titleCase = (who: string) => who.charAt(0).toUpperCase() + who.slice(1);
 
 /** Valid print recipients: each configured person + the whole-family sheet. */
@@ -137,10 +137,13 @@ export async function bootBot(): Promise<void> {
 			try {
 				// Short-term context: record the user turn, load the recent window,
 				// stream the reply, then record the final reply text. Tools/thinking
-				// are not stored — just the conversation text.
+				// are not stored — just the conversation text. In a group chat
+				// several humans share one history, so prefix each turn with the
+				// sender's name — the agent then knows who asked what.
 				const chatId = String(ctx.chat.id);
 				const turnId = newTurnId();
-				appendMessage(chatId, turnId, 'user', ctx.message.text);
+				const sender = ctx.chat.type === 'private' ? '' : `${ctx.from?.first_name ?? 'Someone'}: `;
+				appendMessage(chatId, turnId, 'user', sender + ctx.message.text);
 				// Stream the reply as a Bot API 10.1 Rich Message — a <tg-thinking>
 				// block while tools run, then the answer; plain-reply fallback.
 				const result = await runAgentStream({ messages: loadHistory(chatId) }, (r) =>
@@ -181,12 +184,22 @@ export async function bootBot(): Promise<void> {
 	// silent unhandled rejection that can crash the process.
 	const started = bot.start({
 		drop_pending_updates: true, // don't answer messages queued while we were down
+		// Only fetch the update types we handle — less bandwidth, and the agent
+		// never wakes on noise (member joins, edits, …). getUpdates remembers
+		// this server-side; drop_pending_updates makes changes take effect
+		// cleanly. If reactions-as-input ever land, add 'message_reaction'
+		// (off by default, needs group admin).
+		allowed_updates: ['message', 'callback_query'],
 		onStart: async (info) => {
 			log(SCOPE, `polling as @${info.username}`);
 			await bot?.api
 				.setMyCommands([
 					{ command: 'start', description: 'Say hi / get your chat ID' },
-					{ command: 'print', description: 'Print a brief (e.g. /print savi)' }
+					// Example recipient comes from config — real names never live in code.
+					{
+						command: 'print',
+						description: `Print a brief (e.g. /print ${getRecipients()[0] ?? 'family'})`
+					}
 				])
 				.catch((err) => logErr(SCOPE, 'setMyCommands failed', err));
 		}

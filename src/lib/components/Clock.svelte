@@ -22,9 +22,7 @@
 	const date = $derived(sydneyDateLong(now));
 	const shortDate = $derived(sydneyDateShort(now));
 
-	const hasHighlight = $derived(
-		quote !== null && quote.before !== null && quote.after !== null
-	);
+	const hasHighlight = $derived(quote !== null && quote.before !== null && quote.after !== null);
 
 	/**
 	 * Length-tiered font size for the literary clock quote. Combines:

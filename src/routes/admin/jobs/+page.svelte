@@ -71,9 +71,7 @@
 				</div>
 				<div class="text-right text-xs">
 					<div class="text-slate-400 dark:text-neutral-500">
-						next: <span class="text-slate-700 dark:text-neutral-300"
-							>{fmtTime(j.nextRun)}</span
-						>
+						next: <span class="text-slate-700 dark:text-neutral-300">{fmtTime(j.nextRun)}</span>
 					</div>
 					<div class="text-slate-400 dark:text-neutral-500">
 						last: {fmtAgo(j.previousRun)}

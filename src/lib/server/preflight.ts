@@ -29,6 +29,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { env } from '$env/dynamic/private';
+import { getConfig } from './config';
 import { log, logErr } from './log';
 
 /** Hard-required env vars — chota will misbehave without these. */
@@ -40,7 +41,7 @@ const REQUIRED_ENV = [
 ] as const;
 
 export interface PreflightFinding {
-	kind: 'file' | 'env';
+	kind: 'file' | 'env' | 'config';
 	name: string;
 	hint: string;
 }
@@ -78,6 +79,17 @@ export function runPreflight(): PreflightFinding[] {
 				hint: `bootstrap the DB: npx drizzle-kit generate && cat drizzle/*.sql | sqlite3 ${dbPath}`
 			});
 		}
+	}
+
+	// ── admin allowlist ──────────────────────────────────────────────────
+	// The hooks.server.ts guard fails closed: with no adminEmails, /admin and
+	// the gated APIs (agent chat, logs, sentral) reject everyone.
+	if ((getConfig().adminEmails ?? []).length === 0) {
+		findings.push({
+			kind: 'config',
+			name: 'adminEmails',
+			hint: 'add adminEmails: [<google account email>] to chota.config.ts — /admin + agent API are locked until then'
+		});
 	}
 
 	if (findings.length === 0) {

@@ -15,8 +15,9 @@
  * fails, this throws — callers fall back to the canvas renderer (see
  * `composeImage` in composers.ts).
  *
- * Calls are serialized process-wide: agent-browser drives one shared headless
- * browser, so concurrent screenshots would clobber each other's viewport.
+ * Calls are serialized process-wide through `withBrowser()`: agent-browser
+ * drives one shared headless browser, so concurrent screenshots — or a
+ * screenshot overlapping the Sentral SAML login — would clobber each other.
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -24,6 +25,7 @@ import { readFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { env } from '$env/dynamic/private';
+import { withBrowser } from '$lib/server/browser-lock';
 import { log } from '$lib/server/log';
 
 const exec = promisify(execFile);
@@ -33,8 +35,6 @@ const CMD_TIMEOUT_MS = 30_000;
 function baseUrl(): string {
 	return (env.ORIGIN || `http://localhost:${env.PORT || 8000}`).replace(/\/$/, '');
 }
-
-let chain: Promise<unknown> = Promise.resolve();
 
 /**
  * Screenshot `/print/<who>` → PNG bytes. Throws if agent-browser is
@@ -46,12 +46,14 @@ export function briefToPng(
 	date?: string,
 	day: 'today' | 'tomorrow' = 'today'
 ): Promise<Buffer> {
-	const run = chain.then(() => snapshot(who, date, day));
-	chain = run.catch(() => {});
-	return run;
+	return withBrowser(() => snapshot(who, date, day));
 }
 
-async function snapshot(who: string, date?: string, day: 'today' | 'tomorrow' = 'today'): Promise<Buffer> {
+async function snapshot(
+	who: string,
+	date?: string,
+	day: 'today' | 'tomorrow' = 'today'
+): Promise<Buffer> {
 	const params = new URLSearchParams();
 	if (date) params.set('date', date);
 	if (day === 'tomorrow') params.set('day', 'tomorrow');

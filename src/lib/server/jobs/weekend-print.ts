@@ -1,10 +1,15 @@
-// Weekend 06:45 Sydney print — one whole-family sheet (not per-person) with
-// weather, every event, every open task, chores, shopping, plus the puzzle /
-// quote / fact tail. Sat + Sun only; weekdays are the per-person
-// `morning-print` job. A bigger weekend puzzle slot can land later inside the
-// `family` recipient's tail without changing this file.
+// Friday 18:00 Sydney print — one whole-family weekend sheet (not per-person):
+// THIS WEEKEND (the Sat+Sun family calendar), volleyball games + duty rosters,
+// chores, shopping, plus the puzzle / quote tail. Lands on the fridge Friday
+// evening so the weekend can be planned before it starts — this replaced the
+// Sat+Sun 06:45 morning prints. Weekdays stay the per-person `morning-print`.
 //
-// No retry/catch-up — a missed 06:45 run is just missed (see docs/jobs.md).
+// Composed as a Friday `day: 'today'` brief: gatherBrief populates
+// `weekendEvents` + `volleyball` on Fridays, and the family sheet renders
+// THIS WEEKEND whenever those are present. (Masthead + chores show Friday —
+// acceptable; a dedicated 'weekend' gather mode isn't worth it yet.)
+//
+// No retry/catch-up — a missed run is just missed (see docs/jobs.md).
 import { defineJob } from '$lib/server/scheduler';
 import { composeImage } from '$lib/server/print/composers';
 import { printPng } from '$lib/server/print/printer';
@@ -12,8 +17,7 @@ import { FAMILY_RECIPIENT } from '$lib/server/print/sections';
 import { event } from '$lib/server/log';
 import { env } from '$env/dynamic/private';
 
-// `0,6` = Sun + Sat (cron: Sun=0). The five weekdays are handled by morning-print.
-defineJob('weekend-print', '45 6 * * 0,6', async () => {
+defineJob('weekend-print', '0 18 * * 5', async () => {
 	if (env.KIOSK !== 'true') return 'skipped (KIOSK env not set)';
 	const ev = event('print', 'printed {who} ({source})', {
 		who: FAMILY_RECIPIENT,

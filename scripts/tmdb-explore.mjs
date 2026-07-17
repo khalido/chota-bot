@@ -42,14 +42,17 @@ for (const r of results.slice(0, 3)) {
 	const title = kind === 'movie' ? r.title : r.name;
 	const date = kind === 'movie' ? r.release_date : r.first_air_date;
 	const year = date?.slice(0, 4) ?? '????';
-	console.log(`  ${title} (${year})  vote=${r.vote_average?.toFixed(1)}  pop=${r.popularity?.toFixed(0)}  id=${r.id}`);
+	console.log(
+		`  ${title} (${year})  vote=${r.vote_average?.toFixed(1)}  pop=${r.popularity?.toFixed(0)}  id=${r.id}`
+	);
 }
 
 const top = results[0];
 const topTitle = kind === 'movie' ? top.title : top.name;
 console.log(`\n# Picked: ${topTitle}`);
 if (top.poster_path) console.log(`Poster: ${POSTER_BASE}${top.poster_path}`);
-if (top.overview) console.log(`\n${top.overview.slice(0, 200)}${top.overview.length > 200 ? '…' : ''}`);
+if (top.overview)
+	console.log(`\n${top.overview.slice(0, 200)}${top.overview.length > 200 ? '…' : ''}`);
 
 console.log('\n# AU watch providers');
 const provData = await tmdb(`/${kind}/${top.id}/watch/providers`);

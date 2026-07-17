@@ -1,10 +1,10 @@
 # agent/
 
 The chota agent — one `ToolLoopAgent` instance, one growing folder of typed
-tool definitions. Surfaces that need an LLM (eventually a Telegram handler,
-maybe a `/admin` scratch endpoint, possibly some job loops) all import the
-agent from `./index.ts`. Nothing else in the repo imports `ai` or `zod`
-directly.
+tool definitions. Surfaces that need an LLM (the live Telegram handler at
+`$lib/server/telegram/`, the `/admin/agent` chat, eventually job loops) all
+import the agent from `./index.ts`. Nothing else in the repo imports `ai` or
+`zod` directly.
 
 `tools/` here is **not** `$lib/server/tools/`. The latter is pure I/O — each
 file fetches weather, calendar, bus times etc. and returns the raw shape. The
@@ -22,8 +22,8 @@ patterns. Read these first, in this order:
    trust internal knowledge" rule. **Always fetch current model IDs from the
    AI Gateway** — never use IDs from memory.
 2. `.agents/skills/ai-sdk/references/type-safe-agents.md` — the `ToolLoopAgent`
-   pattern and `InferAgentUIMessage<typeof agent>` for the eventual typed
-   Telegram handler.
+   pattern and `InferAgentUIMessage<typeof agent>` for the typed Telegram
+   handler.
 3. `.agents/skills/ai-sdk/references/common-errors.md` — v5→v6 renames that
    bite if you copy from older docs (`maxSteps` → `stopWhen: isStepCount(n)`,
    `parameters` → `inputSchema`, `maxTokens` → `maxOutputTokens`).

@@ -11,6 +11,9 @@
 import { defineChota } from './src/lib/config';
 
 export default defineChota({
+	// Google-account emails allowed into /admin + the gated APIs (agent chat,
+	// log tail, sentral cache). Empty list = nobody gets in (fail closed).
+	adminEmails: ['parent1@example.com'],
 	// People the bot recognises in calendar event titles. `aliases` are matched
 	// case-insensitively (nicknames, initials). Used to tag events on the print.
 	family: [
@@ -23,7 +26,19 @@ export default defineChota({
 	kids: [
 		{
 			name: 'Kid1',
-			buses: [{ label: 'school', stop: '0000000', routes: ['123'], targetTime: '08:00' }]
+			buses: [{ label: 'school', stop: '0000000', routes: ['123'], targetTime: '08:00' }],
+			// Weekend volleyball (optional): the kid's next game + duty roster on
+			// the Friday-evening family sheet. `draw` is the division page URL,
+			// copy-pasted from volleyballnsw.com.au; `team` matches as a
+			// case-insensitive substring (the site's spelling varies per page).
+			// If the club fields several teams in one division ("… CLUB A" and
+			// "… CLUB B"), configure the FULL name including the suffix — a bare
+			// club name would match the sibling team too.
+			volleyball: {
+				team: 'SOME VOLLEYBALL CLUB',
+				division: 'YSVL - Under 15 Girls',
+				draw: 'https://www.volleyballnsw.com.au/games/00000/00000'
+			}
 		},
 		{
 			name: 'Kid2',

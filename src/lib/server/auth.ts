@@ -12,7 +12,11 @@ export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
-	emailAndPassword: { enabled: true },
+	// Password sign-IN stays for any existing local account, but self-serve
+	// sign-UP is off — the box is LAN-reachable, and admin access is gated on
+	// the `adminEmails` allowlist anyway (see hooks.server.ts). Google OAuth
+	// is the intended way in.
+	emailAndPassword: { enabled: true, disableSignUp: true },
 	socialProviders: {
 		// Google sign-in for /admin. Used for read-only access to the family
 		// Google Calendar (Phase 1) and as the foundation for v3 multi-user.

@@ -17,7 +17,11 @@
 	// not a URL-param swap.
 	const dayTabs = [
 		{ label: 'Today', href: resolve('/print'), active: () => data.day === 'today' },
-		{ label: 'Tomorrow', href: resolve('/print') + '?day=tomorrow', active: () => data.day === 'tomorrow' },
+		{
+			label: 'Tomorrow',
+			href: resolve('/print') + '?day=tomorrow',
+			active: () => data.day === 'tomorrow'
+		},
 		{ label: 'Weekend', href: resolve('/print/[who]', { who: 'family' }), active: () => false }
 	];
 
@@ -71,7 +75,7 @@
 				<a
 					href={tab.href}
 					data-active={tab.active() ? '' : undefined}
-					class="inline-flex h-11 items-center justify-center px-5 text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground first:rounded-l-md last:rounded-r-md -ml-px first:ml-0 data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:hover:bg-primary/90 transition-colors"
+					class="-ml-px inline-flex h-11 items-center justify-center border border-input bg-background px-5 text-sm font-medium transition-colors first:ml-0 first:rounded-l-md last:rounded-r-md hover:bg-accent hover:text-accent-foreground data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:hover:bg-primary/90"
 				>
 					{tab.label}
 				</a>

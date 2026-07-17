@@ -178,11 +178,7 @@
 											<!-- Frown sits past the overlapping-bell cluster (ml-1.5
 											     to break the overlap) so it reads as punctuation
 											     after the bells: 🔔🔔🔔🔔🔔🔔🔔🔔  😟 -->
-											<Frown
-												class="ml-1.5 stroke-black"
-												size={22}
-												strokeWidth={2.5}
-											/>
+											<Frown class="ml-1.5 stroke-black" size={22} strokeWidth={2.5} />
 										{/if}
 									</span>
 								{:else if t.when === 'tomorrow'}
@@ -277,9 +273,7 @@
 					     grey/FOOTNOTE-coloured italic dithers into noise and becomes hard
 					     to read at small sizes; the italic alone is plenty of distinction. -->
 					<p class="leading-relaxed whitespace-pre-wrap">
-						{s.lines.join('\n')}<span class="ml-2 text-[14px] italic"
-							>— {s.attribution}</span
-						>
+						{s.lines.join('\n')}<span class="ml-2 text-[14px] italic">— {s.attribution}</span>
 					</p>
 				{:else}
 					<!-- Backstop: a section kind with no branch above renders visibly,
