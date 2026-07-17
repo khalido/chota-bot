@@ -23,7 +23,9 @@ interface BootprintResponse {
 
 /** Fetch a picture + fact for `object` (default "earth"). Throws on network/HTTP error. */
 export async function getBootprintFact(object = 'earth'): Promise<BootprintFact> {
-	const res = await fetch(`${BASE}/${encodeURIComponent(object)}`, { signal: AbortSignal.timeout(8000) });
+	const res = await fetch(`${BASE}/${encodeURIComponent(object)}`, {
+		signal: AbortSignal.timeout(8000)
+	});
 	if (!res.ok) throw new Error(`bootprint ${res.status}: ${await res.text().catch(() => '')}`);
 	const d = (await res.json()) as BootprintResponse;
 	if (!d.fact) throw new Error('bootprint: no fact in response');

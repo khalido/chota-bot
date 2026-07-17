@@ -48,8 +48,9 @@ src/lib/server/
     CLAUDE.md             # "how to write a job"
     heartbeat.ts          # every 5 min: console.log (debug)
     morning-print.ts      # Mon–Fri 06:45: per-person briefs (gated by KIOSK env)
-    weekend-print.ts      # Sat+Sun 06:45: one whole-family sheet (gated by KIOSK env)
-    sentral-refresh.ts    # weekday mornings: refresh Sentral .ics caches
+    weekend-print.ts      # Fri 18:00: one whole-family weekend sheet (gated by KIOSK env)
+    sentral-refresh.ts    # weekday mornings + 17:30: refresh Sentral .ics caches, one kid at a time
+    schoolterms-refresh.ts # Mondays 04:00: refresh the NSW school-calendar cache
     sentral-login.ts      # Mondays 04:00: pre-emptive Sentral cookie refresh
     weather-refresh.ts    # warm weather cache
     calendar-refresh.ts   # warm Google Calendar cache
@@ -110,18 +111,19 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 
 (one file per job in `src/lib/server/jobs/`)
 
-| Name               | Pattern            | Kind           | Purpose                                                 |
-| ------------------ | ------------------ | -------------- | ------------------------------------------------------- |
-| `heartbeat`        | `*/5 * * * *`      | scripted       | Debug log                                               |
-| `morning-print`    | `45 6 * * 1-5`     | scripted       | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)      |
-| `weekend-print`    | `45 6 * * 0,6`     | scripted       | One whole-family sheet, Sat+Sun (gated by `KIOSK=true`) |
-| `sentral-refresh`  | `30 6,7,8 * * 1-5` | scripted       | Refresh per-kid Sentral .ics caches                     |
-| `sentral-login`    | `0 4 * * 1`        | scripted       | Mondays — pre-emptive Sentral cookie refresh            |
-| `weather-refresh`  | refresh cadence    | scripted       | Warm weather cache                                      |
-| `calendar-refresh` | refresh cadence    | scripted       | Warm Google Calendar cache                              |
-| `bus-refresh`      | refresh cadence    | scripted       | Warm bus departures cache                               |
-| `ticktick-refresh` | refresh cadence    | scripted       | Warm TickTick lists cache                               |
-| `dreaming`         | `0 3 * * *`        | agent (Sonnet) | Stub — will consolidate memory once agent lands         |
+| Name                  | Pattern               | Kind           | Purpose                                                            |
+| --------------------- | --------------------- | -------------- | ------------------------------------------------------------------ |
+| `heartbeat`           | `*/5 * * * *`         | scripted       | Debug log                                                          |
+| `morning-print`       | `45 6 * * 1-5`        | scripted       | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                 |
+| `weekend-print`       | `0 18 * * 5`          | scripted       | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`) |
+| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted       | Refresh per-kid Sentral .ics caches (serialized)                   |
+| `schoolterms-refresh` | `0 4 * * 1`           | scripted       | Refresh the NSW school-calendar cache                              |
+| `sentral-login`       | `0 4 * * 1`           | scripted       | Mondays — pre-emptive Sentral cookie refresh                       |
+| `weather-refresh`     | refresh cadence       | scripted       | Warm weather cache                                                 |
+| `calendar-refresh`    | refresh cadence       | scripted       | Warm Google Calendar cache                                         |
+| `bus-refresh`         | refresh cadence       | scripted       | Warm bus departures cache                                          |
+| `ticktick-refresh`    | refresh cadence       | scripted       | Warm TickTick lists cache                                          |
+| `dreaming`            | `0 3 * * *`           | agent (Sonnet) | Stub — will consolidate memory once agent lands                    |
 
 Planned:
 

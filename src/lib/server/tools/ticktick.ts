@@ -90,7 +90,10 @@ const STALE_OK_MS = 60 * 60_000;
 const projectsCache: { data: Project[]; at: number } = { data: [], at: 0 };
 const projectDataCache = new Map<string, { data: ProjectWithTasks; at: number }>();
 // One batched entry: completed tasks across all configured projects, grouped by projectId.
-const completedCache: { data: Map<string, CompletedTask[]>; at: number } = { data: new Map(), at: 0 };
+const completedCache: { data: Map<string, CompletedTask[]>; at: number } = {
+	data: new Map(),
+	at: 0
+};
 
 function fresh<T>(entry: { data: T; at: number } | undefined): T | null {
 	if (!entry || entry.at === 0 || Date.now() - entry.at > CACHE_TTL_MS) return null;
@@ -101,7 +104,6 @@ function staleOk<T>(entry: { data: T; at: number } | undefined): T | null {
 	if (!entry || entry.at === 0 || Date.now() - entry.at > STALE_OK_MS) return null;
 	return entry.data;
 }
-
 
 // ────────────────────────────────────────────────────────────────────────────
 // Public — high-level helpers used by routes/components
@@ -173,7 +175,10 @@ async function getCompletedByProject(projectIds: string[]): Promise<Map<string, 
 			log('ticktick', `list_completed_tasks_by_date failed (${errText(err)}) — serving stale`);
 			return stale;
 		}
-		log('ticktick', `list_completed_tasks_by_date failed (${errText(err)}) — no done items this round`);
+		log(
+			'ticktick',
+			`list_completed_tasks_by_date failed (${errText(err)}) — no done items this round`
+		);
 		return new Map();
 	}
 }
@@ -305,7 +310,10 @@ export async function getProjectWithTasks(projectId: string): Promise<ProjectWit
 	} catch (err) {
 		const stale = staleOk(projectDataCache.get(projectId));
 		if (stale) {
-			log('ticktick', `get_project_with_undone_tasks(${projectId}) failed (${errText(err)}) — serving stale cache`);
+			log(
+				'ticktick',
+				`get_project_with_undone_tasks(${projectId}) failed (${errText(err)}) — serving stale cache`
+			);
 			return stale;
 		}
 		throw err;
@@ -334,7 +342,11 @@ export async function pingTickTick(): Promise<{
 		const names = (r.result ?? []).map((p) => p.name);
 		return { ok: true, ms: Date.now() - start, projects: names.length, names };
 	} catch (err) {
-		return { ok: false, ms: Date.now() - start, error: err instanceof Error ? err.message : String(err) };
+		return {
+			ok: false,
+			ms: Date.now() - start,
+			error: err instanceof Error ? err.message : String(err)
+		};
 	}
 }
 
@@ -471,7 +483,9 @@ function errText(err: unknown): string {
 function isTransient(err: unknown): boolean {
 	if ((err as { retryable?: boolean })?.retryable) return true;
 	const m = errText(err).toLowerCase();
-	return /fetch failed|aborted|timeout|timed ?out|econnreset|socket hang|network|enotfound|eai_again/.test(m);
+	return /fetch failed|aborted|timeout|timed ?out|econnreset|socket hang|network|enotfound|eai_again/.test(
+		m
+	);
 }
 
 function requestHeaders(): Record<string, string> {

@@ -30,17 +30,19 @@
 	<div class="mx-auto max-w-4xl space-y-8">
 		<!-- Current + headline -->
 		<section>
-			<h1 class="text-sm font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500">
+			<h1
+				class="text-sm font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500"
+			>
 				{data.suburb}
 			</h1>
 
 			<div class="mt-3 flex items-baseline gap-6">
 				<div
-					class="text-7xl font-light tabular-nums text-slate-900 dark:text-neutral-50 sm:text-8xl"
+					class="text-7xl font-light text-slate-900 tabular-nums sm:text-8xl dark:text-neutral-50"
 				>
 					{Math.round(data.weather.tempC)}&deg;
 				</div>
-				<div class="text-2xl text-slate-600 dark:text-neutral-300 sm:text-3xl">
+				<div class="text-2xl text-slate-600 sm:text-3xl dark:text-neutral-300">
 					{data.weather.condition}
 				</div>
 			</div>
@@ -82,18 +84,26 @@
 
 		<!-- Day × block grid -->
 		<section>
-			<h2 class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500">
+			<h2
+				class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500"
+			>
 				Forecast
 			</h2>
 
-			<div class="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800">
+			<div
+				class="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
+			>
 				<!-- Header row -->
 				<div class="grid grid-cols-5 gap-px bg-slate-200 dark:bg-neutral-800">
-					<div class="bg-slate-50 px-4 py-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:bg-neutral-900 dark:text-neutral-500">
+					<div
+						class="bg-slate-50 px-4 py-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:bg-neutral-900 dark:text-neutral-500"
+					>
 						Day
 					</div>
 					{#each BLOCK_ORDER as block (block)}
-						<div class="bg-slate-50 px-4 py-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:bg-neutral-900 dark:text-neutral-500">
+						<div
+							class="bg-slate-50 px-4 py-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:bg-neutral-900 dark:text-neutral-500"
+						>
 							{block}
 						</div>
 					{/each}
@@ -102,7 +112,9 @@
 				<!-- Day rows -->
 				{#each data.days as day (day.dateKey)}
 					<div class="grid grid-cols-5 gap-px bg-slate-200 dark:bg-neutral-800">
-						<div class="bg-white px-4 py-3 text-sm font-medium text-slate-700 dark:bg-neutral-900 dark:text-neutral-200">
+						<div
+							class="bg-white px-4 py-3 text-sm font-medium text-slate-700 dark:bg-neutral-900 dark:text-neutral-200"
+						>
 							{day.label}
 						</div>
 						{#each BLOCK_ORDER as block (block)}
@@ -118,7 +130,7 @@
 							>
 								{#if cell}
 									<div class={colorFor(cell.condition)}>{cell.condition}</div>
-									<div class="tabular-nums text-slate-700 dark:text-neutral-300">
+									<div class="text-slate-700 tabular-nums dark:text-neutral-300">
 										{Math.round(cell.tempC)}&deg;
 									</div>
 									{#if cell.rainPct > 0}
@@ -127,9 +139,7 @@
 										</div>
 									{/if}
 								{:else if isPast}
-									<div class="text-xs text-slate-400 italic dark:text-neutral-600">
-										past
-									</div>
+									<div class="text-xs text-slate-400 italic dark:text-neutral-600">past</div>
 								{:else}
 									<div class="text-slate-300 dark:text-neutral-700">—</div>
 								{/if}

@@ -17,6 +17,8 @@
 
 	// Group events by Sydney calendar date, preserving sort order.
 	const groups = $derived.by(() => {
+		// Built fresh and never mutated after this derived runs — plain Map is fine.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const m = new Map<string, EventWithPeople[]>();
 		for (const e of events) {
 			const key = sydneyYMD(e.start);
@@ -39,9 +41,7 @@
 	</h2>
 
 	{#if events.length === 0}
-		<p class="mt-3 text-sm text-slate-400 italic dark:text-neutral-500">
-			Nothing on the calendar.
-		</p>
+		<p class="mt-3 text-sm text-slate-400 italic dark:text-neutral-500">Nothing on the calendar.</p>
 	{:else}
 		<div class="mt-3 space-y-3">
 			{#each groups as g (g.key)}
@@ -54,9 +54,7 @@
 					<ul class="mt-1 space-y-1">
 						{#each g.events as e (e.id)}
 							<li class="flex items-baseline gap-2 text-sm">
-								<span
-									class="w-14 shrink-0 font-mono text-xs text-slate-500 dark:text-neutral-500"
-								>
+								<span class="w-14 shrink-0 font-mono text-xs text-slate-500 dark:text-neutral-500">
 									{e.isAllDay ? 'all day' : sydneyTimeCompact(e.start)}
 								</span>
 								<span class="flex-1 text-slate-700 dark:text-neutral-200">{e.summary}</span>

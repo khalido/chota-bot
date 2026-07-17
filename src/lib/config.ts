@@ -24,9 +24,25 @@ export interface BusTrip {
 	targetTime?: string;
 }
 
+export interface KidVolleyball {
+	/** Team name as it appears on volleyballnsw.com.au fixture pages. Matched
+	 *  as a case-insensitive substring — the site's spelling varies per page
+	 *  ("SYDNEY ACERS VOLLEYBALL CLUB" on one, division-prefixed on another),
+	 *  so configure the stable core of the name. */
+	team: string;
+	/** Division label shown on the print, e.g. "YSVL - Under 15 Boys". */
+	division: string;
+	/** The division draw/results URL, copy-pasted from the browser:
+	 *  https://www.volleyballnsw.com.au/games/{competition}/{division} */
+	draw: string;
+}
+
 export interface Kid {
 	name: string;
 	buses: BusTrip[];
+	/** Weekend volleyball — fills the family sheet's VOLLEYBALL section with
+	 *  this kid's next game + duty roster. Omit for kids who don't play. */
+	volleyball?: KidVolleyball;
 }
 
 /** Map of chore key → kid name for one day. */
@@ -69,6 +85,11 @@ export interface WeatherThresholds {
 }
 
 export interface ChotaConfig {
+	/** Google-account emails allowed into /admin and the gated APIs (the agent
+	 *  chat endpoint, admin log tail, sentral cache, …). Anyone else — signed
+	 *  in or not — is turned away by the hooks.server.ts guard. Empty/omitted
+	 *  means NOBODY gets in (fail closed); preflight warns at boot. */
+	adminEmails?: string[];
 	kids: Kid[];
 	/** Everyone whose name might appear in calendar events. Used to tag
 	 *  events with people chips on the dashboard + print. */

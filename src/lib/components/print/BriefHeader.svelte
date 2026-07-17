@@ -20,7 +20,7 @@
 	let {
 		who,
 		date,
-		variant = 'newspaper'
+		variant: _variant = 'newspaper'
 	}: {
 		/** Recipient name (kebab/lowercase). Drives the title + the pattern seed. */
 		who: string;
@@ -40,7 +40,7 @@
 
 	const seed = $derived(hash(who));
 	/** Hatch rotation (-60° to +60° in 15° steps, never 0° or 90° — those are too "stripey"). */
-	const angle = $derived(15 + ((seed % 4) * 15) * (seed & 1 ? 1 : -1));
+	const angle = $derived(15 + (seed % 4) * 15 * (seed & 1 ? 1 : -1));
 	/** Stable DOM id so multiple briefs on /print don't share the same pattern. */
 	const patternId = $derived(`hdr-hatch-${who}`);
 </script>

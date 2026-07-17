@@ -54,7 +54,9 @@ function ab(args, { capture = false } = {}) {
 try {
 	ab(['--version'], { capture: true });
 } catch {
-	console.error('agent-browser not found. Install it: npm i -g agent-browser && agent-browser install');
+	console.error(
+		'agent-browser not found. Install it: npm i -g agent-browser && agent-browser install'
+	);
 	process.exit(1);
 }
 try {
@@ -62,7 +64,9 @@ try {
 	const res = await fetch(`${BASE}/print`, { signal: AbortSignal.timeout(20_000) });
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 } catch (e) {
-	console.error(`Can't reach ${BASE} — is the dev server running? (${e instanceof Error ? e.message : e})`);
+	console.error(
+		`Can't reach ${BASE} — is the dev server running? (${e instanceof Error ? e.message : e})`
+	);
 	console.error('Set CHOTA_URL to point elsewhere.');
 	process.exit(1);
 }
@@ -81,7 +85,10 @@ for (const r of recipients) {
 
 	// `screenshot --full` does NOT grow the viewport past its set height, so
 	// measure the rendered sheet and resize before capturing.
-	const h = parseInt(String(ab(['eval', 'document.documentElement.scrollHeight'], { capture: true })).trim(), 10);
+	const h = parseInt(
+		String(ab(['eval', 'document.documentElement.scrollHeight'], { capture: true })).trim(),
+		10
+	);
 	const height = Number.isFinite(h) && h > 0 ? h + 8 : 1600;
 	ab(['set', 'viewport', String(WIDTH), String(height)]);
 	ab(['wait', '200']);

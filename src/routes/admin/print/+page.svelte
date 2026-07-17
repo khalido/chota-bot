@@ -18,9 +18,7 @@
 			const res = await fetch(`/api/print/${kind}${query}`, { method: 'POST' });
 			const b = await res.json();
 			const meta = b.lines != null ? `${b.lines} lines, ${b.bytes}b` : `${b.bytes}b`;
-			result = b.ok
-				? `✓ ${label}: ${meta} (${b.mode})`
-				: `✗ ${label}: ${b.error ?? 'failed'}`;
+			result = b.ok ? `✓ ${label}: ${meta} (${b.mode})` : `✗ ${label}: ${b.error ?? 'failed'}`;
 		} catch (e) {
 			result = `✗ ${label}: ${e instanceof Error ? e.message : String(e)}`;
 		} finally {

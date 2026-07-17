@@ -50,7 +50,9 @@
 					class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
 				>
 					<div class="mb-3 flex items-baseline justify-between gap-2">
-						<h2 class="flex items-baseline gap-2 text-base font-medium text-slate-800 dark:text-neutral-100">
+						<h2
+							class="flex items-baseline gap-2 text-base font-medium text-slate-800 dark:text-neutral-100"
+						>
 							{#if nm.icon}<span class="text-lg">{nm.icon}</span>{/if}
 							<span>{nm.label}</span>
 						</h2>

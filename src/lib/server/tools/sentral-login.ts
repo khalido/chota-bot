@@ -14,14 +14,14 @@
  * command line a shell would log), the same way print/snapshot.ts does.
  * Requires agent-browser on PATH with its browser installed.
  *
- * Caveat: this and the print screenshot path share one agent-browser browser
- * and aren't locked against each other. A login overlapping a print could make
- * one fail — the print falls back to the canvas renderer, the login throws and
- * the next refresh retries. The job schedules don't overlap in practice
- * (sentral-refresh 06:30, morning-print 06:45).
+ * This and the print screenshot path share one agent-browser browser, so the
+ * whole login runs inside `withBrowser()` — the same process-wide mutex
+ * `print/snapshot.ts` uses. A Telegram `/print` tapped mid-login queues
+ * behind the SAML flow instead of clobbering its page.
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { withBrowser } from '$lib/server/browser-lock';
 import { log } from '$lib/server/log';
 
 const exec = promisify(execFile);
@@ -47,8 +47,13 @@ export interface SentralCredentials {
  * Log in to Sentral through the NSW DoE SAML flow and return the session
  * cookie string (ready for a `cookie:` request header). Throws with a clear
  * message on bad credentials or if the flow doesn't reach the student portal.
+ * Serialized against every other agent-browser user via `withBrowser()`.
  */
-export async function loginSentral(creds: SentralCredentials): Promise<string> {
+export function loginSentral(creds: SentralCredentials): Promise<string> {
+	return withBrowser(() => doLogin(creds));
+}
+
+async function doLogin(creds: SentralCredentials): Promise<string> {
 	const loginUrl = `${new URL(creds.baseUrl).origin}/auth/portal#!/login`;
 	const ab = (args: string[]) => exec('agent-browser', args, { timeout: CMD_TIMEOUT_MS });
 

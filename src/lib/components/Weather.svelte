@@ -18,7 +18,7 @@
 
 	{#if weather}
 		<div class="mt-3 flex items-baseline gap-3">
-			<div class="text-4xl font-light tabular-nums text-slate-800 dark:text-neutral-100">
+			<div class="text-4xl font-light text-slate-800 tabular-nums dark:text-neutral-100">
 				{Math.round(weather.tempC)}&deg;
 			</div>
 			<div class="text-sm text-slate-600 dark:text-neutral-400">{weather.condition}</div>

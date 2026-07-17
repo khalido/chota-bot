@@ -75,7 +75,9 @@ export async function refreshWeather({
 	const latitude = lat ?? home?.lat;
 	const longitude = lon ?? home?.lon;
 	if (latitude == null || longitude == null) {
-		throw new Error('No coordinates: set home.lat + home.lon in chota.config.ts or pass {lat, lon}');
+		throw new Error(
+			'No coordinates: set home.lat + home.lon in chota.config.ts or pass {lat, lon}'
+		);
 	}
 
 	const params = new URLSearchParams({
@@ -92,10 +94,14 @@ export async function refreshWeather({
 	]);
 
 	if (!currentRes.ok) {
-		throw new Error(`Google Weather currentConditions ${currentRes.status}: ${await currentRes.text().catch(() => '')}`);
+		throw new Error(
+			`Google Weather currentConditions ${currentRes.status}: ${await currentRes.text().catch(() => '')}`
+		);
 	}
 	if (!forecastRes.ok) {
-		throw new Error(`Google Weather forecast/hours ${forecastRes.status}: ${await forecastRes.text().catch(() => '')}`);
+		throw new Error(
+			`Google Weather forecast/hours ${forecastRes.status}: ${await forecastRes.text().catch(() => '')}`
+		);
 	}
 
 	const current = (await currentRes.json()) as GoogleCurrent;
@@ -103,7 +109,10 @@ export async function refreshWeather({
 
 	const hourly: ForecastHour[] = (forecast.forecastHours ?? []).map(toForecastHour);
 
-	log('weather', `current ${current.temperature?.degrees ?? '?'}C ${current.weatherCondition?.description?.text ?? '?'}; ${hourly.length} hourly`);
+	log(
+		'weather',
+		`current ${current.temperature?.degrees ?? '?'}C ${current.weatherCondition?.description?.text ?? '?'}; ${hourly.length} hourly`
+	);
 
 	const data: Weather = {
 		tempC: current.temperature?.degrees ?? 0,
@@ -117,8 +126,6 @@ export async function refreshWeather({
 	if (!hasOverrides({ lat, lon, hours })) cache = data;
 	return data;
 }
-
-
 
 // ────────────────────────────────────────────────────────────────────────────
 // Pure helpers — derive useful slices from the hourly array.
@@ -224,9 +231,7 @@ export function groupByDayBlocks(hourly: ForecastHour[]): DayBlock[] {
 		});
 	}
 
-	return blocks.sort(
-		(a, b) => a.dateKey.localeCompare(b.dateKey) || a.startHour - b.startHour
-	);
+	return blocks.sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.startHour - b.startHour);
 }
 
 // ────────────────────────────────────────────────────────────────────────────

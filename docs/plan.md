@@ -1,6 +1,6 @@
 # Chota — Build Plan
 
-(formerly *home-dashboard v2*)
+(formerly _home-dashboard v2_)
 
 Family kiosk + thermal printer + (later) voice. **Chota** is the personality kids talk to — small but mighty, like Chota Bheem. Repo: `chota-bot`. Kiosk URL: `chota.local`.
 
@@ -79,6 +79,7 @@ One SvelteKit project, one `package.json`. Croner runs in-process inside the Sve
 **`chota.config.ts` is the single most leveraged file.** Per-family typed config at the repo root (gitignored; `chota.config.example.ts` shows the shape). Defines kids, bus stops, chores rotations, school region, weather location, calendar IDs, activity gear lists. **The schema is the bottleneck for new tools** — adding NSW holidays, council bins, school canteen, Opal balance, after-school packing checklists each need config entries. When tempted to widen the schema for one new thing, design the next 2–3 along with it.
 
 **Why TS at the root, not JSON in `data/`:**
+
 - Matches the `*.config.ts` convention (svelte/vite/tailwind/drizzle).
 - Types + IDE autocomplete + comments + computed values for free — no zod needed.
 - Editable like code by the dev who maintains it; the hardware-kit business later can layer a JSON or web-form on top.
@@ -89,7 +90,7 @@ API keys + secrets stay in `.env` (read via `$env/static/private`). `chota.confi
 
 `py/` is a scratchpad, **not a sidecar.** Drop self-contained Python scripts there for one-offs (data exploration, testing a Python-only library, anything pandas-y). Run with global `uv`: `uv run --script py/<name>.py`. No shared `pyproject.toml`, no IPC.
 
-**Earned complexity** = a Python *service* (long-running, called over HTTP). Most likely candidate: Enphase if the port stalls (local gateway JWT dance, no good Node SDK). *That* gets its own subdir (`enphase-svc/` with its own `pyproject.toml`) and we refactor root → `web/`. 10 min of `git mv` when needed; don't pre-build.
+**Earned complexity** = a Python _service_ (long-running, called over HTTP). Most likely candidate: Enphase if the port stalls (local gateway JWT dance, no good Node SDK). _That_ gets its own subdir (`enphase-svc/` with its own `pyproject.toml`) and we refactor root → `web/`. 10 min of `git mv` when needed; don't pre-build.
 
 ## Memory architecture
 
@@ -112,6 +113,7 @@ v2 MVP doesn't need a conversational loop. Print menu + voice + dashboard widget
 **v2 = better-auth wired with Google OAuth provider for the calendar tool.** Per-user kiosk login + admin route gating is v3 work (the auth tables/hooks/`src/lib/auth.ts` config exist already, so v3 is a config flip not a refactor). At the kiosk, anyone present uses the shared context.
 
 **Google Cloud project setup:**
+
 - One project, Web application OAuth client
 - Authorized redirect URI: `http://localhost:8000/api/auth/callback/google`
 - OAuth consent screen: external, family Gmails as test users (avoids verification gate at this scale)
@@ -134,16 +136,18 @@ In-process scheduler — one TS file per job in `src/lib/server/jobs/`, self-reg
 ## v1 module ports
 
 Most live: `weather`, `bus` (TfNSW), `calendar`, `chores`. Pending:
+
 - `enphase.py` (cloud auth + local gateway JWT dance) — port carefully OR run as tiny Python `uvicorn` service if it tar-pits. **Targeted split-stack for one module is fine.**
 - `dashboard_image.py` — dropped the Gemini PNG path; v2 is Tailwind components. Salvaged: data-aggregation logic + imminent-event detection. PNG generator moved to v3 candidates.
 
 ## Phase roadmap
 
-### Phase 1 — Morning print  ✅  (May 2026)
+### Phase 1 — Morning print ✅ (May 2026)
 
 End state: 06:45 every weekday, the printer fires with weather + bus + chores + per-kid Sentral schedule, plus the family brief. Built and shipping.
 
 What changed from the original M0/M1/M2 plan:
+
 - **Restructured the brief into a GUS-style sheet** — `CHOTA` masthead, numbered sections (`01 WEATHER`, `02 TODAY`, …), 12-hour compact times, left-aligned. The old shape (text rules, all-caps, no sections) is in git history.
 - **Two render paths** — plain text via `composeText('morning')` for the always-works fallback; HTML→image via `agent-browser` screenshotting `/print/<who>` (rendered bare; the layout hides the dashboard nav for this route) for the production "designed" path. See "Two render paths" below.
 - **Multi-recipient prints** — family brief + per-kid briefs (kids weekdays only). Each recipient is a `/print/<who>` route; the morning-print job loops over enabled recipients and prints in sequence.
@@ -160,10 +164,10 @@ End state: a kiosk you actually look at + a print menu with several formats + th
 - **Basic agent loop** — `runAgent()` wrapper per `docs/agent.md`, read-only tools only, behind a feature flag with strict timeout + step caps. First agent job: the closing line on the morning brief (until then a static "Have a good day, kids -- Chota" sign-off). **No memory writes in Phase 2** — do more research on the memory-tool design first (moved to Phase 3, see below). Keeping the Phase 2 agent stateless makes it a small, safe target.
 - **More tools** — `drive`, `exa` (web search), NSW school terms / public holidays, council bin night, school canteen menu, Opal/school transport balance.
 - **`/clock` polish** — already have the literary clock dataset (`../curios/dist/clock-quotes.json`, sibling repo [`khalido/curios`](https://github.com/khalido/curios), 24h `HH:MM` keys). Add Urdu/Pakistani shers as `lang: "ur-roman"` entries; add `family.md` for hand-edited family quotes upstream in curios; fallback chain: `clock-quotes[hhmm]` → `family.md` → Quotable API.
-- **Tomorrow lookahead** — ✅ *shipped, retired.* The plan was one compressed `tmrw:` line on the morning brief (density-tiered acronym extraction). That landed differently — first as a full evening (`15 19`) print of tomorrow's per-person briefs, then retired in favour of a single labelled "Tomorrow:" line on the morning weather block (lighter touch, fewer prints). The morning sheet itself is the place to peek at tomorrow.
+- **Tomorrow lookahead** — ✅ _shipped, retired._ The plan was one compressed `tmrw:` line on the morning brief (density-tiered acronym extraction). That landed differently — first as a full evening (`15 19`) print of tomorrow's per-person briefs, then retired in favour of a single labelled "Tomorrow:" line on the morning weather block (lighter touch, fewer prints). The morning sheet itself is the place to peek at tomorrow.
 - **Night mode** — two layers because CSS alone doesn't dim the backlight. (1) **CSS filter:** extend the existing Sydney-hour pre-paint script in `app.html` to also add a `night` class after, say, 21:00; `html.night { filter: brightness(0.4) grayscale(1) }` wraps everything cheaply with no per-component changes. (2) **Backlight:** a Chota cron job (`night-brightness.ts`) writes to `/sys/class/backlight/intel_backlight/brightness` (Surface Pro 5 device) at 21:00/06:00. Needs `ko` in the `video` group (or a udev rule for the backlight device). The CSS layer is the visual win; the backlight layer is what makes the SP5 actually disappear into the wall at night.
 - **Logging + observability** — wire LogTape in place of the thin `log()` wrapper: console + rotating file sinks, plus a best-effort, non-blocking OTel sink shipping to Axiom over OTLP. OTel keeps it vendor-neutral (the backend is just an endpoint — a reusable logging pattern across projects). Structured wide-events. The real payoff is one alert: morning-print failure / canvas-fallback → phone. See `docs/logging.md`.
-- **Kiosk mode** — on boot, launch Chromium fullscreen pointed at the dashboard. Not an OS lockdown — the Cinnamon desktop stays running underneath so Alt-Tab / app-switching still works (the box is a normal multi-use machine: it also runs the Chota server + agent-browser). Four small things, no framework: (1) `chromium --kiosk --noerrdialogs --disable-translate http://localhost:8000` — fullscreen + chromeless. (2) **Cinnamon autostart** — `.desktop` file in `~/.config/autostart/` running that on login. (3) **Auto-login as `ko`** — Mint Login Window settings. (4) **`unclutter`** — `apt install unclutter` to hide the idle cursor. Plus screensaver/lock disable: `gsettings set org.cinnamon.desktop.screensaver lock-enabled false; gsettings set org.cinnamon.desktop.session idle-delay 0; xset s off; xset -dpms`. Skip Electron/Tauri/Balena/WPE — the app is already a server, wrapping a browser around a web app is doubled work. Hardware-agnostic: SvelteKit + adapter-node + agent-browser all run on a Raspberry Pi 5, so the SP5 (fiddly long-term) can be swapped for a cheaper Pi-and-screen later — nothing in the stack is tied to the Surface.
+- **Kiosk mode** — _deprioritized June 2026: the dashboard isn't earning its keep; direction is headless server + print-first + e-ink later — see [`docs/next.md`](next.md)._ On boot, launch Chromium fullscreen pointed at the dashboard. Not an OS lockdown — the Cinnamon desktop stays running underneath so Alt-Tab / app-switching still works (the box is a normal multi-use machine: it also runs the Chota server + agent-browser). Four small things, no framework: (1) `chromium --kiosk --noerrdialogs --disable-translate http://localhost:8000` — fullscreen + chromeless. (2) **Cinnamon autostart** — `.desktop` file in `~/.config/autostart/` running that on login. (3) **Auto-login as `ko`** — Mint Login Window settings. (4) **`unclutter`** — `apt install unclutter` to hide the idle cursor. Plus screensaver/lock disable: `gsettings set org.cinnamon.desktop.screensaver lock-enabled false; gsettings set org.cinnamon.desktop.session idle-delay 0; xset s off; xset -dpms`. Skip Electron/Tauri/Balena/WPE — the app is already a server, wrapping a browser around a web app is doubled work. Hardware-agnostic: SvelteKit + adapter-node + agent-browser all run on a Raspberry Pi 5, so the SP5 (fiddly long-term) can be swapped for a cheaper Pi-and-screen later — nothing in the stack is tied to the Surface.
 
 ### Phase 3 — Voice + polish
 
@@ -173,11 +177,12 @@ End state: a kiosk you actually look at + a print menu with several formats + th
 
 ## Print formats — Daily Shout + on-demand menu
 
-The Daily Shout is the auto-scheduled morning print at 06:45 (weekdays only for kid briefs; family brief every day). The kiosk's Print Menu screen has buttons for *many other formats*, all using the same `/api/print/<kind>` route. Format catalogue grows over time.
+The Daily Shout is the auto-scheduled morning print at 06:45 (weekdays only for kid briefs; family brief every day). The kiosk's Print Menu screen has buttons for _many other formats_, all using the same `/api/print/<kind>` route. Format catalogue grows over time.
 
 **Auto-scheduled:** `today` (the morning print).
 
 **On-demand (kiosk button):**
+
 - `today` — same as scheduled, force-print
 - per-kid briefs (`/print/<who>`) — today's calendar items + their chore + Sentral school timetable + a kid-tuned joke or fact (memory files for tuning, when agent lands)
 - `cal` — week-ahead family calendar
@@ -230,12 +235,12 @@ Why HTML→image: any typeface, CSS boxes/rules/icons, "just write lines and let
 
 ## Ditched on purpose
 
-Things v1 has that v2 should *not* recreate without explicit need:
+Things v1 has that v2 should _not_ recreate without explicit need:
 
 - **MCP server pattern.** Tools are plain TS functions. Mario Zechner's argument applies: tools-as-functions with good docstrings are cleaner than MCP for in-process agents. ([Why no MCP in pi](https://mariozechner.at/posts/2025-11-02-what-if-you-dont-need-mcp/))
 - **Multi-user sessions and per-user memories.** Family kiosk = shared context, not switched accounts.
 - **Streamlit + Textual prototypes.** Single dashboard, single UI surface.
-- **v1's `agent/tools/` two-layer pattern** (tool wrapper + API call). v2 splits by *purpose*, not by abstraction layer: `src/lib/server/tools/<domain>.ts` is the tool implementation; `src/lib/server/agent/{system-prompt,tools}.ts` (when it lands) is the agent-runtime registration.
+- **v1's `agent/tools/` two-layer pattern** (tool wrapper + API call). v2 splits by _purpose_, not by abstraction layer: `src/lib/server/tools/<domain>.ts` is the tool implementation; `src/lib/server/agent/{system-prompt,tools}.ts` (when it lands) is the agent-runtime registration.
 - **Multiple databases / DB setup scripts.** Drizzle migrations from day one.
 - **CLI agent.** Kiosk + chat + Telegram cover all interaction surfaces. CLI was for dev; v2 has `npm run dev` and Vite HMR.
 - **Knowledge base directory (`data/knowledge/`).** Was speculative. If FAQs matter, surface them as tools, not files for the agent to grep.
@@ -243,15 +248,18 @@ Things v1 has that v2 should *not* recreate without explicit need:
 ## Risks / gotchas
 
 **Hardware:** see `docs/printers.md` for MUNBYN specifics (USB IDs vary per unit, macOS CUPS conflict, Linux udev rule, Windows Zadig). General reminders:
+
 - Thermal paper fades in months under light/heat. Use BPA-free thermal paper (skin contact concern for kids). Don't promise "keep this forever" features.
 - `type: PrinterTypes.EPSON` (MUNBYN is an Epson TM-T88 clone). Width = `48` chars for 80mm at default font.
 
 **Software:**
+
 - **Enphase auth is the highest-friction port.** If it stalls, run it as a tiny Python `uvicorn` service. Targeted split-stack is fine; full split-stack is not.
-- **Telegram bot moderation:** whitelist family chat IDs only. Do *not* rely on LLM moderation for inbound — the public Message Maddie incident is a cautionary tale. If grandparent web form ships, gate by `better-auth` magic-link or shared secret.
+- **Telegram bot moderation:** whitelist family chat IDs only. Do _not_ rely on LLM moderation for inbound — the public Message Maddie incident is a cautionary tale. If grandparent web form ships, gate by `better-auth` magic-link or shared secret.
 - **AI SDK is moving fast.** API changed a few times in 2025. Pin versions in `package.json`, expect mild churn.
 
 **UX:**
+
 - **Don't let the agent write chores.** Parents curate the chore list; agent just formats. LLM-generated busywork lands badly with kids.
 - **Auto-cut between sections is the default temptation** — resist it. One scroll per morning.
 - **Voice in a noisy kitchen/family room is hard.** VAD, push-to-talk button, or wake-word are different UX choices. Start with push-to-talk.
@@ -261,6 +269,7 @@ Things v1 has that v2 should *not* recreate without explicit need:
 The agent (when it lands) will have file tools — `Read`/`Write`/`Edit`/`Bash` give it the same blast radius as the user running the SvelteKit process. **For v2 MVP this is fine** — the kiosk box is a personal kiosk, not a precious machine, family is trusted, no untrusted input enters the agent loop except via Telegram (whitelisted family chat IDs) and the kiosk page (in-home).
 
 **Free hygiene — do this anyway, costs nothing:**
+
 - Agent `cwd = data/memory/`, **not the repo root**. Agent's view of the world should be data, not source.
 - `.env` outside the agent's cwd. Read env vars in code via `process.env`, never expose the file to file tools.
 - Run from a built bundle (`adapter-node` output), not the source tree — source code stays read-only from the agent's perspective.
@@ -268,13 +277,13 @@ The agent (when it lands) will have file tools — `Read`/`Write`/`Edit`/`Bash` 
 
 **When to actually sandbox:**
 
-| Migration | Sandbox needed? | Approach |
-|---|---|---|
-| **Kiosk box (now)** | No | Free hygiene above. Trust the family. |
-| **Mac Mini M4 (future)** | No | Same trust model, more compute. Same answer: scope `cwd`. |
-| **Railway / cloud host** | **Yes** | Container-level isolation comes for free with Railway. Don't expose more than `/api/*` publicly. |
-| **Public web form** (grandparent notes) | **Yes for that surface** | Don't let untrusted input feed into the same agent loop the trusted kiosk uses. Separate route, separate scope, output sanitized before printing. |
-| **Web-fetch / arbitrary URL access by agent** | **Yes** | Untrusted content is the classic prompt injection path. |
+| Migration                                     | Sandbox needed?          | Approach                                                                                                                                          |
+| --------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Kiosk box (now)**                           | No                       | Free hygiene above. Trust the family.                                                                                                             |
+| **Mac Mini M4 (future)**                      | No                       | Same trust model, more compute. Same answer: scope `cwd`.                                                                                         |
+| **Railway / cloud host**                      | **Yes**                  | Container-level isolation comes for free with Railway. Don't expose more than `/api/*` publicly.                                                  |
+| **Public web form** (grandparent notes)       | **Yes for that surface** | Don't let untrusted input feed into the same agent loop the trusted kiosk uses. Separate route, separate scope, output sanitized before printing. |
+| **Web-fetch / arbitrary URL access by agent** | **Yes**                  | Untrusted content is the classic prompt injection path.                                                                                           |
 
 ## Operations
 
@@ -287,6 +296,7 @@ Linux + systemd. `deploy/chota.service` is committed; `sudo cp` once to `/etc/sy
 ### Backup of `data/memory/`
 
 When the agent lands, `data/memory/` becomes the most precious artifact. One misbehaving agent + bad nightly run = `family.jsonl` gone, no rollback. Plan:
+
 - **Nightly:** `git -C data/memory commit -am "$(date -I)"` against a local bare repo. No remote needed; `git log` + `git show` is enough. Trivial rollback.
 - **Weekly:** rsync `data/memory/` + `data/home.db` to a NAS or external drive.
 - Both wired as croner jobs in `src/lib/server/jobs/`.
@@ -294,12 +304,14 @@ When the agent lands, `data/memory/` becomes the most precious artifact. One mis
 ### Failure alerting (the empty-printer-at-06:45 problem)
 
 Silent kiosk failure = kids stare at empty printer = you find out at 7am from the wrong end.
+
 - LogTape to `data/logs/chota.log` (rotating). On `morning-print` failure → Telegram DM to the parent via the family bot.
 - Optional 06:50 watchdog job — if 06:45 print's row isn't `done`, alert.
 
 ### Internet-out posture
 
 Sydney NBN flakes. Be explicit about degraded mode:
+
 - Agent loop fails on Gateway / provider error → kiosk shows last cached dashboard image + "I'm offline, back soon."
 - Bounded retry then visible failure — don't drain Gateway spend on transient errors.
 - Daily Shout: if 06:45 fails on internet, retry once at 07:00. Then bail with alert.
@@ -307,6 +319,7 @@ Sydney NBN flakes. Be explicit about degraded mode:
 ### Memory-edit feedback loop
 
 Cheap evals signal: a "that wasn't right" button on the kiosk + `/wrong` command in Telegram.
+
 - Logs the previous turn + reason to `data/memory/feedback.jsonl`.
 - Dreaming session reads it; agent reflects on its own mistakes that night.
 - Highest-leverage feature relative to LOC.
@@ -341,22 +354,23 @@ Kid sees it weekly; parents get a "kiosk healthy?" signal without reading logs. 
 
 Captured so future-you knows what was evaluated and why we landed where we did.
 
-| Option | Type | Verdict | Why |
-|---|---|---|---|
-| **Vercel AI SDK + AI Gateway** | TS toolkit | **Chosen — sole runtime** | One SDK for agent + streaming UI + non-agent pipeline calls. AI Gateway value (one key, per-task model selection) is native. Custom memory tool is ~50 LOC. See `docs/agent.md` |
-| **pi-coding-agent** (badlogic/pi-mono) | TS coding-agent SDK | **Considered then dropped** | File tools built in, skills system, production-tested. Built for code-writing/shell-running agents. Our agent only calls typed API wrappers + writes memory notes — coding-agent runtime is overkill |
-| **Mastra** | TS framework | Not adopted | Strongest framework competitor. Bundles agent + memory (`LibSQLStore`) + workflows + RAG + evals + observability. Has SvelteKit guide. Skipped: opinionated about owning the loop; for *learning*, primitives beat pre-built. Revisit after 6 months — for *work* projects this might be the better default |
-| **Claude Agent SDK** | Coding-agent SDK (Anthropic) | Rejected | "Claude Code as a library" — Anthropic-only, ships `claude` binary, defeats multi-provider goal. v1 used the Python variant; we already escaped it |
-| **pydantic-ai** | Python framework | Not chosen | Solid Python alternative. Skipped because we're going TS for voice + frontend ergonomics |
-| **Letta** (formerly MemGPT) | TS+Py framework | Not chosen | Server-first — agent lives inside Letta's runtime. Replaces, not augments. Docker overhead disproportionate for 5 users |
-| **Mem0** | Memory framework | Pattern stolen | OSS path needs Qdrant sidecar. Operational friction not justified. **Pattern worth copying:** LLM extraction pass per turn → discrete facts in DB. We do this with Haiku + sqlite, no vector DB |
-| **Zep / Graphiti** | Memory framework | Not chosen | Self-hosted CE deprecated; cloud-only or BYO Neo4j. Bi-temporal graph (preferences-over-time) is clever; we approximate with `superseded_at` column |
-| **DurableAgent + Vercel Workflows** | Durable runtime | Future option | Right answer for long pause-and-resume flows ("wait 10 min for kid reaction"). Local jobs cover our case until we move to Vercel infra |
-| **Inngest / Temporal** | Durable runtime | Future option | Vercel-endorsed alternatives. Same calculus as DurableAgent — overkill for local kiosk |
+| Option                                 | Type                         | Verdict                     | Why                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------- | ---------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vercel AI SDK + AI Gateway**         | TS toolkit                   | **Chosen — sole runtime**   | One SDK for agent + streaming UI + non-agent pipeline calls. AI Gateway value (one key, per-task model selection) is native. Custom memory tool is ~50 LOC. See `docs/agent.md`                                                                                                                             |
+| **pi-coding-agent** (badlogic/pi-mono) | TS coding-agent SDK          | **Considered then dropped** | File tools built in, skills system, production-tested. Built for code-writing/shell-running agents. Our agent only calls typed API wrappers + writes memory notes — coding-agent runtime is overkill                                                                                                        |
+| **Mastra**                             | TS framework                 | Not adopted                 | Strongest framework competitor. Bundles agent + memory (`LibSQLStore`) + workflows + RAG + evals + observability. Has SvelteKit guide. Skipped: opinionated about owning the loop; for _learning_, primitives beat pre-built. Revisit after 6 months — for _work_ projects this might be the better default |
+| **Claude Agent SDK**                   | Coding-agent SDK (Anthropic) | Rejected                    | "Claude Code as a library" — Anthropic-only, ships `claude` binary, defeats multi-provider goal. v1 used the Python variant; we already escaped it                                                                                                                                                          |
+| **pydantic-ai**                        | Python framework             | Not chosen                  | Solid Python alternative. Skipped because we're going TS for voice + frontend ergonomics                                                                                                                                                                                                                    |
+| **Letta** (formerly MemGPT)            | TS+Py framework              | Not chosen                  | Server-first — agent lives inside Letta's runtime. Replaces, not augments. Docker overhead disproportionate for 5 users                                                                                                                                                                                     |
+| **Mem0**                               | Memory framework             | Pattern stolen              | OSS path needs Qdrant sidecar. Operational friction not justified. **Pattern worth copying:** LLM extraction pass per turn → discrete facts in DB. We do this with Haiku + sqlite, no vector DB                                                                                                             |
+| **Zep / Graphiti**                     | Memory framework             | Not chosen                  | Self-hosted CE deprecated; cloud-only or BYO Neo4j. Bi-temporal graph (preferences-over-time) is clever; we approximate with `superseded_at` column                                                                                                                                                         |
+| **DurableAgent + Vercel Workflows**    | Durable runtime              | Future option               | Right answer for long pause-and-resume flows ("wait 10 min for kid reaction"). Local jobs cover our case until we move to Vercel infra                                                                                                                                                                      |
+| **Inngest / Temporal**                 | Durable runtime              | Future option               | Vercel-endorsed alternatives. Same calculus as DurableAgent — overkill for local kiosk                                                                                                                                                                                                                      |
 
 **Net:** Vercel AI SDK as the sole agent runtime — `generateText({ tools, stopWhen })` for short-lived agent jobs (per `docs/agent.md`), AI Gateway for multi-provider routing, custom memory tool wrapping JSONL. Groq direct for voice (Phase 3). The "no framework" tax is ~80 LOC across `scheduler.ts` + `runAgent.ts` — exactly the part worth understanding ourselves.
 
 **Patterns to borrow:**
+
 - `~/code/khalido.dev/` — proves pi/Vercel AI SDK embeds cleanly in SvelteKit. Mirror its `src/lib/agent/` + `src/lib/server/llm.ts` shape.
 - `~/code/curios/` — sibling content repo: literary-clock quotes + TV/comic quotes + puzzles. chota reads `../curios/dist/*` at runtime. `deploy.sh` `git pull`s it on every deploy.
 - `refs/pi-autoresearch/` — JSONL log + living markdown precedent.
@@ -372,7 +386,7 @@ Captured so future-you knows what was evaluated and why we landed where we did.
 - [Vercel AI Gateway docs](https://vercel.com/docs/ai-gateway) — multi-provider routing
 - [Mastra](https://mastra.ai/) — framework backup (revisit for work projects)
 - [Claude Managed Agents memory](https://platform.claude.com/docs/en/managed-agents/memory) — same file-mount pattern, useful reference
-- [`pi-observational-memory`](https://github.com/elpapi42/pi-observational-memory) — in-session continuous memory with mechanical compaction. Key insight: compaction should *append*, never LLM-rewrite, to avoid drift
+- [`pi-observational-memory`](https://github.com/elpapi42/pi-observational-memory) — in-session continuous memory with mechanical compaction. Key insight: compaction should _append_, never LLM-rewrite, to avoid drift
 - [Vercel Chat SDK docs](https://chat-sdk.dev/docs) — v3 reading
 - [Vercel AI SDK transcription](https://ai-sdk.dev/docs/ai-sdk-core/transcription) + [speech](https://ai-sdk.dev/docs/ai-sdk-core/speech) — Phase 3 voice
 - [`whisper.cpp`](https://github.com/ggml-org/whisper.cpp) — offline voice fallback
@@ -384,6 +398,7 @@ Captured so future-you knows what was evaluated and why we landed where we did.
 Cut from v2 to keep scope honest. Bring back when v2 is stable.
 
 **Conversational chat (the big one):**
+
 - **Kiosk chat screen** — fourth tab in the multi-screen UI. SvelteKit `Chat` from `@ai-sdk/svelte`, agent runtime on the same loop the print menu already uses.
 - **Telegram bot** — gramio + long polling + voice-via-Groq-Whisper. Decisions captured in `docs/telegram.md`.
 - **Sandboxed mini-app arcade via Telegram Mini Apps** — coding agent (Claude Agent SDK or pi-coding-agent in a Vercel Sandbox isolate) builds small HTML/JS games on request ("Chota, build me sudoku"), bot serves them as Telegram Mini Apps. Hosting needs Tailscale Funnel (Mini App URLs must be public HTTPS). Defer until Phase 3 voice + Phase 4 chat are stable. See `docs/telegram.md` §Future.
@@ -391,6 +406,7 @@ Cut from v2 to keep scope honest. Bring back when v2 is stable.
 - **Grandparent web form** at `/g/<token>` for note-drops without Telegram.
 
 **Other deferred:**
+
 - **Gemini-generated dashboard image** (v1's approach in `dashboard_image.py`). v2 went pure Tailwind. The Gemini path is fun for "share a family snapshot card" or "print today's image at the top of the receipt" — both v3 features.
 - **DurableAgent + Vercel Workflows.** Local jobs cover v2.
 - **News ticker (RSS via `rss-parser`).** Skip until kiosk is stable; reactivate as a ticker widget.

@@ -48,7 +48,12 @@ function cacheKey(stop: string, routes?: string[]): string {
 
 /** Read departures. Returns cache if hot, delegates to refresh on cold.
  *  Cached entries are re-filtered by `dueMins >= 0` so passed buses drop. */
-export async function getBus({ stop, routes, limit = 5, at }: GetBusOptions): Promise<BusDeparture[]> {
+export async function getBus({
+	stop,
+	routes,
+	limit = 5,
+	at
+}: GetBusOptions): Promise<BusDeparture[]> {
 	// A dated lookup bypasses the cache entirely — it's a scheduled-timetable
 	// query for another day, not the live "next from now" the cache holds.
 	if (at) return (await refreshBus({ stop, routes, at })).slice(0, limit);
@@ -114,7 +119,10 @@ export async function refreshBus({
 
 	// Dated (scheduled) queries are one-offs — never let them poison the live cache.
 	if (!at) cache.set(cacheKey(stop, routes), result);
-	log('bus', `${result.length} departures for stop ${stop}${wanted ? ` filtered to [${[...wanted].join(',')}]` : ''}${at ? ` (scheduled @ ${sydneyHHMM(at)})` : ''}`);
+	log(
+		'bus',
+		`${result.length} departures for stop ${stop}${wanted ? ` filtered to [${[...wanted].join(',')}]` : ''}${at ? ` (scheduled @ ${sydneyHHMM(at)})` : ''}`
+	);
 	return result;
 }
 
@@ -181,7 +189,9 @@ export async function schoolRunLine(
 		...(scheduled ? { at: new Date(target - 30 * 60_000) } : {})
 	});
 	const inWindow = all.filter(
-		(d) => d.estimatedAt.getTime() >= target - 25 * 60_000 && d.estimatedAt.getTime() <= target + 30 * 60_000
+		(d) =>
+			d.estimatedAt.getTime() >= target - 25 * 60_000 &&
+			d.estimatedAt.getTime() <= target + 30 * 60_000
 	);
 	// Fallback: if the school-run window is empty (e.g. the brief is being
 	// previewed mid-afternoon), show the next few from now — never include

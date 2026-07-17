@@ -92,14 +92,16 @@ export async function printText(text: string, opts: PrintTextOpts = {}): Promise
 				const isHead = line === 'CHOTA' || SECTION_RE.test(line);
 				const want: 'A' | 'B' = isHead ? 'A' : 'B';
 				if (want !== cur) {
-					want === 'A' ? p.setTypeFontA() : p.setTypeFontB();
+					if (want === 'A') p.setTypeFontA();
+					else p.setTypeFontB();
 					cur = want;
 				}
 				for (const w of wrapLine(line, isHead ? COLS_A : COLS_B)) p.println(w);
 			}
 		} else {
 			const fontB = opts.font === 'B';
-			fontB ? p.setTypeFontB() : p.setTypeFontA();
+			if (fontB) p.setTypeFontB();
+			else p.setTypeFontA();
 			const cols = fontB ? COLS_B : COLS_A;
 			for (const line of lines) for (const w of wrapLine(line, cols)) p.println(w);
 		}
@@ -148,9 +150,8 @@ async function sendToUsb(buffer: Buffer): Promise<void> {
 		}
 		iface.claim();
 
-		const out = iface.endpoints.find(
-			(e) => e.direction === 'out' && e.transferType === 2
-		) as OutEndpoint | undefined;
+		const out = iface.endpoints.find((e) => e.direction === 'out' && e.transferType === 2) as
+			OutEndpoint | undefined;
 		if (!out) throw new Error('No bulk OUT endpoint on interface 0');
 
 		await new Promise<void>((resolve, reject) => {

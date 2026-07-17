@@ -28,6 +28,7 @@ import {
 } from '$lib/server/tools/schoolterms';
 import { pickPuzzle, type Puzzle } from '$lib/server/puzzles';
 import { getQuote, type Quote } from '$lib/server/tools/quotes';
+import { getWeekendVolleyball, weekendDates, type KidFixture } from '$lib/server/tools/volleyball';
 import {
 	sydneyDateMedium,
 	sydneyDateShort,
@@ -96,8 +97,11 @@ export interface BriefData {
 	events: CalendarEvent[];
 	/** The upcoming/current weekend's shared family calendar (Sat+Sun), populated
 	 *  only on Fri & Sat morning briefs. Drives the kids' Friday "WEEKEND"
-	 *  lookahead and the Saturday whole-family sheet; undefined otherwise. */
+	 *  lookahead and the Friday-evening whole-family sheet; undefined otherwise. */
 	weekendEvents?: CalendarEvent[];
+	/** Each volleyball kid's weekend game + duty roster — populated alongside
+	 *  `weekendEvents` (Fri & Sat briefs), empty/undefined otherwise. */
+	volleyball?: KidFixture[];
 	family: FamilyMember[];
 	/** Kid names (config order) — lets the renderer tell parents from kids. */
 	kids: string[];
@@ -150,13 +154,24 @@ export async function gatherBrief({
 	// Saturday whole-family sheet. Skipped the rest of the week + on the evening
 	// (tomorrow) brief, so most briefs make no extra calendar call.
 	const refDow = sydneyDayOfWeek(ref);
-	const weekendEvents =
-		!tomorrow && (refDow === 'Fri' || refDow === 'Sat')
-			? await getCalendar({ range: 'weekend' }).catch((err) => {
+	// Volleyball fixtures ride the same Fri/Sat window as weekendEvents — the
+	// tool itself skips kids without a volleyball config and caches per
+	// division. The two fetches are independent, so they run concurrently: on
+	// a cold Friday 06:45 cache a slow volleyballnsw page would otherwise add
+	// its whole wait on top of the calendar's.
+	const weekendWindow = !tomorrow && (refDow === 'Fri' || refDow === 'Sat');
+	const [weekendEvents, volleyball] = weekendWindow
+		? await Promise.all([
+				getCalendar({ range: 'weekend' }).catch((err) => {
 					logErr('brief', 'weekend calendar lookup failed:', err);
 					return [] as CalendarEvent[];
+				}),
+				getWeekendVolleyball(weekendDates(ref), ref).catch((err) => {
+					logErr('brief', 'volleyball lookup failed:', err);
+					return [] as KidFixture[];
 				})
-			: undefined;
+			])
+		: [undefined, undefined];
 	const schoolBus = await collectSchoolBus(ref, tomorrow);
 	const schoolWeek = await getSchoolWeek(ref).catch((err) => {
 		logErr('brief', 'school week lookup failed:', err);
@@ -224,6 +239,7 @@ export async function gatherBrief({
 		weatherIcon: wx.icon,
 		events,
 		weekendEvents,
+		volleyball,
 		family: config.family ?? [],
 		kids: config.kids.map((k) => k.name),
 		schoolBus,

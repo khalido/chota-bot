@@ -38,13 +38,13 @@ await printPng(pngBuffer);
 // Lower level: build with node-thermal-printer's full API, includes images
 import { printReceipt } from '$lib/server/print/printer';
 await printReceipt(async (p) => {
-  p.alignCenter().bold(true);
-  p.println('CHOTA');
-  p.bold(false).alignLeft();
-  p.println(headerText);
-  await p.printImage('./data/dithered.png');
-  p.println(footerText);
-  p.cut();
+	p.alignCenter().bold(true);
+	p.println('CHOTA');
+	p.bold(false).alignLeft();
+	p.println(headerText);
+	await p.printImage('./data/dithered.png');
+	p.println(footerText);
+	p.cut();
 });
 ```
 
@@ -54,15 +54,15 @@ A process-level mutex prevents two prints racing on the same USB endpoint. Concu
 
 ## ESC/POS commands worth knowing
 
-| Bytes | Meaning | When |
-|---|---|---|
-| `1B 40` (`ESC @`) | Initialize | Start of every payload |
-| `1B 61 00/01/02` (`ESC a n`) | Align left/center/right | Headers, footers |
-| `1B 45 01/00` (`ESC E n`) | Bold on/off | Emphasis |
-| `1D 56 00` (`GS V 0`) | Full cut (paper severed) | When you want clean separation |
-| `1D 56 01` (`GS V 1`) | Partial cut (small bridge) | Default — easy tear, no jam |
-| `1D 56 41 nn` (`GS V A n`) | Feed `n` lines + full cut | Extra space before tear |
-| `1B 64 nn` (`ESC d n`) | Feed `n` lines | Whitespace |
+| Bytes                        | Meaning                    | When                           |
+| ---------------------------- | -------------------------- | ------------------------------ |
+| `1B 40` (`ESC @`)            | Initialize                 | Start of every payload         |
+| `1B 61 00/01/02` (`ESC a n`) | Align left/center/right    | Headers, footers               |
+| `1B 45 01/00` (`ESC E n`)    | Bold on/off                | Emphasis                       |
+| `1D 56 00` (`GS V 0`)        | Full cut (paper severed)   | When you want clean separation |
+| `1D 56 01` (`GS V 1`)        | Partial cut (small bridge) | Default — easy tear, no jam    |
+| `1D 56 41 nn` (`GS V A n`)   | Feed `n` lines + full cut  | Extra space before tear        |
+| `1B 64 nn` (`ESC d n`)       | Feed `n` lines             | Whitespace                     |
 
 `node-thermal-printer` exposes these via `cut()`, `partialCut()`, `feed(n)`, etc.
 
@@ -100,7 +100,7 @@ printer?: {
 
 **`usb` (libusb binding) for transport** — direct, no driver overhead, works on Mac (with kernel-driver detach) + Linux (no detach needed) + Windows (with WinUSB swap via Zadig).
 
-**Images via `node-thermal-printer.printImage(path)`** — accepts PNG/BMP, downscales, dithers (Floyd–Steinberg), packs to 1-bit, embeds in the ESC/POS buffer. For high-quality dithering of *photos*, [`sharp`](https://github.com/lovell/sharp) gives more control: resize to 576px width (80mm @ 203dpi), greyscale, write Floyd–Steinberg yourself, send via `printer.printImageBuffer`. Defer until we have a real image to print.
+**Images via `node-thermal-printer.printImage(path)`** — accepts PNG/BMP, downscales, dithers (Floyd–Steinberg), packs to 1-bit, embeds in the ESC/POS buffer. For high-quality dithering of _photos_, [`sharp`](https://github.com/lovell/sharp) gives more control: resize to 576px width (80mm @ 203dpi), greyscale, write Floyd–Steinberg yourself, send via `printer.printImageBuffer`. Defer until we have a real image to print.
 
 ---
 

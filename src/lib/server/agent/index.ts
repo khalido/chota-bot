@@ -1,8 +1,8 @@
 /**
  * chotaAgent — the single ToolLoopAgent backing every LLM call in chota.
  *
- * Everything that wants an LLM (Phase 3 Telegram handler, scratch admin
- * endpoints, future job loops) imports from here. Nothing else in the
+ * Everything that wants an LLM (the live Telegram handler, the /admin/agent
+ * chat, future job loops) imports from here. Nothing else in the
  * repo should import `ai` or `zod` directly — keep the model + tool
  * surface area in one place.
  *
@@ -15,8 +15,8 @@
  *
  * Wide-event logging: `runAgent` wraps `chotaAgent.generate(...)` in one
  * `agent.run` event so PostHog/OTel sees token usage + step count +
- * outcome per invocation. Stream paths can wrap `.stream(...)` the same
- * way when they land.
+ * outcome per invocation; `runAgentStream` does the same for the
+ * streaming path (Telegram + the admin chat).
  */
 import { google } from '@ai-sdk/google';
 import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
@@ -26,6 +26,7 @@ import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
 import { ticktickTool } from './tools/ticktick';
 import { tmdbTool } from './tools/tmdb';
+import { volleyballTool } from './tools/volleyball';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
@@ -51,6 +52,7 @@ export const chotaAgent = new ToolLoopAgent({
 		calendar: calendarTool,
 		ticktick: ticktickTool,
 		tmdb: tmdbTool,
+		volleyball: volleyballTool,
 		// Google Search grounding — Gemini's native web tool. Same-provider
 		// tool (Gemini is trained on it), so search results + synthesised
 		// answer come back in one response — no extra loop step needed.
@@ -62,8 +64,27 @@ export const chotaAgent = new ToolLoopAgent({
 	}
 });
 
-/** UIMessage type for typed `useChat` / Telegram handlers (Phase 3). */
+/** UIMessage type for the typed `useChat` admin chat + Telegram handlers. */
 export type ChotaAgentUIMessage = InferAgentUIMessage<typeof chotaAgent>;
+
+/**
+ * Sum the AI Gateway's per-step dollar cost off `providerMetadata.gateway.cost`
+ * — null when the metadata is absent (non-gateway model, or the gateway didn't
+ * price the call). Rides the `agent.run` wide event so PostHog can chart spend.
+ */
+function gatewayCost(steps: readonly { providerMetadata?: unknown }[]): number | null {
+	let total = 0;
+	let found = false;
+	for (const s of steps) {
+		const raw = (s.providerMetadata as { gateway?: { cost?: unknown } } | undefined)?.gateway?.cost;
+		const n = typeof raw === 'string' ? Number(raw) : raw;
+		if (typeof n === 'number' && Number.isFinite(n)) {
+			total += n;
+			found = true;
+		}
+	}
+	return found ? total : null;
+}
 
 /**
  * Thin wrapper around `chotaAgent.generate(...)` that emits one
@@ -74,10 +95,13 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 	const ev = event('agent', 'run {model}', { model: MODEL });
 	try {
 		const result = await chotaAgent.generate(args);
-		ev.set('tokens_in', result.totalUsage.inputTokens ?? 0)
-			.set('tokens_out', result.totalUsage.outputTokens ?? 0)
-			.set('steps', result.steps.length)
-			.done();
+		// v7: `usage` aggregates across steps (`totalUsage` is deprecated).
+		ev.set('tokens_in', result.usage.inputTokens ?? 0)
+			.set('tokens_out', result.usage.outputTokens ?? 0)
+			.set('steps', result.steps.length);
+		const cost = gatewayCost(result.steps);
+		if (cost !== null) ev.set('cost_usd', cost);
+		ev.done();
 		return result;
 	} catch (err) {
 		ev.fail(err);
@@ -86,7 +110,7 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 }
 
 /** The resolved result of `chotaAgent.stream(...)` — exposes `fullStream`
- *  (typed tool-call + text-delta parts), `textStream`, `totalUsage`, `steps`. */
+ *  (typed tool-call + text-delta parts), `textStream`, `usage`, `steps`. */
 export type ChotaStreamResult = Awaited<ReturnType<typeof chotaAgent.stream>>;
 
 /**
@@ -105,12 +129,15 @@ export async function runAgentStream(
 	try {
 		const result = await chotaAgent.stream(args);
 		await consume(result);
-		const usage = await result.totalUsage;
+		// v7: `usage` aggregates across steps (`totalUsage` is deprecated).
+		const usage = await result.usage;
 		const steps = await result.steps;
 		ev.set('tokens_in', usage.inputTokens ?? 0)
 			.set('tokens_out', usage.outputTokens ?? 0)
-			.set('steps', steps.length)
-			.done();
+			.set('steps', steps.length);
+		const cost = gatewayCost(steps);
+		if (cost !== null) ev.set('cost_usd', cost);
+		ev.done();
 		return result;
 	} catch (err) {
 		ev.fail(err);

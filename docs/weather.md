@@ -6,10 +6,10 @@ How weather information is gathered, prioritized, and rendered across the kiosk'
 
 The kiosk is a **smart friend, not a weather station**. A glance should answer "what should I do differently today?", not "what's the dew point?". Three surfaces, three densities:
 
-| Surface | Density | What it shows |
-|---|---|---|
-| **Print receipt** | 1-2 lines | Current temp + the one notable thing |
-| **Dashboard card** | 4-5 lines | Current + condition + headline + tiny lookahead |
+| Surface                   | Density           | What it shows                                      |
+| ------------------------- | ----------------- | -------------------------------------------------- |
+| **Print receipt**         | 1-2 lines         | Current temp + the one notable thing               |
+| **Dashboard card**        | 4-5 lines         | Current + condition + headline + tiny lookahead    |
 | **`/weather` fullscreen** | Whatever's useful | Current + 2-day grid + sparklines + sunrise/sunset |
 
 The same `Weather` data powers all three. Render layers pick what to surface.
@@ -19,9 +19,10 @@ The same `Weather` data powers all three. Render layers pick what to surface.
 `weatherSummary(weather, thresholds, now): string` returns the **one** most-actionable sentence. First match wins; thresholds tunable per family in `chota.config.ts`.
 
 Order:
+
 1. **Rain soon** — within `rainSoonMins` (default 120) and prob ≥ `rainPctSoon` (default 50)
-   - `< 60 min`:  `"Rain in ~30min (peaks 84%)."`
-   - `≥ 60 min`:  `"Rain by 4pm (84%)."`
+   - `< 60 min`: `"Rain in ~30min (peaks 84%)."`
+   - `≥ 60 min`: `"Rain by 4pm (84%)."`
 2. **UV high** — current UV ≥ `uvHigh` (default 8) — Sydney sun is brutal for kids
    - `"UV 11 — sunscreen + hats."`
 3. **Cold day** — today's max < `coldC` (default 12)
@@ -34,6 +35,7 @@ Order:
    - `"Sunny, 14-22°C today."`
 
 **Sydney-tuned defaults:**
+
 ```ts
 { coldC: 12, hotC: 28, windyKmh: 30, uvHigh: 8, rainPctSoon: 50, rainSoonMins: 120 }
 ```
@@ -45,6 +47,7 @@ A Brisbane fork might bump `coldC` to 15 + `hotC` to 32. A Boston fork would bum
 ### Dashboard card (small, ~280px wide)
 
 Default:
+
 ```
 ┌─────────────────────────────────────┐
 │ WEATHER                             │
@@ -57,6 +60,7 @@ Default:
 ```
 
 With rain headline (priority 1):
+
 ```
 ┌─────────────────────────────────────┐
 │ WEATHER                             │
@@ -115,41 +119,42 @@ Two lines max. ASCII only. Headline is the second line.
 
 For the dashboard card and `/weather` page (not the receipt):
 
-| Condition | Tailwind palette | Reason |
-|---|---|---|
-| Clear / Sunny | amber-* | Warm |
-| Cloudy / Overcast | slate-* | Neutral |
-| Rain / Showers | sky-* / blue-* | Wet |
-| Storm | indigo-* | Severe |
-| Snow | (n/a Sydney) | — |
+| Condition         | Tailwind palette | Reason  |
+| ----------------- | ---------------- | ------- |
+| Clear / Sunny     | amber-*          | Warm    |
+| Cloudy / Overcast | slate-*          | Neutral |
+| Rain / Showers    | sky-* / blue-*   | Wet     |
+| Storm             | indigo-*         | Severe  |
+| Snow              | (n/a Sydney)     | —       |
 
 ## Data shape
 
 ```ts
 interface Weather {
-  tempC: number;
-  feelsLikeC: number;
-  condition: string;          // "Sunny", "Patchy rain near", etc.
-  humidityPct: number;
-  windKmh: number;
-  uvIndex: number;
-  // sunrise / sunset — Google's currentConditions.sunEvents has these; not surfaced
-  // on Weather yet. Add when /weather wants to dim past blocks against actual
-  // sunset rather than the (current) Sydney-time approximation.
-  hourly: ForecastHour[];     // up to 48
+	tempC: number;
+	feelsLikeC: number;
+	condition: string; // "Sunny", "Patchy rain near", etc.
+	humidityPct: number;
+	windKmh: number;
+	uvIndex: number;
+	// sunrise / sunset — Google's currentConditions.sunEvents has these; not surfaced
+	// on Weather yet. Add when /weather wants to dim past blocks against actual
+	// sunset rather than the (current) Sydney-time approximation.
+	hourly: ForecastHour[]; // up to 48
 }
 
 interface ForecastHour {
-  at: Date;
-  tempC: number;
-  condition: string;
-  rainPct: number;
-  rainMm: number;
-  windKmh: number;
+	at: Date;
+	tempC: number;
+	condition: string;
+	rainPct: number;
+	rainMm: number;
+	windKmh: number;
 }
 ```
 
 Pure helpers (all in `src/lib/server/tools/weather.ts`):
+
 - `findRainSoon(hourly, now, threshold) → RainSoon | null`
 - `groupByDayBlocks(hourly) → DayBlock[]`
 - `groupByDay(blocks) → DayForecast[]` — re-groups into per-day rows for the grid
