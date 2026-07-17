@@ -344,6 +344,18 @@ async function kidFixture(kid: Kid, now: Date): Promise<KidFixture | null> {
 }
 
 /**
+ * Drop both caches and re-fetch every configured kid's fixture — the
+ * `volleyball-refresh` job's entry point. The Friday prints then read a
+ * minutes-old draw; the 6h TTL alone could serve the evening sheet a draw
+ * cached that morning.
+ */
+export async function refreshFixtures(now: Date = new Date()): Promise<KidFixture[]> {
+	cache.clear();
+	standingsCache.clear();
+	return getKidFixtures(now);
+}
+
+/**
  * `getKidFixtures` narrowed to the given dates (the upcoming weekend's
  * `YYYY-MM-DD`s) — the weekend print's view: fixtures next weekend or later
  * don't belong on this Friday's sheet.
