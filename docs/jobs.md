@@ -51,6 +51,7 @@ src/lib/server/
     weekend-print.ts      # Fri 18:00: one whole-family weekend sheet (gated by KIOSK env)
     sentral-refresh.ts    # weekday mornings + 17:30: refresh Sentral .ics caches, one kid at a time
     schoolterms-refresh.ts # Mondays 04:00: refresh the NSW school-calendar cache
+    volleyball-refresh.ts # Fridays 06:30 + 17:30: warm the fixture cache before the prints
     sentral-login.ts      # Mondays 04:00: pre-emptive Sentral cookie refresh
     weather-refresh.ts    # warm weather cache
     calendar-refresh.ts   # warm Google Calendar cache
@@ -118,6 +119,7 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 | `weekend-print`       | `0 18 * * 5`          | scripted       | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`) |
 | `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted       | Refresh per-kid Sentral .ics caches (serialized)                   |
 | `schoolterms-refresh` | `0 4 * * 1`           | scripted       | Refresh the NSW school-calendar cache                              |
+| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted       | Warm the volleyball fixture cache before the Friday prints         |
 | `sentral-login`       | `0 4 * * 1`           | scripted       | Mondays — pre-emptive Sentral cookie refresh                       |
 | `weather-refresh`     | refresh cadence       | scripted       | Warm weather cache                                                 |
 | `calendar-refresh`    | refresh cadence       | scripted       | Warm Google Calendar cache                                         |

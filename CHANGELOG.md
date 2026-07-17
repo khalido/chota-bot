@@ -11,6 +11,11 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- `volleyball-refresh` job (Fridays 06:30 + 17:30) — force-refreshes the
+  fixture + standings caches right before the morning briefs and the
+  Friday-evening weekend sheet, so Sunday's game info prints from a
+  minutes-old draw.
+
 - `volleyball` agent tool — ask Chota (Telegram or `/admin/agent`) "what's on
   the volleyball this weekend" / "does anyone have duty". Marked authoritative
   over hand-typed calendar volleyball entries (tool description + a system-
