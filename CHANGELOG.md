@@ -11,6 +11,13 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- `beach` tool — parses the Randwick City Council lifeguard feed for the
+  configured beach (`home.beach.name`, Coogee) into a one-line surf report
+  (summary, water temp, waves, rips, status). Always included in the agent's
+  weather answer, and shown as a BEACH line on the Friday briefs + weekend
+  sheet (kids play beach volleyball Fri arvo + Sun morning).
+- Home location coordinates set to the real suburb (was a CBD placeholder) —
+  accurate weather.
 - `volleyball-refresh` job (Fridays 06:30 + 17:30) — force-refreshes the
   fixture + standings caches right before the morning briefs and the
   Friday-evening weekend sheet, so Sunday's game info prints from a

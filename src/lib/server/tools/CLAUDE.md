@@ -1,7 +1,7 @@
 # tools/
 
 One file per external data source — `weather`, `bus`, `calendar`, `sentral`,
-`ticktick`, `tmdb`, `apod`, `bootprint`, `schoolterms`, `volleyball`. Each owns its fetch, its typed return
+`ticktick`, `tmdb`, `apod`, `bootprint`, `schoolterms`, `volleyball`, `beach`. Each owns its fetch, its typed return
 shape, and (where useful) a module-level cache warmed by a matching
 `<tool>-refresh` job in `jobs/` — e.g. `bus.ts` holds a `Map` cache that
 `bus-refresh` repopulates every 5 min and `getBus()` reads.
