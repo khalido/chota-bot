@@ -15,6 +15,7 @@ import type { BriefData } from './brief';
 import type { SchedulePeriod } from '$lib/server/tools/sentral';
 import { getConfig } from '$lib/server/config';
 import { parseEventPeople } from '$lib/server/people';
+import { beachSummary } from '$lib/server/tools/beach';
 import { sydneyDayOfWeek, sydneyTimeRange } from '$lib/time';
 import { scheduleSection, schoolBreakSection } from './school-section';
 
@@ -138,6 +139,14 @@ function weatherSection(d: BriefData): PrintSectionBody | null {
 		icon: d.weatherIcon ?? 'cloud-sun',
 		lines: d.weatherLines
 	};
+}
+
+/** Local beach lifeguard conditions — one line, shown on the Fri/weekend
+ *  briefs (beach volleyball Fri arvo + Sun morning). null off-window or when
+ *  the feed's down. */
+function beachSection(d: BriefData): PrintSectionBody | null {
+	if (!d.beach) return null;
+	return { title: 'BEACH', kind: 'lines', lines: [beachSummary(d.beach)] };
 }
 
 /** That person's own todos for the day — overdue first, then today, then tomorrow. */
@@ -412,6 +421,7 @@ export function recipientToSections(
 	if (who === FAMILY_RECIPIENT) {
 		return numberSections([
 			weatherSection(d),
+			beachSection(d),
 			familyTodaySection(d),
 			volleyballSection(d),
 			choresSection(d),
@@ -425,6 +435,7 @@ export function recipientToSections(
 	const isParent = !d.kids.some((k) => k.toLowerCase() === who.toLowerCase());
 	return numberSections([
 		weatherSection(d),
+		beachSection(d),
 		scheduleSection(schedule, busLine, d.schoolWeek, d.schoolUpcoming) ?? schoolBreakSection(d),
 		isParent ? todaySection(d, who) : todayEventsSection(d),
 		isParent ? null : myTodosSection(d, who),

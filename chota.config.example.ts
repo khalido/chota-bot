@@ -64,7 +64,15 @@ export default defineChota({
 			Sun: { dish: 'Kid2', dog: 'Kid3' }
 		}
 	},
-	home: { suburb: 'Sydney', lat: -33.86, lon: 151.18 },
+	home: {
+		suburb: 'Sydney',
+		lat: -33.86,
+		lon: 151.18,
+		// Local surf report from the Randwick City Council lifeguard feed.
+		// `name` must match a beach in that feed ("Coogee", "Maroubra",
+		// "Clovelly"). Omit to disable. Randwick-council beaches only for now.
+		beach: { name: 'Maroubra' } // placeholder — set your own in chota.config.ts
+	},
 	school: { region: 'NSW', division: 'E' }, // division: 'E' (Eastern) or 'W' (Western) NSW
 	// Google Calendar to read for the family schedule. List your calendar IDs
 	// from /admin (after signing in with Google), paste the right one here.

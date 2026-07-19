@@ -103,6 +103,11 @@ export interface ChotaConfig {
 		lat?: number;
 		lon?: number;
 		weather?: Partial<WeatherThresholds>;
+		/** Local beach for the lifeguard surf report (Randwick City Council
+		 *  feed). `name` must match a beach title in the feed — "Coogee",
+		 *  "Maroubra", "Clovelly". Omit to disable the beach line. Currently
+		 *  Randwick-council beaches only (that's the one feed we parse). */
+		beach?: { name: string };
 	};
 	/** School region + NSW division. `division` picks which School Development
 	 *  Days apply — `'E'` (Eastern: Sydney, coast, Hunter, Illawarra) or `'W'`

@@ -58,6 +58,7 @@ src/
     chores.ts            # daily rotation lookup
     tools/               # weather, bus, calendar, sentral, ticktick, tmdb, apod, bootprint,
                          # schoolterms (NSW term dates), volleyball (Volleyball NSW fixtures),
+                         # beach (Randwick lifeguard surf report),
                          # quotes (kind-filtered random), clock-quotes (literary HH:MM)
     print/               # brief + weather-block + sections + composers + render + snapshot + printer
     jobs/                # croner-scheduled jobs (auto-discovered; one file = one job)
