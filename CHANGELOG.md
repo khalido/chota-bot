@@ -11,6 +11,17 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Dashboard: auto-refresh + idle→clock screensaver moved into the layout**, so
+  every kiosk page (`/`, `/weather`, `/lists`, `/morning`) stays fresh and falls
+  back to the ambient clock when idle — previously only the home page did, so a
+  kiosk parked on `/weather` or `/lists` froze and never screensavered. `/morning`
+  added to the nav (was URL-only), and the nav scrolls on narrow phones.
+- New favicon (retired the stock Svelte logo — a little thermal-receipt mark).
+- **`/api/health` now reports the running build commit** (from the build-time
+  `buildCommit`, no more git shell-out) plus a **DB liveness probe**
+  (`SELECT 1`). `curl pop-os/api/health?format=json | jq .version` after a
+  deploy is the proof the box rebuilt + restarted on your commit; `status` goes
+  `down` if the sqlite file is unreachable.
 - `beach` tool — parses the Randwick City Council lifeguard feed for the
   configured beach (`home.beach.name`, Coogee) into a surf report (summary,
   water temp, wave height, rips, bluebottles, status). Surfaced through
@@ -49,6 +60,13 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Changed
 
+- **Deploy preflight now runs two explicit Tailscale checks** with clear, distinct
+  messages: (1) is this Mac on the tailnet (`tailscale status`) → "run tailscale
+  up"; (2) is Tailscale SSH still authenticated (the faster-expiring check) →
+  opens the approval page and waits a bounded 120s, then continues automatically
+  or tells you to re-run. Replaces the single opaque probe that stalled this week.
+- Packages: in-range bumps — SvelteKit 2.70, Svelte 5.56.7, Tailwind 4.3.3,
+  `ai` 7.0.32, grammY 1.45.1, lucide 1.25.0, eslint/typescript-eslint patches.
 - grammY 1.44 → 1.45 (Bot API 10.2; no code changes needed) and narrowed long
   polling to `allowed_updates: ['message', 'callback_query']`. Researched the
   1.45/10.2 surface — group-chat patterns (mention gate, ephemeral replies,
@@ -66,6 +84,10 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Fixed
 
+- `/weather` no longer crashes the fullscreen kiosk onto SvelteKit's unstyled
+  default error page when the weather cache is cold — it degrades to a styled
+  "Weather unavailable" state. Added a dark-aware `+error.svelte` so any loader
+  throw (or a 404) shows a proper Chota page, not the bare fallback.
 - Pre-ship review pass (ko-review + multi-agent code review) fixes: weekend
   family sheet no longer falls back to Friday's events labelled TODAY when
   the weekend calendar is empty; the auth guard is deny-by-default (all

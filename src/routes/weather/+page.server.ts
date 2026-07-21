@@ -1,4 +1,3 @@
-import { error } from '@sveltejs/kit';
 import {
 	getWeather,
 	groupByDay,
@@ -14,12 +13,16 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const now = new Date();
+	const suburb = getConfig().home?.suburb ?? 'Home';
 	const weather = await getWeather().catch((err) => {
 		logErr('weather', 'lookup failed:', err);
 		return null;
 	});
+	// Degrade, don't crash: a cold/failed weather cache used to `throw error(503)`,
+	// which drops the fullscreen kiosk onto the unstyled default error page. The
+	// page renders an "unavailable" state from `weather: null` instead.
 	if (!weather) {
-		throw error(503, 'Weather unavailable');
+		return { weather: null, days: [], headline: null, tomorrow: null, suburb };
 	}
 
 	const blocks = groupByDayBlocks(weather.hourly);
@@ -30,13 +33,6 @@ export const load: PageServerLoad = async () => {
 	const thresholds = getConfig().home?.weather;
 	const headline = weatherSummary(weather, thresholds, now);
 	const tomorrow = tomorrowSummary(weather, thresholds, now);
-	const home = getConfig().home;
 
-	return {
-		weather,
-		days,
-		headline,
-		tomorrow,
-		suburb: home?.suburb ?? 'Home'
-	};
+	return { weather, days, headline, tomorrow, suburb };
 };

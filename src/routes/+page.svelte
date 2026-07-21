@@ -8,38 +8,12 @@
 	import FunQuote from '$lib/components/FunQuote.svelte';
 	import PrintMorning from '$lib/components/PrintMorning.svelte';
 	import { resolve } from '$app/paths';
-	import { invalidateAll, goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	// Idle kiosk: with no interaction for this long, fall back to the ambient
-	// clock view. Tapping the clock returns here (/clock is a link back to /).
-	const IDLE_TO_CLOCK_MS = 3 * 60_000;
-
-	onMount(() => {
-		// Re-run +page.server.ts.load() every minute. Tools return cached data
-		// (warmed by the *-refresh jobs), so this is cheap — keeps the dashboard
-		// fresh without per-card polling.
-		const refresh = setInterval(() => invalidateAll(), 60_000);
-
-		// Reset an idle countdown on any interaction; on timeout, show the clock.
-		let idle: ReturnType<typeof setTimeout>;
-		const resetIdle = () => {
-			clearTimeout(idle);
-			idle = setTimeout(() => goto(resolve('/clock')), IDLE_TO_CLOCK_MS);
-		};
-		const activity = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
-		for (const evt of activity) window.addEventListener(evt, resetIdle, { passive: true });
-		resetIdle();
-
-		return () => {
-			clearInterval(refresh);
-			clearTimeout(idle);
-			for (const evt of activity) window.removeEventListener(evt, resetIdle);
-		};
-	});
+	// Auto-refresh (every 60s) and idle→clock screensaver live in the shared
+	// layout now, so every kiosk page gets them — not just this dashboard.
 </script>
 
 <svelte:head><title>Chota</title></svelte:head>
