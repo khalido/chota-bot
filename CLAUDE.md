@@ -18,7 +18,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 
 ## First-time setup
 
-1. `cp chota.config.example.ts chota.config.ts` — fill in your family details (real names live here only; never in tests/docs/code)
+1. `cp chota.config.example.ts chota.config.ts` — fill in your family details incl. `adminEmails` (the Google account[s] allowed into `/admin`). Real names live here only; never in tests/docs/code
 2. `cp .env.example .env` — fill API keys (Transport NSW, Google, TickTick, etc.)
 3. `npm install`
 4. (Print pipeline only) `npm i -g agent-browser && agent-browser install` — downloads the bundled Chromium used to screenshot `/print/<who>` into the PNG that goes to the thermal printer
@@ -28,7 +28,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 
 - **SvelteKit** TS, Tailwind, adapter-node — UI + API in one process
 - **Drizzle + better-sqlite3** at `data/home.db`
-- **Better-auth** Google OAuth — powers the calendar tool AND the admin gate: `hooks.server.ts` requires a session whose email is in `chota.config.ts > adminEmails` for `/admin` + the gated APIs (`/api/agent`, `/api/admin`, `/api/sentral`, `/api/ticktick`); sign-in lives at `/login`
+- **Better-auth** Google OAuth — powers the calendar tool AND the admin gate: `hooks.server.ts` is **deny-by-default** — `/admin` and every `/api/*` need a session whose email is in `chota.config.ts > adminEmails`, except the public `/api/auth`, `/api/health`, `/api/print`. New API routes are gated unless allow-listed. Sign-in at `/login`
 - **grammY (Telegram)** — long-polling bot at `src/lib/server/telegram/`, chat-ID allowlisted, streams agent replies as rich messages — see [`docs/telegram.md`](docs/telegram.md)
 - **Vitest** unit tests + inline-snapshot tests for print formats
 - **croner** auto-discovered jobs (one file per job in `src/lib/server/jobs/`) — see [`docs/jobs.md`](docs/jobs.md)
@@ -45,11 +45,12 @@ chota.config.ts          # per-family config (gitignored). Real names ONLY here.
 chota.config.example.ts  # committed reference shape — uses placeholder names
 
 src/
-  routes/                # pages (/, /clock, /weather, /lists, /morning, /print, /admin)
+  routes/                # pages (/, /clock, /weather, /lists, /morning, /print, /admin, /login)
+                         # /api: health (deploy check), print, agent, admin, sentral, ticktick
                          # /admin has sub-routes: /admin/sentral (per-kid timetable
                          # cache + manual refresh), /admin/logs (live tail of
                          # data/logs/chota.log), /admin/jobs, /admin/print, /admin/agent
-  lib/components/        # Svelte UI (Clock, Weather, Calendar, Bus, Lists, Chores, PrintMorning)
+  lib/components/        # Svelte UI (Clock, Weather, Calendar, Bus, Lists, Chores, FunQuote, PrintMorning)
   lib/components/print/  # BriefSheet — the screenshot-target sheet for the printed briefs
   lib/components/ui/     # shadcn-svelte primitives (Card, Tabs, Dialog, ...)
   lib/server/
@@ -60,11 +61,14 @@ src/
                          # schoolterms (NSW term dates), volleyball (Volleyball NSW fixtures),
                          # beach (Randwick lifeguard surf report),
                          # quotes (kind-filtered random), clock-quotes (literary HH:MM)
-    print/               # brief + weather-block + sections + composers + render + snapshot + printer
+    print/               # gather (brief) → model (sections) → renderers (BriefSheet/canvas/text) → snapshot + printer
     jobs/                # croner-scheduled jobs (auto-discovered; one file = one job)
     agent/               # ToolLoopAgent + prompts.ts + per-tool agent wrappers
+    telegram/            # grammY long-polling bot + rich-message reply streamer
     db/                  # Drizzle schema + client
     auth.ts              # better-auth config
+    browser-lock.ts      # process-wide agent-browser mutex (print screenshots + Sentral login)
+    version.ts           # build commit + is-the-box-behind-origin check
     log.ts               # LogTape structured logging
 
 deploy/                  # production deploy: deploy.sh + chota.service
@@ -83,7 +87,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - **New job:** drop a TS file in `src/lib/server/jobs/`, call `defineJob(name, cron, fn)` at module top. Auto-discovered — see [`src/lib/server/jobs/CLAUDE.md`](src/lib/server/jobs/CLAUDE.md).
 - **Per-family data:** add a typed field to `ChotaConfig` in `src/lib/config.ts`, fill in both `chota.config.example.ts` and your real `chota.config.ts`. No JSON files, no zod — TypeScript catches shape mismatches at compile time.
 - **AI calls** through AI Gateway (one key) except voice transcription (Groq direct).
-- **Auth** — Google OAuth (better-auth). `/admin` + the gated APIs require a session with an email in `chota.config.ts > adminEmails` (fail-closed guard in `hooks.server.ts`; sign-in at `/login`). The kiosk dashboard pages, `/print/<who>` (screenshot target), `/api/print` (kiosk print button) and `/api/health` stay open on the LAN by design.
+- **Auth** — Google OAuth (better-auth). Deny-by-default guard in `hooks.server.ts`: `/admin` and every `/api/*` require a session whose email is in `chota.config.ts > adminEmails` (fail-closed; sign-in at `/login`), except the deliberately-public `/api/auth`, `/api/health`, `/api/print` plus the kiosk dashboard + `/print/<who>` pages (LAN-open by design). A new API route is gated unless you add it to the public allowlist.
 
 ## Where to read more
 
@@ -93,21 +97,19 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/jobs.md`](docs/jobs.md) — job system, cron patterns, hardening.
 - [`docs/printers.md`](docs/printers.md) — thermal printer primer + per-printer USB/driver notes.
 - [`docs/tools.md`](docs/tools.md) — tool roadmap (built + planned + API keys checklist).
-- [`docs/agent.md`](docs/agent.md) — agent integration spec (pre-implementation).
+- [`docs/weather.md`](docs/weather.md) — weather headline rules + the folded-in beach/surf report.
+- [`docs/agent.md`](docs/agent.md) — how the ToolLoopAgent is wired (shipped; live at `/admin/agent` + Telegram).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot: chat + streaming + on-demand prints shipped (June 2026); voice still ahead.
 - [`CHANGELOG.md`](CHANGELOG.md) — keepachangelog-style log of shipped changes; add an entry when you ship something notable.
 - [`docs/logging.md`](docs/logging.md) — LogTape structured logging: design + what shipped.
 
----
+## Gotchas (learned the hard way)
 
-## Project Configuration (sv create)
+- **Deploy = `npm run deploy`** (SSH from the Mac over Tailscale). It runs two preflight checks — is this Mac on the tailnet, then the faster-expiring Tailscale SSH re-auth — and tells you what to approve. After it lands, `curl pop-os/api/health` (or `?format=json | jq .version`) shows the running commit — the proof the box rebuilt on your push. See [`docs/deploy.md`](docs/deploy.md).
+- **`@better-auth/core` is pinned in `package.json > overrides`** and must move in lockstep with `better-auth`, or the production build breaks with a missing-export error the typecheck can't see.
+- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
 
-- **Language:** TypeScript · **Package Manager:** npm
-- **Add-ons:** prettier, eslint, tailwindcss, mcp (Svelte), vitest (unit), drizzle (sqlite + better-sqlite3), better-auth (scaffolded with the password preset; Google OAuth wired on top — see Auth note above)
-- **UI library:** shadcn-svelte (Nova style, neutral base) layered on top of Tailwind. Components are vendored into `src/lib/components/ui/` via `npx shadcn-svelte@latest add <name>`.
+## UI + tooling
 
----
-
-## Svelte MCP server
-
-Use the official Svelte MCP server for Svelte 5 / SvelteKit work — and always run `svelte-autofixer` on Svelte files you write, until clean.
+- **shadcn-svelte** (Nova style, neutral) over Tailwind — add primitives with `npx shadcn-svelte@latest add <name>`, vendored into `src/lib/components/ui/`.
+- Use the official **Svelte MCP** server for Svelte 5 / SvelteKit work, and run `svelte-autofixer` on Svelte files you write until clean.

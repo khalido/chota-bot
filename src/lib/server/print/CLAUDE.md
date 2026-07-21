@@ -21,6 +21,7 @@ entry point routes and jobs import. `weather-block.ts` is weather _formatting_
 
 Most recipients are a single family member from `chota.config.ts` — a kid's
 brief gains a SCHOOL section, everyone else's is just the household sections.
-The weekend swaps this out: Sat + Sun print one whole-household `FAMILY_RECIPIENT`
-sheet (slug `'family'`) instead of one-per-person, with every event + every open
-todo on a single page and no SCHOOL.
+The weekend swaps this out: a single Friday 18:00 job prints one whole-household
+`FAMILY_RECIPIENT` sheet (slug `'family'`) for the weekend instead of the
+per-person weekday briefs — every event + every open todo on one page, no
+SCHOOL, plus the volleyball fixtures.

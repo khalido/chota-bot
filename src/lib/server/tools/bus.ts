@@ -39,7 +39,14 @@ export interface GetBusOptions {
 // Cache by stop+routes (sorted). Stores up to FETCH_LIMIT departures; getBus
 // slices to caller's `limit`. Filter by `dueMins >= 0` happens at fetch time
 // — we re-filter on read to drop departures that have since passed.
+//
+// `cacheAt` (last successful refresh, any key — the bus-refresh job writes them
+// all together every 5 min) guards staleness: a cache older than an hour is
+// useless for "next bus", so a read past then re-fetches rather than serving
+// stale times. Healthy operation stays far inside this, so it never adds a call.
+const STALE_MS = 60 * 60_000; // 1h
 const cache = new Map<string, BusDeparture[]>();
+let cacheAt = 0;
 
 function cacheKey(stop: string, routes?: string[]): string {
 	const r = routes && routes.length > 0 ? [...routes].sort().join(',') : '';
@@ -59,7 +66,7 @@ export async function getBus({
 	if (at) return (await refreshBus({ stop, routes, at })).slice(0, limit);
 	const key = cacheKey(stop, routes);
 	const cached = cache.get(key);
-	if (cached) return reFilter(cached, limit);
+	if (cached && Date.now() - cacheAt < STALE_MS) return reFilter(cached, limit);
 	const fresh = await refreshBus({ stop, routes });
 	return fresh.slice(0, limit);
 }
@@ -118,7 +125,10 @@ export async function refreshBus({
 		.slice(0, FETCH_LIMIT);
 
 	// Dated (scheduled) queries are one-offs — never let them poison the live cache.
-	if (!at) cache.set(cacheKey(stop, routes), result);
+	if (!at) {
+		cache.set(cacheKey(stop, routes), result);
+		cacheAt = Date.now();
+	}
 	log(
 		'bus',
 		`${result.length} departures for stop ${stop}${wanted ? ` filtered to [${[...wanted].join(',')}]` : ''}${at ? ` (scheduled @ ${sydneyHHMM(at)})` : ''}`

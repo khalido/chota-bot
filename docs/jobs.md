@@ -112,20 +112,20 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 
 (one file per job in `src/lib/server/jobs/`)
 
-| Name                  | Pattern               | Kind           | Purpose                                                            |
-| --------------------- | --------------------- | -------------- | ------------------------------------------------------------------ |
-| `heartbeat`           | `*/5 * * * *`         | scripted       | Debug log                                                          |
-| `morning-print`       | `45 6 * * 1-5`        | scripted       | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                 |
-| `weekend-print`       | `0 18 * * 5`          | scripted       | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`) |
-| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted       | Refresh per-kid Sentral .ics caches (serialized)                   |
-| `schoolterms-refresh` | `0 4 * * 1`           | scripted       | Refresh the NSW school-calendar cache                              |
-| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted       | Warm the volleyball fixture cache before the Friday prints         |
-| `sentral-login`       | `0 4 * * 1`           | scripted       | Mondays — pre-emptive Sentral cookie refresh                       |
-| `weather-refresh`     | `*/30 * * * *`        | scripted       | Warm weather cache + the local beach lifeguard report              |
-| `calendar-refresh`    | refresh cadence       | scripted       | Warm Google Calendar cache                                         |
-| `bus-refresh`         | refresh cadence       | scripted       | Warm bus departures cache                                          |
-| `ticktick-refresh`    | refresh cadence       | scripted       | Warm TickTick lists cache                                          |
-| `dreaming`            | `0 3 * * *`           | agent (Sonnet) | Stub — will consolidate memory once agent lands                    |
+| Name                  | Pattern               | Kind     | Purpose                                                            |
+| --------------------- | --------------------- | -------- | ------------------------------------------------------------------ |
+| `heartbeat`           | `*/5 * * * *`         | scripted | Debug log                                                          |
+| `morning-print`       | `45 6 * * 1-5`        | scripted | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                 |
+| `weekend-print`       | `0 18 * * 5`          | scripted | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`) |
+| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches (serialized)                   |
+| `schoolterms-refresh` | `0 4 * * 1`           | scripted | Refresh the NSW school-calendar cache                              |
+| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted | Warm the volleyball fixture cache before the Friday prints         |
+| `sentral-login`       | `0 4 * * 1`           | scripted | Mondays — pre-emptive Sentral cookie refresh                       |
+| `weather-refresh`     | `*/30 * * * *`        | scripted | Warm weather cache + the local beach lifeguard report              |
+| `calendar-refresh`    | refresh cadence       | scripted | Warm Google Calendar cache                                         |
+| `bus-refresh`         | refresh cadence       | scripted | Warm bus departures cache                                          |
+| `ticktick-refresh`    | refresh cadence       | scripted | Warm TickTick lists cache                                          |
+| `dreaming`            | `0 3 * * *`           | stub     | No-op placeholder — will consolidate memory once agent-jobs land   |
 
 Planned:
 

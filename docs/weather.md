@@ -160,6 +160,33 @@ Pure helpers (all in `src/lib/server/tools/weather.ts`):
 - `groupByDay(blocks) → DayForecast[]` — re-groups into per-day rows for the grid
 - `weatherSummary(weather, thresholds, now) → string`
 
+## Sea — the beach report (folded into weather)
+
+Weather is **sky + sea**. `tools/beach.ts` parses the [Randwick City Council
+lifeguard RSS feed](https://www.randwick.nsw.gov.au/integration/feeds/lifeguard-reports)
+for the configured beach (`chota.config.ts > home.beach.name`, e.g. Coogee) into
+a `BeachReport` (summary, water temp, wave height, rips, bluebottles, status,
+`updated`). It's surfaced **through weather**, not as its own subsystem:
+
+- **Print:** `beachSummary()` (sibling to `weatherSummary()`) renders one line —
+  `Coogee: rough conditions, 18C water, 2m waves, open (rips: be cautious)` — into
+  the WEATHER section of **every morning** brief (thermal-safe: bare "C", no ° glyph).
+- **Agent:** the `weather` agent tool returns the **full** `BeachReport`, so it can
+  answer "how cold's the water?" / "any bluebottles?" — not just the one-liner.
+- **Refresh:** the `weather-refresh` job (every 30 min) warms the beach cache on the
+  same tick — one "weather" thing to refresh. `beach.ts` keeps its own 30-min TTL,
+  so the RSS is fetched at most once per run.
+
+Why it lives here and not in its own file/section: the fetch mechanics differ
+(Google JSON API vs council RSS + cheerio), so `beach.ts` stays a separate source
+module — but it's _composed at the weather surface_ everywhere a caller touches it.
+Randwick-council beaches only for now (that's the one feed we parse).
+
+Both caches (weather + bus) now carry a **staleness guard**: if the refresh job has
+been failing for hours (weather >3h, bus >1h), a read re-fetches rather than serving
+an ancient forecast, and degrades to "unavailable" if that fetch also fails. Pure
+safety net — the refresh jobs keep caches far inside the window in normal operation.
+
 ## What's deferred (open for later)
 
 - **`forecast/days` endpoint** for day-3+ outlook (we use 48h hourly today, which gives today + tomorrow only)
