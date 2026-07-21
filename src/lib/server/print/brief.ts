@@ -103,9 +103,10 @@ export interface BriefData {
 	/** Each volleyball kid's weekend game + duty roster — populated alongside
 	 *  `weekendEvents` (Fri & Sat briefs), empty/undefined otherwise. */
 	volleyball?: KidFixture[];
-	/** Local beach lifeguard report — populated on the same Fri/Sat window as
-	 *  `weekendEvents` (the kids play beach volleyball Fri arvo + Sun morning).
-	 *  null when the feed's down; undefined off-window. */
+	/** Local beach lifeguard report — part of every morning brief's WEATHER
+	 *  section (sky + sea). null when the feed's down; undefined on the
+	 *  evening/tomorrow brief (a current-conditions report doesn't fit a
+	 *  next-day forecast). */
 	beach?: BeachReport | null;
 	family: FamilyMember[];
 	/** Kid names (config order) — lets the renderer tell parents from kids. */
@@ -164,11 +165,19 @@ export async function gatherBrief({
 	// division. The two fetches are independent, so they run concurrently: on
 	// a cold Friday 06:45 cache a slow volleyballnsw page would otherwise add
 	// its whole wait on top of the calendar's.
-	// The beach lifeguard report rides the same window (kids play beach
-	// volleyball Fri arvo + Sun morning), and is independent too — all three
-	// fetch concurrently.
+	// Beach lifeguard report — part of every morning brief's WEATHER section
+	// (sky + sea), not the evening/tomorrow one. Kicked off up-front so it
+	// overlaps the calendar/volleyball fetches; the `.catch` means it never
+	// rejects before we await it.
+	const beachP = tomorrow
+		? Promise.resolve(undefined)
+		: getBeachReport(ref).catch((err) => {
+				logErr('brief', 'beach report lookup failed:', err);
+				return null;
+			});
+
 	const weekendWindow = !tomorrow && (refDow === 'Fri' || refDow === 'Sat');
-	const [weekendEvents, volleyball, beach] = weekendWindow
+	const [weekendEvents, volleyball] = weekendWindow
 		? await Promise.all([
 				getCalendar({ range: 'weekend' }).catch((err) => {
 					logErr('brief', 'weekend calendar lookup failed:', err);
@@ -177,13 +186,9 @@ export async function gatherBrief({
 				getWeekendVolleyball(weekendDates(ref), ref).catch((err) => {
 					logErr('brief', 'volleyball lookup failed:', err);
 					return [] as KidFixture[];
-				}),
-				getBeachReport(ref).catch((err) => {
-					logErr('brief', 'beach report lookup failed:', err);
-					return null;
 				})
 			])
-		: [undefined, undefined, undefined];
+		: [undefined, undefined];
 	const schoolBus = await collectSchoolBus(ref, tomorrow);
 	const schoolWeek = await getSchoolWeek(ref).catch((err) => {
 		logErr('brief', 'school week lookup failed:', err);
@@ -241,6 +246,7 @@ export async function gatherBrief({
 	});
 
 	const wx = weather ? weatherBlock(weather, day, now) : { lines: null, icon: null };
+	const beach = await beachP;
 
 	return {
 		now,

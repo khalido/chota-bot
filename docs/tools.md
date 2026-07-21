@@ -20,7 +20,7 @@ Tools = typed TS functions in `src/lib/server/tools/<domain>.ts`. One file per d
 | `chores`      | Daily rotation lookup (lib helper, not a REST tool)                                                    | `chores.ts`            | `chota.config.ts > chores.rotation`                                                |
 | `schoolterms` | NSW public-school calendar — term/week numbers, dev days, holiday blocks (DoE page + ICS fallback)     | `tools/schoolterms.ts` | none; division in `chota.config.ts > school`                                       |
 | `volleyball`  | Volleyball NSW fixtures — each kid's next game + duty roster from the division draw pages              | `tools/volleyball.ts`  | none; per-kid `volleyball` block in `chota.config.ts`                              |
-| `beach`       | Randwick lifeguard surf report — summary, water temp, waves, rips, status for the configured beach     | `tools/beach.ts`       | none; `home.beach.name` in `chota.config.ts` (Randwick-council beaches)            |
+| `beach`       | Randwick lifeguard surf report (surfaced via weather: WEATHER print line + full detail to the agent)   | `tools/beach.ts`       | none; `home.beach.name` in `chota.config.ts` (Randwick-council beaches)            |
 
 ### Planned (Phase 2)
 

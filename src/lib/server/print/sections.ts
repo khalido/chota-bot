@@ -131,22 +131,18 @@ function taskRank(when: 'today' | 'tomorrow' | 'overdue'): number {
 
 // ── per-section builders ────────────────────────────────────────────────────
 
+/** WEATHER = sky + sea: the forecast lines, then (every morning) the local
+ *  beach's lifeguard one-liner. Section drops only if both are missing. */
 function weatherSection(d: BriefData): PrintSectionBody | null {
-	if (!d.weatherLines) return null;
+	const lines = [...(d.weatherLines ?? [])];
+	if (d.beach) lines.push(beachSummary(d.beach));
+	if (lines.length === 0) return null;
 	return {
 		title: 'WEATHER',
 		kind: 'weather',
 		icon: d.weatherIcon ?? 'cloud-sun',
-		lines: d.weatherLines
+		lines
 	};
-}
-
-/** Local beach lifeguard conditions — one line, shown on the Fri/weekend
- *  briefs (beach volleyball Fri arvo + Sun morning). null off-window or when
- *  the feed's down. */
-function beachSection(d: BriefData): PrintSectionBody | null {
-	if (!d.beach) return null;
-	return { title: 'BEACH', kind: 'lines', lines: [beachSummary(d.beach)] };
 }
 
 /** That person's own todos for the day — overdue first, then today, then tomorrow. */
@@ -421,7 +417,6 @@ export function recipientToSections(
 	if (who === FAMILY_RECIPIENT) {
 		return numberSections([
 			weatherSection(d),
-			beachSection(d),
 			familyTodaySection(d),
 			volleyballSection(d),
 			choresSection(d),
@@ -435,7 +430,6 @@ export function recipientToSections(
 	const isParent = !d.kids.some((k) => k.toLowerCase() === who.toLowerCase());
 	return numberSections([
 		weatherSection(d),
-		beachSection(d),
 		scheduleSection(schedule, busLine, d.schoolWeek, d.schoolUpcoming) ?? schoolBreakSection(d),
 		isParent ? todaySection(d, who) : todayEventsSection(d),
 		isParent ? null : myTodosSection(d, who),

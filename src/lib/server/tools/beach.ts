@@ -9,10 +9,11 @@
  * Description. We parse the feed with cheerio (xml mode) and each description
  * with a second cheerio pass over its `<p><strong>Label:</strong> value</p>`.
  *
- * The kids play beach volleyball Fri arvo + Sun morning, so a one-line
- * conditions summary rides the Friday briefs + weekend sheet, and always the
- * agent's weather answer. `beachSummary()` is the sentence helper (sibling to
- * `weatherSummary()` in weather.ts); the parsed `BeachReport` is the pure data.
+ * Surfaced through weather (sky + sea), not as its own thing: a one-line
+ * `beachSummary()` sits in the WEATHER section of every morning print, the
+ * agent's weather tool returns the full `BeachReport`, and `weather-refresh`
+ * warms this cache on the same tick. `beachSummary()` is the sentence helper
+ * (sibling to `weatherSummary()` in weather.ts); `BeachReport` is the pure data.
  */
 import * as cheerio from 'cheerio';
 import { getConfig } from '$lib/server/config';
