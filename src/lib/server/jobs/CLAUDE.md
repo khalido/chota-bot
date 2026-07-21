@@ -7,12 +7,12 @@ Each `.ts` file in here is one scheduled job. Files self-register via `defineJob
 Drop a TS file. Three lines + import + a top comment:
 
 ```ts
-// One-way sync family TickTick lists to the local cache every 5 minutes.
+// Warm the widget cache every 10 minutes (illustrative — pick your own name).
 import { defineJob } from '$lib/server/scheduler';
 
-defineJob('ticktick-refresh', '*/5 * * * *', async () => {
+defineJob('widget-refresh', '*/10 * * * *', async () => {
 	invalidateCache();
-	await getFamilyLists();
+	await getWidgets();
 });
 ```
 

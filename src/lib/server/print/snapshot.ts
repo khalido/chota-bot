@@ -30,7 +30,7 @@ import { log } from '$lib/server/log';
 
 const exec = promisify(execFile);
 const WIDTH = 576; // MUNBYN 80mm print head @ 203dpi
-const CMD_TIMEOUT_MS = 30_000;
+const CMD_TIMEOUT_MS = 35_000;
 
 function baseUrl(): string {
 	return (env.ORIGIN || `http://localhost:${env.PORT || 8000}`).replace(/\/$/, '');

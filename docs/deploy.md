@@ -1,8 +1,12 @@
 # Deploy
 
-The kiosk box is a Surface Pro 5 running Linux at the lounge wall. It hosts the SvelteKit app behind systemd, with the MUNBYN ITPP098P plugged into USB. Nothing fancy — `git pull`, build, restart.
+The kiosk box (currently a ThinkPad X230 running Pop!_OS, reached as `pop-os` over Tailscale) sits at the lounge wall. It hosts the SvelteKit app behind systemd, with the MUNBYN ITPP098P plugged into USB. Nothing fancy — `git pull`, build, restart.
 
-**No CI, no auto-deploy.** Updates are manual SSH-from-Mac. The friction of typing the command is the deploy gate, and we don't want code shipping while the printer is mid-run at 06:45.
+**No CI, no auto-deploy.** Updates are manual SSH-from-Mac (`npm run deploy`). The friction of typing the command is the deploy gate, and we don't want code shipping while the printer is mid-run at 06:45. `push.sh` runs two Tailscale preflight checks first (device-on-tailnet, then the faster-expiring SSH re-auth) and tells you what to approve; after it lands, `curl pop-os/api/health` shows the running commit — the proof the box rebuilt on your push.
+
+## Admin auth gate
+
+`/admin` and every `/api/*` (except the public `/api/auth`, `/api/health`, `/api/print`) are **deny-by-default** — they need a signed-in Google account whose email is in `chota.config.ts > adminEmails` (the `hooks.server.ts` guard; sign-in at `/login`). Self-serve email/password sign-up is off (`disableSignUp`). On a fresh box, if `adminEmails` is empty NOBODY can reach `/admin` — preflight warns about this at boot. The kiosk dashboard pages and `/print/<who>` stay open on the LAN by design.
 
 ## Folder layout (kiosk box)
 

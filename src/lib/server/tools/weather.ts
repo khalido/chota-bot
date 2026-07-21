@@ -46,13 +46,19 @@ export interface GetWeatherOptions {
 	hours?: number;
 }
 
-// Module-level cache. Populated by refreshWeather() (job) or by getWeather()
-// on cold start. Stays warm forever; only refreshWeather replaces it.
+// Module-level cache, warmed every 30 min by the weather-refresh job (or by
+// getWeather on cold start). `cachedAt` guards staleness: if the refresh job
+// has been failing for hours, a read re-fetches instead of serving an ancient
+// forecast — and if that fetch also fails it throws, so the caller degrades to
+// "unavailable". A safety net only: the 30-min job keeps the cache far inside
+// this window, so healthy operation never triggers an extra fetch.
+const STALE_MS = 3 * 60 * 60_000; // 3h
 let cache: Weather | null = null;
+let cachedAt = 0;
 
-/** Read latest weather. Returns cache if hot; delegates to refreshWeather on cold. */
+/** Read latest weather. Returns the cache while fresh; re-fetches when cold or stale. */
 export async function getWeather(opts: GetWeatherOptions = {}): Promise<Weather> {
-	if (cache && !hasOverrides(opts)) return cache;
+	if (cache && Date.now() - cachedAt < STALE_MS && !hasOverrides(opts)) return cache;
 	return refreshWeather(opts);
 }
 
@@ -123,7 +129,10 @@ export async function refreshWeather({
 		uvIndex: current.uvIndex ?? 0,
 		hourly
 	};
-	if (!hasOverrides({ lat, lon, hours })) cache = data;
+	if (!hasOverrides({ lat, lon, hours })) {
+		cache = data;
+		cachedAt = Date.now();
+	}
 	return data;
 }
 

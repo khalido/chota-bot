@@ -15,8 +15,8 @@ keeps the tool's response terse.
 
 ## Before writing anything here, load the skill
 
-The `ai-sdk` skill at `.agents/skills/ai-sdk/` is the canonical source for v6
-patterns. Read these first, in this order:
+The `ai-sdk` skill at `.agents/skills/ai-sdk/` is the canonical source for
+current (`ai@7`) patterns. Read these first, in this order:
 
 1. `.agents/skills/ai-sdk/SKILL.md` — top-level prerequisites + the "do not
    trust internal knowledge" rule. **Always fetch current model IDs from the
@@ -24,9 +24,10 @@ patterns. Read these first, in this order:
 2. `.agents/skills/ai-sdk/references/type-safe-agents.md` — the `ToolLoopAgent`
    pattern and `InferAgentUIMessage<typeof agent>` for the typed Telegram
    handler.
-3. `.agents/skills/ai-sdk/references/common-errors.md` — v5→v6 renames that
-   bite if you copy from older docs (`maxSteps` → `stopWhen: isStepCount(n)`,
-   `parameters` → `inputSchema`, `maxTokens` → `maxOutputTokens`).
+3. `.agents/skills/ai-sdk/references/common-errors.md` — the v5→v7 renames that
+   bite if you copy from older docs (`maxSteps` → `stopWhen: stepCountIs(n)`,
+   `parameters` → `inputSchema`, `maxTokens` → `maxOutputTokens`,
+   `totalUsage` → `usage`).
 4. `.agents/skills/ai-sdk/references/ai-gateway.md` — gateway-specific
    patterns including caching, tags, and model routing.
 
@@ -37,11 +38,17 @@ agent/
   index.ts             # the single ToolLoopAgent instance (+ thin event() wrapper around .generate())
   prompts.ts           # buildSystemPrompt() — soul + style + today + snapshot, composed per call
   tools/               # one file per tool, basename matching the data lib it wraps
-    weather.ts
+    weather.ts         # weather + the beach/surf report folded in (sky + sea)
     calendar.ts
-    ...
+    ticktick.ts
+    tmdb.ts
+    volleyball.ts      # kids' next games + duty + opponent ladder rank
   memory.ts            # later — SQLite-backed memory store (Stevens-shape; flat table to start)
 ```
+
+Registered in `index.ts > tools: { … }`: `weather` (also returns the beach
+report), `calendar`, `ticktick`, `tmdb`, `volleyball`, plus `google_search`
+(Gemini's native grounding tool — no wrapper file, `google.tools.googleSearch({})`).
 
 The system prompt has four layers (see `prompts.ts`):
 
@@ -73,7 +80,7 @@ Memory joins when there's a real second use of it.
 - **`execute` returns a small, scalar-shaped object** — no full payloads,
   no blobs. Slice + shape before returning. The LLM sees this back as a
   tool result; smaller is cheaper.
-- **Tool errors don't throw in v6** — they land as `tool-error` parts in the
+- **Tool errors don't throw** — they land as `tool-error` parts in the
   agent's step content. Wide-event log captures the step count; inspect
   `steps` to debug a specific failure.
 - **Don't reach for the DB or external APIs directly from a tool.** Call the

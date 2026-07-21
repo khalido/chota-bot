@@ -1,16 +1,16 @@
 # Agent
 
-[Vercel AI SDK](https://ai-sdk.dev/docs) (`ai` v6) is chota's **sole** agent runtime. Pi-coding-agent was originally in the plan but dropped — our agent calls typed tool wrappers and writes notes, it never writes/runs code. One SDK, one mental model.
+[Vercel AI SDK](https://ai-sdk.dev/docs) (`ai` v7) is chota's **sole** agent runtime. Pi-coding-agent was originally in the plan but dropped — our agent calls typed tool wrappers and writes notes, it never writes/runs code. One SDK, one mental model.
 
 > **This doc tracks shipped code.** The agent is built and chat-debuggable at `/admin/agent`. The source of truth is `src/lib/server/agent/` + its `CLAUDE.md`; this doc is the reasoning behind it. When the two disagree, the code wins — fix the doc.
 >
-> **Before touching agent code, load the `ai-sdk` skill** (`.agents/skills/ai-sdk/`). Its first rule: _do not trust internal knowledge of the AI SDK_ — the API moved through v5→v6 and training data is stale. Verify against `node_modules/ai/docs/` and **always fetch live model IDs from the gateway** (`curl -s https://ai-gateway.vercel.sh/v1/models | jq -r '.data[].id'`), never from memory.
+> **Before touching agent code, load the `ai-sdk` skill** (`.agents/skills/ai-sdk/`). Its first rule: _do not trust internal knowledge of the AI SDK_ — the API moved through v5→v7 and training data is stale. Verify against `node_modules/ai/docs/` and **always fetch live model IDs from the gateway** (`curl -s https://ai-gateway.vercel.sh/v1/models | jq -r '.data[].id'`), never from memory.
 
 ## Stack decision
 
 | Concern          | Choice                                                                     | Why                                                                                                                                        |
 | ---------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Runtime          | `ai` v6 — the **`ToolLoopAgent`** class                                    | One reusable agent definition for kiosk UI streaming, Telegram, and job loops. Handles the tool loop, context, and stop conditions for us. |
+| Runtime          | `ai` v7 — the **`ToolLoopAgent`** class                                    | One reusable agent definition for kiosk UI streaming, Telegram, and job loops. Handles the tool loop, context, and stop conditions for us. |
 | Provider routing | AI Gateway (plain model-slug string, e.g. `'google/gemini-3.5-flash'`)     | One `AI_GATEWAY_API_KEY`, per-task model swap, spend caps, provider fallback. No per-provider SDK except Groq Whisper (voice, Phase 3).    |
 | Default model    | a fast/cheap Gemini Flash slug (**fetch the current ID from the gateway**) | Good enough for tool-calling family jobs; cheap enough to run often. Shipped value lives in `MODEL` in `agent/index.ts`.                   |
 | Heavy job model  | a stronger slug, dreaming/consolidation only                               | Reasoning-heavy nightly pass; worth the cost once a day.                                                                                   |
@@ -119,7 +119,7 @@ Today there's **one** `ToolLoopAgent` (`agent/index.ts`). As agents are added we
 
 The user always talks to the **main** agent; it can delegate to a subagent that does focused work and returns a result (e.g. a `book` subagent: search → read → summarise → links). Any agent (including `dreaming`) can serve as a subagent of the main one. Two ways:
 
-- **v6 today:** "agent-as-tool" — a tool whose `execute` runs a second `ToolLoopAgent.generate()` and returns its summary (~20 lines).
+- **Today:** "agent-as-tool" — a tool whose `execute` runs a second `ToolLoopAgent.generate()` and returns its summary (~20 lines). (v7 ships native subagents; not adopted yet — see Gotchas.)
 - **v7 (the plan):** the AI SDK's native [subagents](https://ai-sdk.dev/v7/docs/agents/subagents) primitive. **We'll wait for v7-beta to mature, then upgrade and roll subagents out on v7** — same shape, less hand-rolling.
 
 ## Skills — deferred, format decided
@@ -131,7 +131,7 @@ Skills are markdown **procedures/knowledge** the agent loads on demand — disti
 - **Stage 3 — `scripts/` deferred.** Skill scripts need a sandbox/bash runtime (both agentskills.io and eve assume one; eve never auto-runs them). Not appropriate for a family kiosk now; **revisit in the v7 era** (interesting sandbox products are emerging). The loader ignores `scripts/` if present.
 - Skills mostly belong to the **main** conversational agent; single-purpose job agents are prompt-driven. **Skip:** TS/module skills, dynamic skills, `allowed-tools` enforcement, per-agent scoping.
 
-## Tools — current shape (v6)
+## Tools — current shape (v7)
 
 One file per tool in `agent/tools/`, basename matching the data lib it wraps in `$lib/server/tools/`. The tool file adds the LLM-facing `description` + `inputSchema` + any response shaping; the data lib owns the fetch, caching, and stale-ok behaviour.
 
@@ -255,7 +255,7 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 - **`/admin/agent`** — chat UI for debugging the agent (built).
 - **Jobs** (planned) — the morning-brief closing line is the first agent-driven job; a job calls `runAgent()` with job-specific tags. See [`docs/jobs.md`](jobs.md).
 
-## Gotchas (v6)
+## Gotchas (v7)
 
 - **`inputSchema` not `parameters`** (silent mistype).
 - **`CoreMessage` → `ModelMessage`**, **`convertToCoreMessages` → `convertToModelMessages`** (matter only when bridging UI ↔ server).
@@ -265,7 +265,7 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 
 ## Future / worklog
 
-- **Upgrade to AI SDK v7** once the beta matures → adopt the native [subagents](https://ai-sdk.dev/v7/docs/agents/subagents) primitive (book-agent pattern above). On v6 we'd hand-roll agent-as-tool; the upgrade replaces that with first-class subagents.
+- **On `ai` v7 now.** When a second agent role appears, adopt the native [subagents](https://ai-sdk.dev/v7/docs/agents/subagents) primitive instead of the hand-rolled agent-as-tool above (book-agent pattern).
 - **Wire the model/usage metadata capture** (§What to capture) — enrich the `agent.run` wide event with the actual `response.modelId` + `finishReason`, and store a compact `{ model, in, out, finishReason, steps }` blob on `chat_message` assistant rows.
 - **PostHog AI observability** ([posthog.com/ai-observability](https://posthog.com/ai-observability)) — we already ship events to PostHog via the OTel sink; PostHog's LLM-analytics adds per-generation cost/latency/trace dashboards on top. Low effort later + a useful pattern for other projects. (Captured in `~/code/ops/inbox.md`.)
 - **Sandbox + bash-tool / skill `scripts/`** — [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox), [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool). For jobs where the agent writes + runs code, and for executing skill `scripts/`. Revisit in the **v7 era** — interesting sandbox products are emerging. Deferred; typed tool wrappers cover everything today.

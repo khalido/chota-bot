@@ -84,6 +84,17 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Fixed
 
+- Cache staleness guards on `weather.ts` (>3h) and `bus.ts` (>1h): if a
+  refresh job has been failing for hours, a read re-fetches instead of serving
+  an ancient forecast / stale bus times, degrading to "unavailable" if that
+  also fails. Pure safety net — the refresh jobs keep caches far inside the
+  window, so healthy operation adds zero API calls. Screenshot timeout 30→35s
+  for headroom on the slow box.
+- Documentation refresh: root `CLAUDE.md` (deny-by-default auth wording,
+  `/login` + `telegram/` in the tree, a Gotchas block, trimmed sv-create
+  boilerplate), the print/agent/server sub-`CLAUDE.md` files, and
+  `docs/{weather,deploy,agent,jobs}.md` brought in line with everything
+  shipped this session (beach-in-weather, Friday weekend print, `ai` v7).
 - `/weather` no longer crashes the fullscreen kiosk onto SvelteKit's unstyled
   default error page when the weather cache is cold — it degrades to a styled
   "Weather unavailable" state. Added a dark-aware `+error.svelte` so any loader
