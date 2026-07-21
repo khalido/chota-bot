@@ -53,7 +53,7 @@ src/lib/server/
     schoolterms-refresh.ts # Mondays 04:00: refresh the NSW school-calendar cache
     volleyball-refresh.ts # Fridays 06:30 + 17:30: warm the fixture cache before the prints
     sentral-login.ts      # Mondays 04:00: pre-emptive Sentral cookie refresh
-    weather-refresh.ts    # warm weather cache
+    weather-refresh.ts    # warm weather cache (sky + sea: also warms the beach report)
     calendar-refresh.ts   # warm Google Calendar cache
     bus-refresh.ts        # warm bus departures cache
     ticktick-refresh.ts   # warm TickTick lists cache
@@ -121,7 +121,7 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 | `schoolterms-refresh` | `0 4 * * 1`           | scripted       | Refresh the NSW school-calendar cache                              |
 | `volleyball-refresh`  | `30 6,17 * * 5`       | scripted       | Warm the volleyball fixture cache before the Friday prints         |
 | `sentral-login`       | `0 4 * * 1`           | scripted       | Mondays — pre-emptive Sentral cookie refresh                       |
-| `weather-refresh`     | refresh cadence       | scripted       | Warm weather cache                                                 |
+| `weather-refresh`     | `*/30 * * * *`        | scripted       | Warm weather cache + the local beach lifeguard report              |
 | `calendar-refresh`    | refresh cadence       | scripted       | Warm Google Calendar cache                                         |
 | `bus-refresh`         | refresh cadence       | scripted       | Warm bus departures cache                                          |
 | `ticktick-refresh`    | refresh cadence       | scripted       | Warm TickTick lists cache                                          |

@@ -12,10 +12,13 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 ### Added
 
 - `beach` tool — parses the Randwick City Council lifeguard feed for the
-  configured beach (`home.beach.name`, Coogee) into a one-line surf report
-  (summary, water temp, waves, rips, status). Always included in the agent's
-  weather answer, and shown as a BEACH line on the Friday briefs + weekend
-  sheet (kids play beach volleyball Fri arvo + Sun morning).
+  configured beach (`home.beach.name`, Coogee) into a surf report (summary,
+  water temp, wave height, rips, bluebottles, status). Surfaced through
+  **weather** (sky + sea), not as its own thing: a one-line summary sits in the
+  WEATHER section of **every morning** print, the agent's weather tool returns
+  the **full** report (so it can answer "how cold's the water?" / "any
+  bluebottles?"), and the existing `weather-refresh` job (every 30 min) warms
+  the beach cache on the same tick. No separate section or job.
 - Home location coordinates set to the real suburb (was a CBD placeholder) —
   accurate weather.
 - `volleyball-refresh` job (Fridays 06:30 + 17:30) — force-refreshes the

@@ -1,13 +1,13 @@
 /**
- * weather agent-tool — current conditions + today's headline for home, plus
- * the local beach's lifeguard report.
+ * weather agent-tool — sky + sea: current conditions + today's headline for
+ * home, plus the local beach's full lifeguard report.
  *
  * Wraps `$lib/server/tools/weather` (+ `beach`). No args: location + beach come
- * from `chota.config.ts > home`. Returns a small scalar shape — the full hourly
- * array is dropped; the LLM gets `summary` (the same one-liner the kiosk shows)
- * plus today's min/max so it can answer "should I take a jacket?". `beach` is
- * always included (the kids play beach volleyball) — null when no beach is
- * configured or the feed is down.
+ * from `chota.config.ts > home`. The full hourly array is dropped, but — unlike
+ * the print's one-liner — the LLM gets the FULL beach report (water temp, wave
+ * height, rips, bluebottles, status, when updated) so it can answer specifics
+ * like "how cold's the water?" or "any bluebottles at Coogee?". `beach` is null
+ * when no beach is configured or the feed is down.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ import { getBeachReport, beachSummary } from '$lib/server/tools/beach';
 
 export const weatherTool = tool({
 	description:
-		'Current weather + today\'s forecast for the family home, plus the local beach surf report (water temp, waves, rips, status). Use for "is it raining", "how hot today", "do I need a jacket", "how\'s the beach", "is it good for beach volleyball".',
+		'Current weather + today\'s forecast for the family home, plus the local beach surf report (water temp, waves, rips, bluebottles, status). Use for "is it raining", "how hot today", "do I need a jacket", "how\'s the beach", "how cold is the water", "is it good for beach volleyball".',
 	inputSchema: z.object({}),
 	execute: async () => {
 		const [w, beach] = await Promise.all([getWeather(), getBeachReport().catch(() => null)]);
@@ -28,7 +28,20 @@ export const weatherTool = tool({
 			condition: w.condition,
 			todayMinC: range ? Math.round(range.minC) : null,
 			todayMaxC: range ? Math.round(range.maxC) : null,
-			beach: beach ? beachSummary(beach) : null
+			beach: beach
+				? {
+						name: beach.beach,
+						summary: beach.summary,
+						line: beachSummary(beach),
+						waterTempC: beach.waterTempC,
+						waveHeight: beach.waveHeight,
+						status: beach.status,
+						rips: beach.rips,
+						bluebottles: beach.bluebottles,
+						description: beach.description,
+						updated: beach.updated ? beach.updated.toISOString() : null
+					}
+				: null
 		};
 	}
 });
