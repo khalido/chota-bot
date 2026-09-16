@@ -4,8 +4,9 @@
  * level, message, logger, properties. Returns them parsed + most-recent-
  * last so the UI can render in chronological order.
  *
- * No auth check (see /api/admin/sentral/refresh for rationale) — box is
- * tailnet-private. TODO re-add when ORIGIN/Caddy is sorted.
+ * Auth: handled by the deny-by-default guard in hooks.server.ts — every
+ * `/api/*` (bar /api/auth, /api/health, /api/print) requires a session
+ * whose email is in chota.config.ts > adminEmails.
  *
  * Default tail is 200 lines; caps at 2000 to keep the endpoint cheap.
  *

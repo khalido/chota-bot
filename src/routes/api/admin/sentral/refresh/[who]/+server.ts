@@ -4,16 +4,13 @@
  * if the stored one is dead; returns the byte count + event count of
  * the freshly-saved .ics.
  *
- * No auth check: the box is tailnet-private and the /admin UI gates
- * entry via better-auth UI. Adding a server-side session check here
- * would break the Refresh button when the user signs in on one
- * hostname (e.g. localhost on the box) but accesses from another (e.g.
- * http://pop-os via Tailscale) — cookies are host-scoped.
- *
- * TODO: re-add `if (!locals.session?.userId) throw error(401, …)` once
- * we have a single canonical ORIGIN (Caddy + portless URL + Google
- * OAuth allowed redirects all aligned). See docs/deploy.md "Reverse
- * proxy" section.
+ * Auth: covered by the deny-by-default guard in hooks.server.ts. Every
+ * `/api/*` (except /api/auth, /api/health, /api/print) requires a session
+ * whose email is in chota.config.ts > adminEmails, so no per-route check
+ * is needed here — and none should be added: an in-route session check
+ * would break the Refresh button when the user signs in on one hostname
+ * (e.g. localhost on the box) but accesses from another (e.g. http://pop-os
+ * over Tailscale), since cookies are host-scoped.
  */
 import { json } from '@sveltejs/kit';
 import { refreshTimetable } from '$lib/server/tools/sentral';

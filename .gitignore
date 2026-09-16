@@ -57,3 +57,11 @@ vite.config.ts.timestamp-*
 
 # Claude Code per-machine settings
 .claude/settings.local.json
+
+# Python sandbox (py/). Only the scaffold (pyproject.toml, uv.lock, README,
+# CLAUDE.md) is tracked; the venv and tool caches are local. See py/README.md.
+py/.venv/
+.venv/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
