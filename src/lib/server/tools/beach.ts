@@ -1,10 +1,10 @@
 /**
  * Randwick City Council lifeguard reports — surf/beach conditions for the
- * family's beach (`chota.config.ts > home.beach`, e.g. Coogee), written by the
+ * family's beach (`chota.config.ts > home.beach`, e.g. Maroubra), written by the
  * council lifeguards and refreshed each morning.
  *
  * Source: the council RSS feed, one `<item>` per beach (Clovelly, Maroubra,
- * Coogee). Each item's `<description>` is a CDATA HTML block of labelled
+ * …). Each item's `<description>` is a CDATA HTML block of labelled
  * fields: Summary, Water Temp, Wave Height, Beach Status, Rips, Bluebottles,
  * Description. We parse the feed with cheerio (xml mode) and each description
  * with a second cheerio pass over its `<p><strong>Label:</strong> value</p>`.
@@ -27,7 +27,7 @@ const CACHE_TTL_MS = 30 * 60_000;
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36';
 
 export interface BeachReport {
-	/** Beach title from the feed, e.g. "Coogee Beach". */
+	/** Beach title from the feed, e.g. "Maroubra Beach". */
 	beach: string;
 	/** When the lifeguards last posted (from `pubDate`), or null if unparsable. */
 	updated: Date | null;
@@ -67,8 +67,8 @@ function parseWaterTemp(raw: string): number | null {
 
 /**
  * Parse one beach's `<item>` out of the feed into a `BeachReport`. `name` is
- * matched case-insensitively as a substring of the item title ("Coogee" hits
- * "Coogee Beach"). Returns null when that beach isn't in the feed. Exported
+ * matched case-insensitively as a substring of the item title ("Maroubra" hits
+ * "Maroubra Beach"). Returns null when that beach isn't in the feed. Exported
  * for tests.
  */
 export function parseBeachReport(xml: string, name: string): BeachReport | null {
@@ -135,7 +135,7 @@ export async function getBeachReport(now: Date = new Date()): Promise<BeachRepor
 
 /**
  * One-line conditions summary for the print + agent, e.g.
- * "Coogee: rough conditions, 18C water, 2m waves, open (rips: be cautious)."
+ * "Maroubra: rough conditions, 18C water, 2m waves, open (rips: be cautious)."
  * Bluebottles are appended only when sighted — the usual "none sighted" is
  * noise. Temps use bare "C" (no degree glyph) to match `weatherSummary()` and
  * stay thermal-printer-safe. Sentence helper, sibling to `weatherSummary()`.
@@ -147,7 +147,7 @@ export function beachSummary(r: BeachReport): string {
 	if (r.waterTempC != null) parts.push(`${r.waterTempC}C water`);
 	if (r.waveHeight) parts.push(`${r.waveHeight} waves`);
 	if (r.status) parts.push(r.status.toLowerCase());
-	// Feed shape drifted → an item with no parseable fields. Don't print "Coogee: ."
+	// Feed shape drifted → an item with no parseable fields. Don't print "Maroubra: ."
 	if (parts.length === 0) return `${beach}: no report.`;
 	let line = `${beach}: ${parts.join(', ')}`;
 	const extras: string[] = [];

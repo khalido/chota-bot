@@ -23,7 +23,7 @@
 import * as cheerio from 'cheerio';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
-import { parseIcs, type IcsEvent } from '$lib/server/ics';
+import { parseIcsDays, type IcsDay } from '$lib/server/ics';
 import { sydneyYMD } from '$lib/time';
 
 const pageUrl = (year: number) => `https://education.nsw.gov.au/schooling/calendars/${year}`;
@@ -236,7 +236,7 @@ async function fetchFromIcs(year: number): Promise<SchoolYear> {
 	log('schoolterms', `iCal feed ${year}: HTTP ${res.status}`);
 	if (!res.ok) throw new Error(`iCal feed HTTP ${res.status}`);
 
-	const events = parseIcs(await res.text());
+	const events = parseIcsDays(await res.text());
 	const division = schoolDivision();
 	return {
 		terms: termsFromIcs(events),
@@ -362,7 +362,7 @@ function isYmd(s: string): boolean {
 // ────────────────────────────────────────────────────────────────────────────
 
 /** Term ranges from the feed's per-week events (these are the *staff* dates). */
-function termsFromIcs(events: IcsEvent[]): SchoolTerm[] {
+function termsFromIcs(events: IcsDay[]): SchoolTerm[] {
 	const weekly = /^Term (\d+) Week \d+ \(/;
 	const byTerm = new Map<number, { start: string; end: string }>();
 	for (const e of events) {
@@ -380,7 +380,7 @@ function termsFromIcs(events: IcsEvent[]): SchoolTerm[] {
 }
 
 /** Dev-day blocks from the feed — single-day VEVENTs, a contiguous run folded. */
-function devDaysFromIcs(events: IcsEvent[], division: 'E' | 'W'): { start: string; end: string }[] {
+function devDaysFromIcs(events: IcsDay[], division: 'E' | 'W'): { start: string; end: string }[] {
 	const named = `School Development Day (${division})`;
 	const runs: { start: string; end: string }[] = [];
 	for (const e of events

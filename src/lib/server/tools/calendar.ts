@@ -198,7 +198,7 @@ async function getStoredGoogleToken(): Promise<string | null> {
 	if (!acct) return null;
 
 	const result = await auth.api.getAccessToken({
-		body: { providerId: 'google', userId: acct.userId }
+		body: { accountId: acct.id, userId: acct.userId }
 	});
 	return result.accessToken ?? null;
 }

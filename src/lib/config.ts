@@ -104,7 +104,7 @@ export interface ChotaConfig {
 		lon?: number;
 		weather?: Partial<WeatherThresholds>;
 		/** Local beach for the lifeguard surf report (Randwick City Council
-		 *  feed). `name` must match a beach title in the feed — "Coogee",
+		 *  feed). `name` must match a beach title in the feed —
 		 *  "Maroubra", "Clovelly". Omit to disable the beach line. Currently
 		 *  Randwick-council beaches only (that's the one feed we parse). */
 		beach?: { name: string };

@@ -23,7 +23,7 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
   deploy is the proof the box rebuilt + restarted on your commit; `status` goes
   `down` if the sqlite file is unreachable.
 - `beach` tool — parses the Randwick City Council lifeguard feed for the
-  configured beach (`home.beach.name`, Coogee) into a surf report (summary,
+  configured beach (`home.beach.name`, Maroubra) into a surf report (summary,
   water temp, wave height, rips, bluebottles, status). Surfaced through
   **weather** (sky + sea), not as its own thing: a one-line summary sits in the
   WEATHER section of **every morning** print, the agent's weather tool returns
@@ -60,6 +60,19 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Changed
 
+- **iCal parsing via node-ical.** One shared `ics.ts` wraps node-ical for
+  both feeds (NSW school terms, Sentral timetables), replacing two
+  hand-written parsers. Output checked identical on the real feeds; Sentral
+  now handles `TZID` times instead of throwing.
+
+- **Dependency catch-up (2026-10-15).** In-range bumps across the board (`ai`
+  7.0.140, `@ai-sdk/*`, Svelte 5.57.2, Vite 8.3.4, drizzle, LogTape 2.4) plus
+  majors: better-auth 1.7 (calendar's `getAccessToken` now passes the account
+  row id), googleapis 186, vitest 5, better-sqlite3 13. The
+  deprecated `@better-auth/cli` is replaced by `auth`, which removes the
+  `@better-auth/core` override. `allowScripts` added for npm 11's install-script
+  gate. SvelteKit 3 deferred.
+
 - **Deploy preflight now runs two explicit Tailscale checks** with clear, distinct
   messages: (1) is this Mac on the tailnet (`tailscale status`) → "run tailscale
   up"; (2) is Tailscale SSH still authenticated (the faster-expiring check) →
@@ -83,6 +96,11 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
   `usb` 3 (untested against the printer).
 
 ### Fixed
+
+- **No stale print after the box wakes up.** croner fires any overdue run the
+  moment a suspended box wakes, so a laptop shut for weeks printed a morning
+  brief when opened. The scheduler now skips any fire more than 10 minutes
+  late and records it as `skipped` in `/admin/jobs`.
 
 - Cache staleness guards on `weather.ts` (>3h) and `bus.ts` (>1h): if a
   refresh job has been failing for hours, a read re-fetches instead of serving

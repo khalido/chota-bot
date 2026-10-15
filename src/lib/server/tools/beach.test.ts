@@ -11,7 +11,7 @@ const FEED = `<?xml version="1.0" ?>
 		<description><![CDATA[<p><strong>Summary:</strong> Beautiful day</p><p><strong>Water Temp:</strong> 17 C</p><p><strong>Wave Height:</strong> 1m</p><p><strong>Beach Status:</strong> Open</p><p><strong>Rips:</strong> Minimal</p><p><strong>Bluebottles:</strong> None sighted</p><p><strong>Description:</strong> Nice day.</p>]]></description>
 	</item>
 	<item>
-		<title>Coogee Beach</title>
+		<title>Clovelly Beach</title>
 		<pubDate>Sun, 19 Jul 2026 07:12:47 +1000</pubDate>
 		<description><![CDATA[<p><strong>Summary:</strong> Rough conditions</p><p><strong>Water Temp:</strong> 18 C</p><p><strong>Wave Height:</strong> 2m</p><p><strong>Beach Status:</strong> Open</p><p><strong>Rips:</strong> Be cautious</p><p><strong>Bluebottles:</strong> None sighted</p><p><strong>Description:</strong> Rough onshore conditions today</p>]]></description>
 	</item>
@@ -19,9 +19,9 @@ const FEED = `<?xml version="1.0" ?>
 
 describe('parseBeachReport', () => {
 	it('parses the named beach out of the feed', () => {
-		const r = parseBeachReport(FEED, 'Coogee')!;
+		const r = parseBeachReport(FEED, 'Clovelly')!;
 		expect(r).toEqual({
-			beach: 'Coogee Beach',
+			beach: 'Clovelly Beach',
 			updated: new Date('Sun, 19 Jul 2026 07:12:47 +1000'),
 			summary: 'Rough conditions',
 			waterTempC: 18,
@@ -44,9 +44,9 @@ describe('parseBeachReport', () => {
 
 describe('beachSummary', () => {
 	it('renders a compact conditions line and flags cautionary rips', () => {
-		const r = parseBeachReport(FEED, 'Coogee')!;
+		const r = parseBeachReport(FEED, 'Clovelly')!;
 		expect(beachSummary(r)).toBe(
-			'Coogee: rough conditions, 18C water, 2m waves, open (rips: be cautious).'
+			'Clovelly: rough conditions, 18C water, 2m waves, open (rips: be cautious).'
 		);
 	});
 

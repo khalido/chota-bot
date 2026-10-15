@@ -6,7 +6,7 @@
  * from `chota.config.ts > home`. The full hourly array is dropped, but — unlike
  * the print's one-liner — the LLM gets the FULL beach report (water temp, wave
  * height, rips, bluebottles, status, when updated) so it can answer specifics
- * like "how cold's the water?" or "any bluebottles at Coogee?". `beach` is null
+ * like "how cold's the water?" or "any bluebottles at Maroubra?". `beach` is null
  * when no beach is configured or the feed is down.
  */
 import { tool } from 'ai';

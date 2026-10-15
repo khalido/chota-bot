@@ -1,17 +1,32 @@
 /**
- * Minimal iCal (RFC 5545) parser — just enough for the all-day calendar feeds
- * chota ingests (currently the NSW school-term calendar). Extracts VEVENTs as
- * plain `{ title, start, end }` with date-only `YYYY-MM-DD` values.
+ * iCal (RFC 5545) feeds → plain events, via node-ical (line folding, escapes,
+ * TZID timezones, all-day dates). Two shapes for chota's two feeds:
  *
- * Deliberately small and dependency-free. The feeds we read are all-day events
- * with no recurrence and no timezones, so the heavy machinery a full library
- * (node-ical & co.) brings — RRULE expansion, VTIMEZONE, moment-timezone —
- * would be dead weight. If a feed with recurring or timed cross-timezone
- * events ever lands, swap this file's internals for such a library; callers
- * see the same `IcsEvent[]` and need not change.
+ * - `parseIcsEvents` — timed events as instants (Sentral's timetable export).
+ * - `parseIcsDays` — all-day events as `YYYY-MM-DD` ranges (the NSW
+ *   school-term calendar).
+ *
+ * node-ical keys events by UID, so two VEVENTs sharing a UID merge into one
+ * (neither feed does this today).
+ *
+ * No RRULE expansion: neither feed recurs. If one starts to, node-ical exposes
+ * `rrule` on the raw component.
  */
+import ical, { type ParameterValue } from 'node-ical';
+import { sydneyYMD } from '$lib/time';
 
 export interface IcsEvent {
+	/** VEVENT `SUMMARY`, trimmed. */
+	summary: string;
+	start: Date;
+	/** iCal `DTEND` — exclusive. Equals `start` when the feed omits it. */
+	end: Date;
+	allDay: boolean;
+	location?: string;
+	description?: string;
+}
+
+export interface IcsDay {
 	/** VEVENT `SUMMARY`, trimmed. */
 	title: string;
 	/** Inclusive start date, `YYYY-MM-DD`. */
@@ -20,50 +35,51 @@ export interface IcsEvent {
 	end: string;
 }
 
-/**
- * Parse the events out of an iCal feed. Handles RFC 5545 line folding (a line
- * starting with a space/tab continues the one before it) and the all-day
- * `VALUE=DATE` form. iCal's `DTEND` is *exclusive*, so it's rolled back a day
- * to an inclusive end date. Events without a SUMMARY or DTSTART are skipped.
- */
-export function parseIcs(text: string): IcsEvent[] {
-	const logical: string[] = [];
-	for (const raw of text.replace(/\r\n/g, '\n').split('\n')) {
-		if (/^[ \t]/.test(raw) && logical.length) logical[logical.length - 1] += raw.slice(1);
-		else logical.push(raw);
-	}
-
+/** Every VEVENT with a SUMMARY and DTSTART; anything else is skipped. */
+export function parseIcsEvents(text: string): IcsEvent[] {
 	const events: IcsEvent[] = [];
-	let title: string | null = null;
-	let start: string | null = null;
-	let end: string | null = null;
-	for (const line of logical) {
-		if (line === 'BEGIN:VEVENT') {
-			title = start = end = null;
-		} else if (line === 'END:VEVENT') {
-			if (title && start) events.push({ title, start, end: end ?? start });
-		} else {
-			const colon = line.indexOf(':');
-			if (colon < 0) continue;
-			// A property is `NAME;param=…:value` — the name ends at the first `;` or `:`.
-			const name = line.slice(0, colon).split(';')[0];
-			const value = line.slice(colon + 1);
-			if (name === 'SUMMARY') title = value.trim();
-			else if (name === 'DTSTART') start = icsDate(value);
-			else if (name === 'DTEND') end = icsDate(value, -1);
-		}
+	for (const c of Object.values(ical.sync.parseICS(text))) {
+		if (c?.type !== 'VEVENT' || !c.start || c.summary === undefined) continue;
+		events.push({
+			summary: textOf(c.summary)!.trim(),
+			start: c.start,
+			end: c.end ?? c.start,
+			allDay: c.start.dateOnly === true,
+			location: textOf(c.location),
+			description: textOf(c.description)
+		});
 	}
 	return events;
 }
 
 /**
- * An iCal `YYYYMMDD` (or `YYYYMMDDThhmmss…`) date → `YYYY-MM-DD`, optionally
- * shifted by `offsetDays` — used to turn an exclusive `DTEND` into an inclusive
- * end date.
+ * Day-granular events as inclusive date ranges (iCal's exclusive `DTEND` rolled
+ * back). Mostly all-day, but the NSW feed has a few timed at Sydney midnight
+ * (`TZID="AUS Eastern Standard Time"`) — those are read as Sydney days.
  */
-function icsDate(value: string, offsetDays = 0): string {
-	const ymd = value.slice(0, 8);
-	const d = new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8)));
-	d.setUTCDate(d.getUTCDate() + offsetDays);
-	return d.toISOString().slice(0, 10);
+export function parseIcsDays(text: string): IcsDay[] {
+	return parseIcsEvents(text).map((e) => {
+		const start = e.allDay ? localYMD(e.start) : sydneyYMD(e.start);
+		let end = start;
+		if (e.end > e.start) {
+			// Exclusive end → the last day the event covers.
+			end = e.allDay ? localYMD(e.end, -1) : sydneyYMD(new Date(e.end.getTime() - 1));
+		}
+		return { title: e.summary, start, end };
+	});
+}
+
+/** A property's text — node-ical gives `{ params, val }` when it carries parameters (e.g. `LANGUAGE=`). */
+function textOf(v: ParameterValue | undefined): string | undefined {
+	return typeof v === 'string' ? v : v?.val;
+}
+
+/**
+ * node-ical puts an all-day date at local midnight of the *server's*
+ * timezone, so read it back with local getters, not UTC ones.
+ */
+function localYMD(d: Date, offsetDays = 0): string {
+	const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + offsetDays);
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
 }

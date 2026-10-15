@@ -186,6 +186,8 @@ Combine with an array (stops on the first to match). For wall-clock safety pass 
 
 ## Memory (when we land it)
 
+> **Superseded 2026-10-15** by [`memory.md`](memory.md): a markdown home folder with git history instead of a JSONL file. The approach comparison below still holds (custom tools, no lock-in).
+
 The AI SDK documents [three memory approaches](https://ai-sdk.dev/docs/agents/memory):
 
 | Approach                  | Effort | Lock-in            | Notes                                                                                                                                                                                |
@@ -224,6 +226,8 @@ Structured records give stable IDs (clean edits), free metadata (timestamps, tag
 `tools` is **counts only** (`{ "google_search": 3 }`), not arguments — those are noise at consolidation time. Build the counts by walking `result.steps[].content` for `tool-call` parts. The simplification belongs inside `runAgent()` so callers don't think about session logging. ~200 chars/session vs 10K+ raw.
 
 ## Dreaming — Anthropic's "never modify the input" pattern
+
+> Adapted in [`memory.md`](memory.md) §Dreaming: git (one commit per pass, `git revert` to undo) replaces the `.new` + atomic swap.
 
 Inspired by [Anthropic's Dreams pattern](https://platform.claude.com/docs/en/managed-agents/dreams): a dream reads the existing memory + recent session summaries and writes a _fresh, reorganized_ store — duplicates merged, stale entries replaced, new insights surfaced. **The input store is never modified**, so a bad output is discarded, not catastrophic. This is the key safety property (Sonnet rewriting `family.jsonl` was flagged as our highest-corruption-risk operation).
 

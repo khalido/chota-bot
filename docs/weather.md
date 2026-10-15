@@ -164,12 +164,12 @@ Pure helpers (all in `src/lib/server/tools/weather.ts`):
 
 Weather is **sky + sea**. `tools/beach.ts` parses the [Randwick City Council
 lifeguard RSS feed](https://www.randwick.nsw.gov.au/integration/feeds/lifeguard-reports)
-for the configured beach (`chota.config.ts > home.beach.name`, e.g. Coogee) into
+for the configured beach (`chota.config.ts > home.beach.name`, e.g. Maroubra) into
 a `BeachReport` (summary, water temp, wave height, rips, bluebottles, status,
 `updated`). It's surfaced **through weather**, not as its own subsystem:
 
 - **Print:** `beachSummary()` (sibling to `weatherSummary()`) renders one line —
-  `Coogee: rough conditions, 18C water, 2m waves, open (rips: be cautious)` — into
+  `Maroubra: rough conditions, 18C water, 2m waves, open (rips: be cautious)` — into
   the WEATHER section of **every morning** brief (thermal-safe: bare "C", no ° glyph).
 - **Agent:** the `weather` agent tool returns the **full** `BeachReport`, so it can
   answer "how cold's the water?" / "any bluebottles?" — not just the one-liner.

@@ -14,11 +14,16 @@ import { event, logger } from '$lib/server/log';
 
 const TIMEZONE = 'Australia/Sydney';
 const RING_SIZE = 20;
+/** A fire this late is stale: croner fires any overdue slot (it checks
+ *  `now >= due` with no upper bound) — on wake from sleep, so a laptop shut
+ *  for weeks printed a morning brief on open, and when a blocked slot is
+ *  retried after a long-running previous run. Skip it; the next slot runs. */
+const STALE_MS = 10 * 60_000;
 const jobLog = logger('jobs');
 
 export interface JobRecord {
 	at: Date;
-	status: 'ok' | 'error';
+	status: 'ok' | 'error' | 'skipped';
 	durationMs: number;
 	error?: string;
 }
@@ -58,6 +63,7 @@ export function defineJob(name: string, pattern: string, fn: JobFn): Cron | unde
 	}
 
 	const recent: JobRecord[] = [];
+	let due: Date | null = null;
 	const cron = new Cron(
 		pattern,
 		{
@@ -77,6 +83,14 @@ export function defineJob(name: string, pattern: string, fn: JobFn): Cron | unde
 		async () => {
 			const at = new Date();
 			const start = Date.now();
+			const lateMs = due ? start - due.getTime() : 0;
+			due = cron.nextRun();
+			if (lateMs > STALE_MS) {
+				const error = `skipped stale fire, ${Math.round(lateMs / 60_000)} min late`;
+				push(recent, { at, status: 'skipped', durationMs: 0, error });
+				jobLog.warning('job {job} {error}', { job: name, error });
+				return;
+			}
 			// One wide `job.run` event per fire — see docs/logging.md. `runId`
 			// joins here once the job_runs table lands (docs/jobs.md).
 			const ev = event('jobs', 'job {job} ran', { job: name });
@@ -94,6 +108,7 @@ export function defineJob(name: string, pattern: string, fn: JobFn): Cron | unde
 		}
 	);
 
+	due = cron.nextRun();
 	JOBS.push({ name, pattern, cron, recent });
 	jobLog.info('registered {job}: {pattern}, next at {next}', {
 		job: name,

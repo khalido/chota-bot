@@ -94,6 +94,8 @@ API keys + secrets stay in `.env` (read via `$env/static/private`). `chota.confi
 
 ## Memory architecture
 
+> Memory design superseded 2026-10-15 by [`memory.md`](memory.md) (markdown home folder + git).
+
 **Decided: Vercel AI SDK as sole agent runtime + JSONL memory file with structured records + nightly dreaming consolidation via atomic-swap.** Full design in `docs/agent.md`. Highlights:
 
 - `data/memory/family.jsonl` — long-term, JSONL records (id, created, tags[], content)

@@ -42,6 +42,7 @@ import { dirname, join } from 'node:path';
 import { env } from '$env/dynamic/private';
 import { sydneyYMD } from '$lib/time';
 import { log } from '$lib/server/log';
+import { parseIcsEvents } from '$lib/server/ics';
 import { loginSentral } from './sentral-login';
 
 const TIMETABLE_DIR = 'sentral'; // data/sentral/<who>-{timetable.ics,cookie.txt}
@@ -207,90 +208,6 @@ export function configuredSentralKids(): string[] {
 		.filter((u): u is string => !!u)
 		.map((u) => u.toLowerCase())
 		.filter((name) => sentralConfig(name) !== null);
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Minimal ICS (RFC 5545) parsing — enough for Sentral's export. No dependency.
-// ────────────────────────────────────────────────────────────────────────────
-
-interface IcsEvent {
-	start: Date;
-	end: Date;
-	summary: string;
-	location?: string;
-	description?: string;
-}
-
-export function parseIcsEvents(text: string): IcsEvent[] {
-	// Unfold RFC 5545 line continuations: a CRLF followed by a space/tab joins
-	// to the previous line (the whitespace is dropped, nothing inserted).
-	const lines = text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/);
-	const events: IcsEvent[] = [];
-	let cur: Partial<IcsEvent> | null = null;
-	for (const line of lines) {
-		if (line === 'BEGIN:VEVENT') {
-			cur = {};
-			continue;
-		}
-		if (line === 'END:VEVENT') {
-			if (cur?.start && cur.end && cur.summary !== undefined) events.push(cur as IcsEvent);
-			cur = null;
-			continue;
-		}
-		if (!cur) continue;
-		const m = /^([A-Za-z-]+)(?:;[^:]*)?:(.*)$/.exec(line);
-		if (!m) continue;
-		const [, key, value] = m;
-		const upperKey = key.toUpperCase();
-		// Sentral exports bare-Z UTC; if that ever changes to TZID-tagged times
-		// (e.g. `DTSTART;TZID=Australia/Sydney:20260513T085000`), parseIcsDate
-		// would silently treat the value as UTC and shift every period 10 hours,
-		// which `getSchedule`'s day filter then drops invisibly. Fail loud
-		// instead — the next refresh job will throw and surface in /admin/jobs.
-		if ((upperKey === 'DTSTART' || upperKey === 'DTEND') && /;TZID=/i.test(line)) {
-			throw new Error(
-				`Sentral .ics has a TZID-tagged date this parser doesn't support: "${line.slice(0, 80)}". Update parseIcsDate.`
-			);
-		}
-		switch (upperKey) {
-			case 'DTSTART': {
-				const d = parseIcsDate(value);
-				if (d) cur.start = d;
-				break;
-			}
-			case 'DTEND': {
-				const d = parseIcsDate(value);
-				if (d) cur.end = d;
-				break;
-			}
-			case 'SUMMARY':
-				cur.summary = unescapeIcs(value);
-				break;
-			case 'LOCATION':
-				cur.location = unescapeIcs(value);
-				break;
-			case 'DESCRIPTION':
-				cur.description = unescapeIcs(value);
-				break;
-		}
-	}
-	return events;
-}
-
-/** `YYYYMMDDTHHMMSSZ` (UTC) or `YYYYMMDDTHHMMSS` (treated as UTC — Sentral uses Z) or `YYYYMMDD`. */
-function parseIcsDate(s: string): Date | null {
-	const dt = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/.exec(s);
-	if (dt) {
-		const [, Y, M, D, h, m, sec] = dt;
-		return new Date(Date.UTC(+Y, +M - 1, +D, +h, +m, +sec));
-	}
-	const d = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
-	if (d) return new Date(Date.UTC(+d[1], +d[2] - 1, +d[3]));
-	return null;
-}
-
-function unescapeIcs(s: string): string {
-	return s.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
 }
 
 /** Strip a leading subject code like "7CRE&: " or "12ENGADV: " off a SUMMARY. */

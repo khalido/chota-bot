@@ -20,7 +20,7 @@ import { sql } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { buildCommit } from '$lib/server/version';
-import { JOBS } from '$lib/server/scheduler';
+import { JOBS, type JobRecord } from '$lib/server/scheduler';
 import { sydneyHHMM } from '$lib/time';
 import type { RequestHandler } from './$types';
 
@@ -55,7 +55,7 @@ interface JobHealth {
 	name: string;
 	pattern: string;
 	next: string | null;
-	last: { status: 'ok' | 'error'; agoMs: number; durationMs: number; error?: string } | null;
+	last: { status: JobRecord['status']; agoMs: number; durationMs: number; error?: string } | null;
 }
 
 function snapshot() {
@@ -122,7 +122,7 @@ function asText(s: ReturnType<typeof snapshot>): string {
 	for (const j of s.jobs) {
 		const next = j.next ? sydneyHHMM(new Date(j.next)) : '—';
 		const last = j.last
-			? `${j.last.status === 'ok' ? 'ok ' : 'ERR'} · ${ago(j.last.agoMs)} ago`
+			? `${j.last.status === 'error' ? 'ERR' : j.last.status} · ${ago(j.last.agoMs)} ago`
 			: '—';
 		lines.push(
 			`  ${j.name.padEnd(16)} ${j.pattern.padEnd(17)} next ${next.padEnd(7)} last ${last}`

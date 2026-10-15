@@ -69,7 +69,7 @@ export default defineChota({
 		lat: -33.86,
 		lon: 151.18,
 		// Local surf report from the Randwick City Council lifeguard feed.
-		// `name` must match a beach in that feed ("Coogee", "Maroubra",
+		// `name` must match a beach in that feed ("Maroubra",
 		// "Clovelly"). Omit to disable. Randwick-council beaches only for now.
 		beach: { name: 'Maroubra' } // placeholder — set your own in chota.config.ts
 	},

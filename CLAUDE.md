@@ -1,5 +1,7 @@
 # Chota
 
+Read [`docs/handover.md`](docs/handover.md) first — where things stand and what's next.
+
 Family kiosk + thermal printer. Runs on a ThinkPad X230 (Pop!_OS 24.04) with a MUNBYN ITPP098P over USB. (Hardware lineage: SP5 → SP5 LCD died May 2026 → X230. `chota.service` and the deploy pipeline don't care which box, only `/etc/hostname` does.)
 
 **Status:** Phase 1 shipped. The thermal printer fires per-person briefs Mon–Fri at 06:45 (weather + bus + chores + per-kid School schedule), plus one whole-family weekend sheet Friday 18:00 (weekend calendar + volleyball fixtures). Phase 2 = autonomous agent loop — ToolLoopAgent is wired, chat-debuggable at `/admin/agent`, and **live over Telegram** (grammY bot: chat + streamed replies + on-demand prints, booted from `hooks.server.ts`); it isn't yet driving cron jobs on its own. Phase 3 = voice.
@@ -91,13 +93,15 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 
 ## Where to read more
 
-- [`docs/next.md`](docs/next.md) — current direction (print-first, headless Pi 5, dual-screen control box) + box hardware plan + next shortlist.
+- [`docs/next.md`](docs/next.md) — current direction (print-first, headless) + next software shortlist.
+- [`docs/box.md`](docs/box.md) — the Pi 5 counter-top box: migration, screens, control deck, panel software.
 - [`docs/plan.md`](docs/plan.md) — long-form architecture + framework decisions + risks. Read when something's unclear.
 - [`docs/deploy.md`](docs/deploy.md) — the deploy ritual + first-time bootstrap on the kiosk box.
 - [`docs/jobs.md`](docs/jobs.md) — job system, cron patterns, hardening.
 - [`docs/printers.md`](docs/printers.md) — thermal printer primer + per-printer USB/driver notes.
 - [`docs/tools.md`](docs/tools.md) — tool roadmap (built + planned + API keys checklist).
 - [`docs/weather.md`](docs/weather.md) — weather headline rules + the folded-in beach/surf report.
+- [`docs/memory.md`](docs/memory.md) — family memory design: the markdown home folder (soul, memory, project folders), its tools and git sync. Not built yet.
 - [`docs/agent.md`](docs/agent.md) — how the ToolLoopAgent is wired (shipped; live at `/admin/agent` + Telegram).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot: chat + streaming + on-demand prints shipped (June 2026); voice still ahead.
 - [`CHANGELOG.md`](CHANGELOG.md) — keepachangelog-style log of shipped changes; add an entry when you ship something notable.
@@ -106,8 +110,9 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 ## Gotchas (learned the hard way)
 
 - **Deploy = `npm run deploy`** (SSH from the Mac over Tailscale). It runs two preflight checks — is this Mac on the tailnet, then the faster-expiring Tailscale SSH re-auth — and tells you what to approve. After it lands, `curl pop-os/api/health` (or `?format=json | jq .version`) shows the running commit — the proof the box rebuilt on your push. See [`docs/deploy.md`](docs/deploy.md).
-- **`@better-auth/core` is pinned in `package.json > overrides`** and must move in lockstep with `better-auth`, or the production build breaks with a missing-export error the typecheck can't see.
-- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
+- **`auth` (the Better Auth CLI, devDep) pins `better-auth` exactly** — bump both together, or npm installs a second better-auth copy for the CLI.
+- **npm 11 blocks install scripts unless allow-listed** in `package.json > allowScripts`. `better-sqlite3`, `usb` and `esbuild` need theirs (npm adds an implicit `node-gyp rebuild` for any package with a `binding.gyp`); a missing entry for a native addon shows up as `ERR_DLOPEN_FAILED` at build/run time, not at install.
+- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). **SvelteKit stays on 2** for now — 3 is a real migration (`npx sv migrate sveltekit-3`; adapter-node drops `ORIGIN` for `paths.origin`). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
 
 ## UI + tooling
 
