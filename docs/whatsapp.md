@@ -13,7 +13,7 @@ Meta has no official path for a personal or family bot. The WhatsApp Business Pl
 
 So chota links to WhatsApp the way WhatsApp Web does: as a **linked device** of a real account, via an unofficial client. That account is a normal one, so none of the above applies — it can join any group and message anyone, any time. It breaks WhatsApp's terms; the risk is a ban of that number, which is why it's a **dedicated number**, never a family member's own.
 
-## Library: Baileys
+## Library: baileyrs
 
 |              | Baileys                                   | baileyrs                                                                     | whatsmeow-node                                           |
 | ------------ | ----------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -23,11 +23,40 @@ So chota links to WhatsApp the way WhatsApp Web does: as a **linked device** of 
 | Engine       | JS; v7 still release-candidate            | whatsapp-rust: 907★, v0.7.0, commits daily                                   | whatsmeow: very active, behind mautrix-whatsapp          |
 | Extras       | proven by OpenClaw (`@openclaw/whatsapp`) | Rust-side reconnect with backoff, media CDN failover, fuzzed against Baileys | ~10–20 MB extra process                                  |
 
-**Start on Baileys, write against its API, keep baileyrs in play.** Baileys is the most used by far and OpenClaw is a working reference to copy. baileyrs mirrors Baileys' API (its CI checks consumer code against it), so switching is mostly an import change, and it brings things we'd otherwise write: transient reconnects with backoff inside the engine, media CDN failover, a well-kept Rust core. It's young (0.3.x, six months) — so is chota. The spike runs both against the same code and we keep whichever behaves better on the Pi. whatsmeow-node is the fallback if both disappoint.
+**Start on baileyrs (decided 2026-10-16), written against the Baileys API.** baileyrs mirrors Baileys' API (its CI checks consumer code against it), so falling back to Baileys is mostly an import change, and it brings things we'd otherwise write: transient reconnects with backoff inside the engine, media CDN failover, a well-kept Rust core. The core ships as WASM (`@oxidezap/whatsapp-rust-bridge`, 6.3 MB `.wasm`) and its one native dep (`fs-native-extensions`) has prebuilds, so it installs on the X230 and the Pi's arm64 with no compiler. Risk: it's young (0.3.x, six months). Baileys is the fallback, then whatsmeow-node. Each running connection is one linked device on the number (WhatsApp allows four), so two libraries could be paired side by side — but never run two against the bot at once, or every message is answered twice.
 
 **Our own connector, not OpenClaw's plugin.** `@openclaw/whatsapp` needs OpenClaw's runtime and is built for every setup (multi-account, pairing approvals, proxies). chota's is small and opinionated: one account, a config allowlist, mention-gated groups, the agent behind it. OpenClaw's code and docs are the checklist of what goes wrong.
 
 All three link by **QR or an 8-character pairing code** (WhatsApp → Linked devices → "Link with phone number instead"). The pairing code is what makes remote setup easy: chota shows the code, the phone's owner types it in.
+
+## Spike findings (2026-10-16, `scripts/whatsapp-spike.mjs` on the Mac)
+
+| Check                            | Result                                                                                                                                                                                                                            |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install                          | WASM core, no compiler, no `allowScripts` entry                                                                                                                                                                                   |
+| Bundled WA Web version           | **405 "Client outdated"**. Fix: `version` from `fetchLatestWaWebVersion()` at start (Baileys has the same issue)                                                                                                                  |
+| Link                             | pairing code (`sock.requestPairingCode(botNumber)` on the first `qr` event), typed on the bot phone; linked in ~40 s                                                                                                              |
+| DM send / receive / quoted reply | works                                                                                                                                                                                                                             |
+| Sender identity                  | `key.remoteJid` (DM) or `key.participant` (group) is a **LID** (`…@lid`); `remoteJidAlt` / `participantAlt` carry the phone JID (`61…@s.whatsapp.net`); `pushName` the display name. Match phone JIDs against `family[].whatsapp` |
+| Bot's own identity               | `sock.user` = `{ id: '61…@s.whatsapp.net', lid: '…@lid', name }`                                                                                                                                                                  |
+| Group @mention                   | `contextInfo.mentionedJid` holds the bot's **LID**; match against both `sock.user.id` and `.lid` (strip `:device`). The text carries `@<lid digits>` — rewrite to `@chota` before the agent sees it                               |
+| Restart                          | reconnects from the saved login, no re-pair, under a second                                                                                                                                                                       |
+| Message sent while down          | arrives on reconnect as `type: 'append'`, not `'notify'` — answer if under ~10 min old, else ignore                                                                                                                               |
+| Contact card                     | `contactMessage.vcard`; read `waid=` or the `TEL` line                                                                                                                                                                            |
+| Own phone's messages             | the bot phone's own sends arrive `fromMe: true` — skip                                                                                                                                                                            |
+
+Auth state: `useMultiFileAuthState` (the default, and what the library's own example uses) wrote 905 small `.bin` files in minutes. Keep it, in `data/whatsapp-auth/` (gitignored; back the folder up whole). There's no SQLite store for Node: the Rust core has one (`whatsapp-rust` `storages/sqlite-storage`, diesel) but the WASM bridge doesn't expose it, and writing our own means the bridge's six `JsStoreCallbacks` with an atomic `commitPatch` — the easiest place to corrupt a session. Revisit if the bridge exposes SQLite.
+
+**Rules from the baileyrs README (bundled docs are only the two READMEs; the full reference is the [DeepWiki](https://deepwiki.com/oxidezap/baileyrs)):**
+
+- `close` means the socket is finished — build a new one, except 401 loggedOut (re-pair), 405 (outdated build; refetch version), 403 forbidden (temporary ban: wait until `lastDisconnect.error.data.expire`), 500 (check `cause`; storage errors repeat).
+- **`connecting` can last 15–30 minutes** while the engine backs off a rate limit. Never arm a short readiness timeout on it and **never restart the process** to fix it — that resets the backoff and earns the next 429 sooner. A watchdog, if any, is tens of minutes and alerts a human (`raiseAlert('whatsapp', …)`).
+- Calls made while reconnecting park and send when the connection lands, possibly much later. Pin `messageId` if a send might be retried.
+- Register every handler inside the connect function — a replacement socket is a new emitter.
+- Dedupe side effects on the whole key (`remoteJid`, `id`, `fromMe`, `participant`), never on `id` alone. The engine drops a sender's resends within 5 minutes, not across our restarts.
+- `creds.registered` / `creds.me?.id` decide "paired?" — a non-empty key store does not.
+- Send less: the engine restores connections but doesn't pace our traffic.
+- Back up the whole auth store including `bridge-*` rows; don't downgrade the library over a live store.
 
 ## Lessons from OpenClaw's plugin
 
@@ -137,7 +166,7 @@ Setup for a business number: a cheap Android phone on Wi-Fi and a charger, Whats
    - killing the process for 5 minutes replays nothing old;
    - a PNG goes out as a document.
 
-   Run it on Baileys, then swap the import to baileyrs and rerun; keep whichever is steadier.
+   Run it on baileyrs; swap the import to Baileys only if something here fails.
 
 5. `whatsapp/` module: allowlist, mention gating, per-chat turn queue, agent replies + a `print` tool, typing presence, reconnect, `/api/health`.
 6. Media out (print PNGs, artifacts), then voice notes in (Groq transcription, as planned for Telegram).

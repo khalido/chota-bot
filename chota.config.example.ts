@@ -17,7 +17,13 @@ export default defineChota({
 	// People the bot recognises in calendar event titles. `aliases` are matched
 	// case-insensitively (nicknames, initials). Used to tag events on the print.
 	family: [
-		{ name: 'Parent1', aliases: ['Parent1', 'P1'] },
+		// `whatsapp` (E.164) puts someone on the WhatsApp allowlist.
+		{
+			name: 'Parent1',
+			aliases: ['Parent1', 'P1'],
+			whatsapp: '+61400000001',
+			email: 'parent1@example.com'
+		},
 		{ name: 'Parent2', aliases: ['Parent2', 'P2'] },
 		{ name: 'Kid1', aliases: ['Kid1', 'K1'] },
 		{ name: 'Kid2', aliases: ['Kid2', 'K2'] },

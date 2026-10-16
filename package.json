@@ -65,6 +65,7 @@
 		"@logtape/logtape": "^2.0.9",
 		"@logtape/otel": "^2.1.1",
 		"@napi-rs/canvas": "^1.0.0",
+		"@oxidezap/baileyrs": "^0.3.11",
 		"ai": "^7.0.142",
 		"better-auth": "^1.7.10",
 		"better-sqlite3": "^13.0.3",

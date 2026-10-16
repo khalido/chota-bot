@@ -72,6 +72,13 @@ export interface FamilyMember {
 	 *  valid on-demand / `/print/<who>` recipient (and calendar-tag target)
 	 *  without a daily sheet — e.g. parents who don't want a morning printout. */
 	autoPrint?: boolean;
+	/** WhatsApp number, E.164 ("+614…"). Having one puts this person on the
+	 *  WhatsApp allowlist — the bot answers only family members with a number,
+	 *  in a DM or a group. Config only, never the repo. */
+	whatsapp?: string;
+	/** Email — for their own calendar later, and who they are when they sign
+	 *  in. Config only, never the repo. */
+	email?: string;
 }
 
 export interface WeatherThresholds {
@@ -152,6 +159,12 @@ export interface ChotaConfig {
 		 *  { from: '21:00', to: '06:30' } — ending before the 06:45 print, so a
 		 *  failed brief buzzes. Omit to always notify. */
 		quietHours?: { from: string; to: string };
+	};
+	/** WhatsApp (docs/whatsapp.md). Who may talk to it comes from
+	 *  `family[].whatsapp`. */
+	whatsapp?: {
+		/** The bot's own number, E.164 — WhatsApp Business on its own SIM. */
+		botNumber?: string;
 	};
 	/** Telegram bot wiring. Token + username live in `.env` (the token's a
 	 *  secret); chat IDs live here because they're per-family and typed. */

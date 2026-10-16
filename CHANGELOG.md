@@ -11,6 +11,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **WhatsApp spike** (`scripts/whatsapp-spike.mjs`, baileyrs): links the bot number by pairing code, sends, echoes, detects group @mentions, reads contact cards. Findings in `docs/whatsapp.md` §Spike findings. Config: `family[].whatsapp` / `email`, `whatsapp.botNumber`.
+
 - **Alerts:** `$lib/server/alerts.ts` (`raiseAlert` / `clearAlert`) with an `alert` table. A failed job messages the notify chats on Telegram once, repeats only after 12h, and sends "working again" when it recovers; silent during `alerts.quietHours`; deploys don't resend. `/admin/jobs` lists alerts and can send a test one. Frequent refreshes alert after 3 failures in a row.
 
 - **Agent tools: `bus`, `chores`, `ticktick_add`.** Next live departures for the kids' trips; whose chore it is on a day; add an item to a family list, with a due date for the buying list ("Kid1 shoes, mid-November"). `addToList` was sending TickTick the wrong shape and had never worked — fixed. The list read now shows due dates.
