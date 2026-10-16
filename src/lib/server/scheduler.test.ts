@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineJob, JOBS } from './scheduler';
+import { clearAlert, raiseAlert } from '$lib/server/alerts';
+
+vi.mock('$lib/server/alerts', () => ({ raiseAlert: vi.fn(), clearAlert: vi.fn() }));
 
 afterEach(() => {
 	for (const j of JOBS.splice(0)) j.cron.stop();
@@ -47,5 +50,32 @@ describe('defineJob protect + stale guard', () => {
 		await vi.advanceTimersByTimeAsync(3 * 60_000); // 09:46 — past the 09:45 slot
 		expect(calls).toBe(2);
 		expect(job.recent[0].status).toBe('ok');
+	});
+});
+
+describe('defineJob alerts', () => {
+	it('alerts after alertAfter failures in a row, and clears on the next ok run', async () => {
+		vi.useFakeTimers({ now: new Date('2026-10-16T09:00:30+11:00') });
+		vi.mocked(raiseAlert).mockClear();
+		vi.mocked(clearAlert).mockClear();
+		let fail = true;
+		defineJob(
+			'test-feed',
+			'* * * * *',
+			() => {
+				if (fail) throw new Error('feed down');
+			},
+			{ alertAfter: 2 }
+		);
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(raiseAlert).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(raiseAlert).toHaveBeenCalledWith(
+			'job:test-feed',
+			'Job test-feed failed (2 runs in a row): feed down'
+		);
+		fail = false;
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(clearAlert).toHaveBeenLastCalledWith('job:test-feed', expect.anything());
 	});
 });

@@ -8,8 +8,13 @@ import { defineJob } from '$lib/server/scheduler';
 import { refreshWeather } from '$lib/server/tools/weather';
 import { getBeachReport } from '$lib/server/tools/beach';
 
-defineJob('weather-refresh', '*/30 * * * *', async () => {
-	const [w, beach] = await Promise.all([refreshWeather(), getBeachReport()]);
-	const sea = beach ? `; ${beach.beach} ${beach.summary}` : '';
-	return `${Math.round(w.tempC)} C ${w.condition}${sea}`;
-});
+defineJob(
+	'weather-refresh',
+	'*/30 * * * *',
+	async () => {
+		const [w, beach] = await Promise.all([refreshWeather(), getBeachReport()]);
+		const sea = beach ? `; ${beach.beach} ${beach.summary}` : '';
+		return `${Math.round(w.tempC)} C ${w.condition}${sea}`;
+	},
+	{ alertAfter: 3 }
+);

@@ -143,11 +143,22 @@ export interface ChotaConfig {
 	};
 	/** Activity → packing-list mapping for the after-school gear tool (later). */
 	activities?: Activity[];
+	/** Alerts (`$lib/server/alerts.ts`): problems the bot tells someone about —
+	 *  a failed job, the printer out of paper. Sent on the default channel. */
+	alerts?: {
+		/** Channel alerts go out on. Default 'telegram' (to `telegram.notifyChatIds`). */
+		channel?: 'telegram';
+		/** Sydney "HH:MM" span when alerts arrive without a sound, e.g.
+		 *  { from: '21:00', to: '06:30' } — ending before the 06:45 print, so a
+		 *  failed brief buzzes. Omit to always notify. */
+		quietHours?: { from: string; to: string };
+	};
 	/** Telegram bot wiring. Token + username live in `.env` (the token's a
 	 *  secret); chat IDs live here because they're per-family and typed. */
 	telegram?: {
-		/** Chat IDs that receive proactive pushes from the bot — the daily
-		 *  log-summary, print-failure alerts, etc. Usually a parent or two. */
+		/** Chat IDs that receive proactive pushes from the bot — alerts
+		 *  (failed jobs, printer problems), later the daily summary. Usually a
+		 *  parent or two. */
 		notifyChatIds?: number[];
 		/** Chat IDs allowed to interact with the bot (Phase 3 inbound). Anyone
 		 *  not on this list is silently dropped at the middleware layer. */

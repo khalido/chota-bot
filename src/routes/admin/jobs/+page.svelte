@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import type { PageData } from './$types';
+	import { enhance } from '$app/forms';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	function fmtTime(iso: string | null): string {
 		if (!iso) return '—';
@@ -49,6 +50,37 @@
 			>← admin</a
 		>
 	</header>
+
+	<section
+		class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-neutral-800"
+	>
+		<header class="flex items-baseline justify-between">
+			<h3 class="text-base font-medium text-slate-800 dark:text-neutral-100">Alerts</h3>
+			<form method="POST" action="?/testAlert" use:enhance>
+				<button
+					class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
+					>{form ? (form.sent ? 'Sent ✓' : 'Not sent — check the log') : 'Send test alert'}</button
+				>
+			</form>
+		</header>
+		{#if data.alerts.length === 0}
+			<p class="mt-2 text-sm text-slate-500 dark:text-neutral-500">None yet.</p>
+		{:else}
+			<ul class="mt-2 space-y-1 text-sm">
+				{#each data.alerts as a (a.key)}
+					<li class="flex gap-3">
+						<span class={a.status === 'open' ? statusColor('error') : statusColor('ok')}
+							>{a.status}</span
+						>
+						<span class="text-slate-700 dark:text-neutral-300">{a.text}</span>
+						<span class="ml-auto shrink-0 text-slate-400 dark:text-neutral-500"
+							>{fmtTime(a.openedAt)}{a.sent ? '' : ' · not sent'}</span
+						>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
 
 	{#each data.jobs as j (j.name)}
 		<section

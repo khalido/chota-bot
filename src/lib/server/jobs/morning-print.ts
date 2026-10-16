@@ -5,7 +5,7 @@
 // sheet carries their school timetable. Prints the designed image (a
 // screenshot of /print/<who>); composeImage falls back to the canvas renderer
 // if the screenshot path is unavailable. One recipient failing doesn't stop
-// the rest.
+// the rest, but the run then fails (and alerts) naming who didn't print.
 //
 // No retry/catch-up here yet — if the box was asleep at 06:45 or the printer was
 // off, the run is just missed. See docs/jobs.md if/when we add a catch-up tick.
@@ -13,7 +13,7 @@ import { defineJob } from '$lib/server/scheduler';
 import { composeImage } from '$lib/server/print/composers';
 import { printPng } from '$lib/server/print/printer';
 import { getAutoPrintRecipients } from '$lib/server/print/sections';
-import { event } from '$lib/server/log';
+import { errorMessage, event } from '$lib/server/log';
 import { env } from '$env/dynamic/private';
 
 defineJob('morning-print', '45 6 * * 1-5', async () => {
@@ -23,6 +23,7 @@ defineJob('morning-print', '45 6 * * 1-5', async () => {
 
 	const recipients = getAutoPrintRecipients();
 	const results: string[] = [];
+	const failed: string[] = [];
 	for (const who of recipients) {
 		const ev = event('print', 'printed {who} ({source})', { who, source: 'morning-print' });
 		try {
@@ -36,8 +37,12 @@ defineJob('morning-print', '45 6 * * 1-5', async () => {
 			results.push(`${who} ${bytes}b${tag}`);
 		} catch (err) {
 			ev.fail(err);
-			results.push(`${who} FAILED`);
+			failed.push(`${who}: ${errorMessage(err)}`);
 		}
+	}
+	if (failed.length) {
+		const ok = results.length ? ` (printed ${results.join(', ')})` : '';
+		throw new Error(`${failed.join('; ')}${ok}`);
 	}
 	return `printed ${recipients.length} (${results.join(', ')})`;
 });

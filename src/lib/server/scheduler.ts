@@ -10,6 +10,7 @@
  */
 import { Cron } from 'croner';
 import { building } from '$app/environment';
+import { clearAlert, raiseAlert } from '$lib/server/alerts';
 import { event, logger } from '$lib/server/log';
 
 const TIMEZONE = 'Australia/Sydney';
@@ -46,14 +47,30 @@ export const JOBS: RegisteredJob[] = globalThis.__chotaJobs;
 /** Optional return value from a job — appended to the "ok" log line. */
 export type JobFn = () => Promise<string | void> | string | void;
 
+export interface JobOptions {
+	/** Log ok runs (default true). False for frequent checks — a 30-min check
+	 *  would add 48 identical lines a day; its failures and alerts still log,
+	 *  and every run stays in /admin/jobs. */
+	logOk?: boolean;
+	/** Failed runs in a row before alerting (default 1). Frequent refreshes set
+	 *  3 so one blip in a feed doesn't send "failed" then "working again". */
+	alertAfter?: number;
+}
+
 /**
  * Register a job. Call this once at the top of each `jobs/*.ts` file.
  * Same name → stop the previous Cron and replace (HMR + restart safety).
  *
  * `fn` may return a short summary string (e.g. "4 lists, 12 items"); it
- * gets appended to the success log line as `— <summary>`.
+ * gets appended to the success log line as `— <summary>`. A throw marks the
+ * run failed and raises the `job:<name>` alert; the next ok run clears it.
  */
-export function defineJob(name: string, pattern: string, fn: JobFn): Cron | undefined {
+export function defineJob(
+	name: string,
+	pattern: string,
+	fn: JobFn,
+	{ logOk = true, alertAfter = 1 }: JobOptions = {}
+): Cron | undefined {
 	if (building) return; // skip during `vite build`
 
 	const existingIdx = JOBS.findIndex((j) => j.name === name);
@@ -64,6 +81,7 @@ export function defineJob(name: string, pattern: string, fn: JobFn): Cron | unde
 
 	const recent: JobRecord[] = [];
 	let due: Date | null = null;
+	let failStreak = 0;
 	const cron = new Cron(
 		pattern,
 		{
@@ -94,17 +112,28 @@ export function defineJob(name: string, pattern: string, fn: JobFn): Cron | unde
 			// One wide `job.run` event per fire — see docs/logging.md. `runId`
 			// joins here once the job_runs table lands (docs/jobs.md).
 			const ev = event('jobs', 'job {job} ran', { job: name });
+			let error: string | undefined;
 			try {
 				const summary = await fn();
 				push(recent, { at, status: 'ok', durationMs: Date.now() - start });
-				ev.done({
-					summary: typeof summary === 'string' && summary.length > 0 ? summary : undefined
-				});
+				if (logOk) {
+					ev.done({
+						summary: typeof summary === 'string' && summary.length > 0 ? summary : undefined
+					});
+				}
 			} catch (err) {
-				const error = err instanceof Error ? err.message : String(err);
+				error = err instanceof Error ? err.message : String(err);
 				push(recent, { at, status: 'error', durationMs: Date.now() - start, error });
 				ev.fail(err);
 			}
+			// Outside the try: alerting never throws, and must not flip the run's status.
+			failStreak = error ? failStreak + 1 : 0;
+			if (error) {
+				if (failStreak >= alertAfter) {
+					const times = failStreak > 1 ? ` (${failStreak} runs in a row)` : '';
+					await raiseAlert(`job:${name}`, `Job ${name} failed${times}: ${error}`);
+				}
+			} else await clearAlert(`job:${name}`, { recovered: `Job ${name} is working again` });
 		}
 	);
 

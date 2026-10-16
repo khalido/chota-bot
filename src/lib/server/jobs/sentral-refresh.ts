@@ -11,24 +11,34 @@
 // good .ics on disk.
 import { defineJob } from '$lib/server/scheduler';
 import { configuredSentralKids, refreshTimetable } from '$lib/server/tools/sentral';
+import { errorMessage } from '$lib/server/log';
 
-defineJob('sentral-refresh', '30 6,7,8,17 * * 1-5', async () => {
-	const kids = configuredSentralKids();
-	if (kids.length === 0) return 'no kids configured';
-	// One kid at a time, with a short breather in between. The kids' session
-	// cookies expire on the same weekly cadence (sentral-login, Mondays), so a
-	// parallel run would fire concurrent SAML re-logins — serialized here, and
-	// belt-and-braces via the withBrowser() mutex inside loginSentral. The gap
-	// also keeps us a polite client of the school's Sentral instance.
-	const results: string[] = [];
-	for (const kid of kids) {
-		if (results.length > 0) await new Promise((r) => setTimeout(r, 3_000));
-		try {
-			const { events } = await refreshTimetable(kid);
-			results.push(`${kid}: ${events} events`);
-		} catch (err) {
-			results.push(`${kid}: FAILED (${err instanceof Error ? err.message : err})`);
+defineJob(
+	'sentral-refresh',
+	'30 6,7,8,17 * * 1-5',
+	async () => {
+		const kids = configuredSentralKids();
+		if (kids.length === 0) return 'no kids configured';
+		// One kid at a time, with a short breather in between. The kids' session
+		// cookies expire on the same weekly cadence (sentral-login, Mondays), so a
+		// parallel run would fire concurrent SAML re-logins — serialized here, and
+		// belt-and-braces via the withBrowser() mutex inside loginSentral. The gap
+		// also keeps us a polite client of the school's Sentral instance.
+		const results: string[] = [];
+		const failed: string[] = [];
+		for (const kid of kids) {
+			if (results.length + failed.length > 0) await new Promise((r) => setTimeout(r, 3_000));
+			try {
+				const { events } = await refreshTimetable(kid);
+				results.push(`${kid}: ${events} events`);
+			} catch (err) {
+				failed.push(`${kid}: ${errorMessage(err)}`);
+			}
 		}
-	}
-	return results.join('; ');
-});
+		// Every kid is tried; any failure fails the run. Alerts on the second miss in
+		// a row — one flaky login is covered by the cached .ics.
+		if (failed.length) throw new Error([...failed, ...results].join('; '));
+		return results.join('; ');
+	},
+	{ alertAfter: 2 }
+);

@@ -34,6 +34,6 @@ defineJob('weekend-print', '0 18 * * 5', async () => {
 		return `family ${bytes}b${tag}`;
 	} catch (err) {
 		ev.fail(err);
-		return 'family FAILED';
+		throw err;
 	}
 });

@@ -21,6 +21,7 @@ defineJob('widget-refresh', '*/10 * * * *', async () => {
 - **Filename = job name** (kebab-case): `ticktick-refresh.ts` → `'ticktick-refresh'`
 - **One-line comment at the top** describing what the job does — this is the only doc, so make it count
 - **One `defineJob` call per file** — don't pile multiple jobs into one file
+- **Fail honestly** — throw when anything failed (try every recipient first, then throw naming who). A throw alerts the admin; an "ok" with FAILED in the summary alerts no one. Frequent refreshes pass `{ alertAfter: 3 }`; every-few-minute jobs pass `{ logOk: false }`. See `docs/jobs.md` §Alerts.
 
 ## Cron pattern (5-field, Sydney time)
 

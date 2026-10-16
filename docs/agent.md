@@ -267,6 +267,10 @@ chota is reached from more than one chat app: Telegram now, WhatsApp next ([`wha
 - input: what (a brief, text, an image from the message, a puzzle) and where — `thermal` (the MUNBYN, default) or `laser` (the Brother HL-L2350DW on Wi-Fi, often off: the tool checks it's reachable and says so if not). The laser goes through CUPS driverless IPP/AirPrint on the box.
 - **Approval** with the SDK's `toolApproval` on `ToolLoopAgent` (in `ai` 7.0.140; `needsApproval` is the `WorkflowAgent` name). A policy function per call: thermal from an allowlisted person → `'approved'`; laser, or more than a page or two → `'user-approval'`. The adapter shows "Print 3 pages on the Brother? yes / no", appends the `tool-approval-response`, and calls the agent again. Tell the model not to retry a denied print.
 - `/print` stays as the fast path that skips the model.
+- The system prompt gets a line once the tool exists: a receipt printer is connected; offer it sparingly (lists, a puzzle, something to keep), never print unasked.
+- Before the tool, streamline the print path: compose → screenshot → PNG → USB has several fallbacks and two callers that each log their own way (`printBrief()` in the handover's review list). The tool should call one function, and the printer status check (`docs/jobs.md` §Alerts) goes first so it can say "out of paper".
+
+**Calendar write (planned).** Add, move or cancel events and answer invitations. Needs the `calendar.events` Google scope (re-consent). Every write is a proposal first: the bot replies with the event as it will be saved ("Sat 18 Oct 9:00–10:00, Kid1 volleyball, Tempe") and waits for "yes / go / ok" or a 👍 reaction; anything else cancels or edits. Same approval shape as `print`.
 
 **A message that arrives mid-turn.** The per-chat queue holds it. If the agent is between steps, `prepareStep` appends it to `messages` so the next step sees it (it can't enter mid-token); if the turn already finished, it runs as the next turn. No aborting a turn halfway.
 

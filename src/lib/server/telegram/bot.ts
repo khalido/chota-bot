@@ -30,6 +30,7 @@ import { composeImage } from '$lib/server/print/composers';
 import { getRecipients, FAMILY_RECIPIENT } from '$lib/server/print/sections';
 import { streamRichReply } from './stream';
 import { event, log, logErr } from '$lib/server/log';
+import { registerAlertChannel } from '$lib/server/alerts';
 
 const SCOPE = 'telegram';
 
@@ -79,6 +80,21 @@ export async function bootBot(): Promise<void> {
 	// retry_after. grammY's built-in retries only cover getMe/deleteWebhook —
 	// our sendRichMessageDraft/sendRichMessage/reply calls need this.
 	bot.api.config.use(autoRetry());
+
+	// Alerts (failed jobs, printer problems) go to the notify chats.
+	const api = bot.api;
+	registerAlertChannel('telegram', async (text, { silent }) => {
+		const ids = getConfig().telegram?.notifyChatIds ?? [];
+		if (!ids.length) throw new Error('no telegram.notifyChatIds configured');
+		// Each chat on its own; only all failing counts as unsent (a resend
+		// would otherwise repeat it to the chats that got it).
+		const results = await Promise.allSettled(
+			ids.map((id) => api.sendMessage(id, text, { disable_notification: silent }))
+		);
+		const failed = results.filter((r) => r.status === 'rejected');
+		if (failed.length === ids.length) throw (failed[0] as PromiseRejectedResult).reason;
+		if (failed.length) logErr(SCOPE, 'alert not delivered to every notify chat', failed[0]);
+	});
 
 	// Whitelist gate. `/start` always passes (onboarding); whitelisted chats
 	// pass; everyone else is dropped — with a chat-ID hint on a plain message so

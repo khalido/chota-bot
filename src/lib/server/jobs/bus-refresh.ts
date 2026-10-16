@@ -4,7 +4,12 @@
 import { defineJob } from '$lib/server/scheduler';
 import { refreshAllConfiguredBus } from '$lib/server/tools/bus';
 
-defineJob('bus-refresh', '*/5 * * * *', async () => {
-	const n = await refreshAllConfiguredBus();
-	return `${n} stop${n === 1 ? '' : 's'}`;
-});
+defineJob(
+	'bus-refresh',
+	'*/5 * * * *',
+	async () => {
+		const n = await refreshAllConfiguredBus();
+		return `${n} stop${n === 1 ? '' : 's'}`;
+	},
+	{ logOk: false, alertAfter: 3 }
+);

@@ -3,10 +3,15 @@
 import { defineJob } from '$lib/server/scheduler';
 import { refreshCalendar } from '$lib/server/tools/calendar';
 
-defineJob('calendar-refresh', '*/15 * * * *', async () => {
-	const [todayEvents, weekEvents] = await Promise.all([
-		refreshCalendar('today'),
-		refreshCalendar('week')
-	]);
-	return `${todayEvents.length} today, ${weekEvents.length} this week`;
-});
+defineJob(
+	'calendar-refresh',
+	'*/15 * * * *',
+	async () => {
+		const [todayEvents, weekEvents] = await Promise.all([
+			refreshCalendar('today'),
+			refreshCalendar('week')
+		]);
+		return `${todayEvents.length} today, ${weekEvents.length} this week`;
+	},
+	{ alertAfter: 3 }
+);

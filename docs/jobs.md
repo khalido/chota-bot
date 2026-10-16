@@ -27,6 +27,25 @@ A thin wrapper around croner's `new Cron(...)`:
 - `catch: callback` — uncaught errors logged, process stays alive
 - Wraps `fn` to record start/end into a 20-row ring buffer per job (visible at `/admin/jobs`)
 - HMR-safe: re-defining a job by the same name stops the old Cron and replaces
+- A throw fails the run and raises the `job:<name>` alert; the next ok run clears it (see §Alerts). Options: `{ logOk: false }` for frequent checks (failures still log), `{ alertAfter: 3 }` so a refresh needs 3 failures in a row before it alerts.
+
+A job that does several things (a print per person, a refresh per kid) tries them all, then throws naming what failed — never returns ok with "FAILED" in its summary.
+
+## Alerts
+
+`$lib/server/alerts.ts`: `raiseAlert(key, text)` and `clearAlert(key, { okNeeded, recovered })`. One row per key in the `alert` table — state, not history (the log has every event):
+
+- First raise sends `⚠️ text`; while open, quiet; a repeat only after 12h.
+- `clearAlert` closes after `okNeeded` good checks in a row (2 for a device that flaps) and sends `✅ …` only if the problem was sent.
+- A deploy or restart doesn't resend open alerts (the table persists).
+- Delivered on the channel in `chota.config.ts > alerts.channel` (default Telegram, to `telegram.notifyChatIds`); the transport registers itself at boot. During `alerts.quietHours` they arrive silent. Alerting never throws.
+- `/admin/jobs` lists recent alerts and has a "Send test alert" button (sends ⚠️ then ✅).
+
+Planned on top: per-person targets (an alert to a kid, via their channel); `/mute <key>` once the commands registry exists.
+
+**Device checks (planned):** `printer-check` every 30 min asks the thermal printer for status (`DLE EOT`: paper out/low, cover open, error; unplugged counts) — free, local USB. Logging follows the rule above: ok runs aren't logged, a change of state is (`printer: ok → paper low`), and the alert carries it. The morning/weekend prints run the same check first and fail with the reason. The laser can get a reachability check the same way later — but as status, not an alert, since it's off most of the time.
+
+Learned from hermes-agent (`refs/hermes-agent/cron/incidents.py`, `gateway/cron_store_notices.py`): alert on transitions, not on every poll; no lone "recovered"; close incidents on recovery or they pile up as "open" forever. Not taken: its run ledger, leases, retry queue, catch-up runs (a 06:45 print at 11:00 is worse than none) — that's multi-process machinery.
 
 ## What we deliberately don't have
 
