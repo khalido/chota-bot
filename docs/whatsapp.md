@@ -156,17 +156,9 @@ Setup for a business number: a cheap Android phone on Wi-Fi and a charger, Whats
 
 ## Build order
 
-1. Before the WhatsApp module: the Pi is the server (link once, on the box that keeps it) and the `lru-cache` helper exists.
-2. Number: eSIM + WhatsApp Business registered, two-step PIN on, battery optimisation off (KO).
-3. **Warm up the number** for a few days before automating it: normal messages with the family from the phone, joined to the family group, a profile name and photo. A brand-new number that starts sending automated messages straight away is the classic ban pattern.
-4. Spike in `scripts/`, on the Pi, behind a 4-method interface (`send`, `onMessage`, `onConnection`, `requestPairingCode`). It must prove:
-   - link headless by pairing code and by QR, including the 515 restart; restart with saved creds and no re-link;
-   - **every family member resolves to a person**, in a DM and in the group (LID vs phone) — the biggest unknown;
-   - an @mention of the bot is detectable (`contextInfo.mentionedJid` is a LID in v7; match the bot's own PN and LID from `sock.user`);
-   - killing the process for 5 minutes replays nothing old;
-   - a PNG goes out as a document.
-
-   Run it on baileyrs; swap the import to Baileys only if something here fails.
-
-5. `whatsapp/` module: allowlist, mention gating, per-chat turn queue, agent replies + a `print` tool, typing presence, reconnect, `/api/health`.
-6. Media out (print PNGs, artifacts), then voice notes in (Groq transcription, as planned for Telegram).
+1. ~~Number: eSIM + WhatsApp Business, two-step PIN, battery optimisation off~~ (KO, 2026-10-16). Warm-up: the family group and DMs are in normal use.
+2. ~~Spike~~ (`scripts/whatsapp-spike.mjs`, 2026-10-16): pairing code, restart without re-link, LID ↔ phone, mentions, catch-up as `append`, contact cards, images — see §Spike findings.
+3. ~~Channel~~ (`channels/whatsapp.ts` behind the shared router, 2026-10-16): allowlist from `family[].whatsapp`, mention gating, per-chat queue, quoted replies, footnote links, tool reactions, reconnect with backoff, pairing code as an alert.
+4. ~~Photos and voice notes in~~ (2026-10-16): photos to the agent as images; voice notes transcribed by Gemini through the Gateway; untagged group messages triaged by Jev (agent.md §Channels).
+5. **Move to the box** — `WHATSAPP_ENABLED=true` in the box's `.env`, deploy, type the code from the Telegram alert, unlink the Mac device. Then back up `data/whatsapp-auth/`.
+6. Media out (brief PNGs, artifacts), polls for approvals, message edits for "working on it".

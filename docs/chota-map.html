@@ -1,0 +1,750 @@
+<title>Chota Bot Map</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+	rel="stylesheet"
+	href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap"
+/>
+<style>
+	/* Layout: a receipt-roll column for reading, wide tables and the diagram scroll in their own boxes. */
+	:root {
+		--paper: #f6f4ee;
+		--card: #fffdf8;
+		--ink: #1d1f1c;
+		--muted: #62665e;
+		--rule: #d9d5c9;
+		--accent: #1f6f6a;
+		--accent-soft: #dceeec;
+		--now: #2f7a3d;
+		--next: #9a6a12;
+		--later: #6b5a8e;
+		--tag-bg: #ece8dc;
+		--display: 'Familjen Grotesk', 'Helvetica Neue', Arial, sans-serif;
+		--body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+		--mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root:not([data-theme='light']) {
+			--paper: #161816;
+			--card: #1f221f;
+			--ink: #e9e7df;
+			--muted: #a3a79c;
+			--rule: #343832;
+			--accent: #6cc4bc;
+			--accent-soft: #1d3634;
+			--now: #7cc68a;
+			--next: #e0b45c;
+			--later: #b3a2dc;
+			--tag-bg: #2b2f2a;
+			color-scheme: dark;
+		}
+	}
+	:root[data-theme='dark'] {
+		--paper: #161816;
+		--card: #1f221f;
+		--ink: #e9e7df;
+		--muted: #a3a79c;
+		--rule: #343832;
+		--accent: #6cc4bc;
+		--accent-soft: #1d3634;
+		--now: #7cc68a;
+		--next: #e0b45c;
+		--later: #b3a2dc;
+		--tag-bg: #2b2f2a;
+		color-scheme: dark;
+	}
+	* {
+		box-sizing: border-box;
+	}
+	body {
+		background: var(--paper);
+		color: var(--ink);
+		font: 16px/1.55 var(--body);
+		padding-left: max(16px, env(safe-area-inset-left, 0px));
+		padding-right: max(16px, env(safe-area-inset-right, 0px));
+		padding-block: 32px 64px;
+	}
+	main {
+		max-width: 980px;
+		margin: 0 auto;
+		display: grid;
+		gap: 40px;
+	}
+	header {
+		display: grid;
+		gap: 8px;
+	}
+	.eyebrow {
+		font: 600 12px/1 var(--mono);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--accent);
+	}
+	h1 {
+		font: 700 clamp(30px, 6vw, 46px)/1.05 var(--display);
+		margin: 0;
+		text-wrap: balance;
+	}
+	h2 {
+		font: 700 24px/1.2 var(--display);
+		margin: 0 0 4px;
+		text-wrap: balance;
+	}
+	h3 {
+		font: 700 17px/1.3 var(--display);
+		margin: 0;
+	}
+	p {
+		margin: 0;
+		max-width: 68ch;
+	}
+	.lead {
+		color: var(--muted);
+		font-size: 17px;
+	}
+	section {
+		display: grid;
+		gap: 14px;
+	}
+	.sub {
+		color: var(--muted);
+		font-size: 15px;
+	}
+	code,
+	.mono {
+		font-family: var(--mono);
+		font-size: 0.86em;
+	}
+	.tear {
+		border: 0;
+		border-top: 2px dashed var(--rule);
+		margin: 0;
+	}
+	.diagram {
+		background: var(--card);
+		border: 1px solid var(--rule);
+		border-radius: 6px;
+		padding: 16px;
+		overflow-x: auto;
+	}
+	.diagram svg {
+		display: block;
+		min-width: 760px;
+		width: 100%;
+		height: auto;
+	}
+	.diagram text {
+		font-family: var(--body);
+		fill: var(--ink);
+	}
+	.diagram .lbl {
+		font: 600 11px var(--mono);
+		fill: var(--muted);
+		letter-spacing: 0.04em;
+	}
+	.diagram .box {
+		fill: var(--card);
+		stroke: var(--rule);
+		stroke-width: 1.5;
+	}
+	.diagram .hub {
+		fill: var(--accent-soft);
+		stroke: var(--accent);
+		stroke-width: 1.5;
+	}
+	.diagram .plan {
+		fill: none;
+		stroke: var(--muted);
+		stroke-dasharray: 4 3;
+		stroke-width: 1.2;
+	}
+	.diagram .wire {
+		stroke: var(--muted);
+		stroke-width: 1.4;
+		fill: none;
+	}
+	.diagram .wire.plan-w {
+		stroke-dasharray: 4 3;
+	}
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+		font-size: 13px;
+		color: var(--muted);
+	}
+	.table-wrap {
+		overflow-x: auto;
+		background: var(--card);
+		border: 1px solid var(--rule);
+		border-radius: 6px;
+	}
+	table {
+		border-collapse: collapse;
+		width: 100%;
+		font-size: 14.5px;
+	}
+	th,
+	td {
+		text-align: left;
+		padding: 9px 12px;
+		border-bottom: 1px solid var(--rule);
+		vertical-align: top;
+	}
+	th {
+		font: 600 11.5px/1.2 var(--mono);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--muted);
+		background: var(--paper);
+	}
+	tr:last-child td {
+		border-bottom: 0;
+	}
+	td:first-child {
+		font-weight: 700;
+		white-space: nowrap;
+	}
+	.pill {
+		display: inline-block;
+		font: 600 11px/1 var(--mono);
+		padding: 4px 7px;
+		border-radius: 99px;
+		background: var(--tag-bg);
+		color: var(--muted);
+		white-space: nowrap;
+	}
+	.pill.live {
+		color: var(--now);
+	}
+	.pill.plan {
+		color: var(--later);
+	}
+	.grid2 {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 14px;
+	}
+	.card {
+		background: var(--card);
+		border: 1px solid var(--rule);
+		border-radius: 6px;
+		padding: 14px 16px;
+		display: grid;
+		gap: 6px;
+		min-width: 0;
+	}
+	.card ul {
+		margin: 0;
+		padding-left: 18px;
+		display: grid;
+		gap: 4px;
+		font-size: 15px;
+	}
+	.lanes {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+		gap: 14px;
+	}
+	.lane {
+		display: grid;
+		gap: 10px;
+		align-content: start;
+	}
+	.lane h3 {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		display: inline-block;
+	}
+	.idea {
+		background: var(--card);
+		border: 1px solid var(--rule);
+		border-left: 3px solid var(--rule);
+		border-radius: 4px;
+		padding: 10px 12px;
+		display: grid;
+		gap: 3px;
+	}
+	.idea b {
+		font-family: var(--display);
+		font-size: 15.5px;
+	}
+	.idea span {
+		font-size: 14px;
+		color: var(--muted);
+	}
+	.lane.now .idea {
+		border-left-color: var(--now);
+	}
+	.lane.next .idea {
+		border-left-color: var(--next);
+	}
+	.lane.later .idea {
+		border-left-color: var(--later);
+	}
+	footer {
+		color: var(--muted);
+		font-size: 13px;
+	}
+	@media (max-width: 520px) {
+		td:first-child {
+			white-space: normal;
+		}
+	}
+</style>
+
+<main>
+	<header>
+		<div class="eyebrow">chota-bot · system map · 16 Oct 2026</div>
+		<h1>Chota Bot Map</h1>
+		<p class="lead">
+			What the family bot is made of, where its data lives, and what it could do next. One page to
+			come back to when planning; updated as things ship.
+		</p>
+	</header>
+
+	<section>
+		<h2>How it fits together</h2>
+		<p class="sub">
+			One Node process on the kitchen box (<span class="mono">pop-os</span>, moving to a Pi 5).
+			Every chat app goes through one router to one agent; scheduled jobs print and alert on their
+			own.
+		</p>
+		<div class="diagram">
+			<svg
+				viewBox="0 0 900 470"
+				role="img"
+				aria-label="Chat apps feed a router, which runs the agent; the agent calls tools that read external sources; jobs and alerts run alongside"
+			>
+				<text class="lbl" x="20" y="24">PEOPLE &amp; CHANNELS</text>
+				<rect class="box" x="20" y="40" width="170" height="54" rx="6" />
+				<text x="36" y="63" font-weight="700">Telegram</text>
+				<text x="36" y="82" font-size="12.5" fill="currentColor">grammY · live drafts</text>
+				<rect class="box" x="20" y="108" width="170" height="54" rx="6" />
+				<text x="36" y="131" font-weight="700">WhatsApp</text>
+				<text x="36" y="150" font-size="12.5">baileyrs · reactions</text>
+				<rect class="box" x="20" y="176" width="170" height="44" rx="6" />
+				<text x="36" y="195" font-size="13.5" font-weight="700">Photos · voice notes</text>
+				<text x="36" y="212" font-size="12">Gemini transcribe</text>
+
+				<text class="lbl" x="250" y="24">ROUTER</text>
+				<rect class="hub" x="250" y="40" width="190" height="180" rx="8" />
+				<text x="266" y="66" font-weight="700">channels/index.ts</text>
+				<text x="266" y="92" font-size="13">voice → transcript</text>
+				<text x="266" y="112" font-size="13">addressed? DM · @chota</text>
+				<text x="266" y="132" font-size="13">untagged → Jev triage</text>
+				<text x="266" y="152" font-size="13">per-chat queue · quiet turns</text>
+				<text x="266" y="172" font-size="13">history · sender names</text>
+				<text x="266" y="192" font-size="13">alerts default → fallback</text>
+
+				<text class="lbl" x="500" y="24">AGENT</text>
+				<rect class="hub" x="500" y="40" width="160" height="90" rx="8" />
+				<text x="516" y="66" font-weight="700">ToolLoopAgent</text>
+				<text x="516" y="88" font-size="13">DeepSeek Flash Fast</text>
+				<text x="516" y="108" font-size="13">via AI Gateway</text>
+				<rect class="plan" x="500" y="146" width="160" height="74" rx="8" />
+				<text x="516" y="172" font-size="13.5">approvals · memory</text>
+				<text x="516" y="192" font-size="13.5">reminders</text>
+				<text x="516" y="210" font-size="12" class="lbl">PLANNED</text>
+
+				<text class="lbl" x="720" y="24">TOOLS → SOURCES</text>
+				<g font-size="13">
+					<rect class="box" x="720" y="40" width="160" height="26" rx="4" />
+					<text x="732" y="58">calendar → Google</text>
+					<rect class="box" x="720" y="72" width="160" height="26" rx="4" />
+					<text x="732" y="90">lists → TickTick</text>
+					<rect class="box" x="720" y="104" width="160" height="26" rx="4" />
+					<text x="732" y="122">school → Sentral, NSW</text>
+					<rect class="box" x="720" y="136" width="160" height="26" rx="4" />
+					<text x="732" y="154">bus → Transport NSW</text>
+					<rect class="box" x="720" y="168" width="160" height="26" rx="4" />
+					<text x="732" y="186">weather · beach</text>
+					<rect class="box" x="720" y="200" width="160" height="26" rx="4" />
+					<text x="732" y="218">volleyball · chores</text>
+					<rect class="box" x="720" y="232" width="160" height="26" rx="4" />
+					<text x="732" y="250">TMDB · web (Exa)</text>
+				</g>
+
+				<path class="wire" d="M190 67 H250" />
+				<path class="wire" d="M190 135 H250" />
+				<path class="wire plan-w" d="M190 198 H250" />
+				<path class="wire" d="M440 85 H500" />
+				<path class="wire" d="M660 85 H690 V150 H720" />
+				<path class="wire plan-w" d="M580 130 V146" />
+
+				<text class="lbl" x="20" y="300">ON A SCHEDULE</text>
+				<rect class="box" x="20" y="316" width="420" height="120" rx="8" />
+				<text x="36" y="342" font-weight="700">13 jobs (croner, scheduler.ts)</text>
+				<text x="36" y="364" font-size="13">06:45 morning briefs · Fri 18:00 weekend sheet</text>
+				<text x="36" y="384" font-size="13">
+					refreshes: bus 5m · ticktick 10m · calendar 15m · weather 30m
+				</text>
+				<text x="36" y="404" font-size="13">sentral 4×/school day · term dates · volleyball</text>
+				<text x="36" y="424" font-size="13">
+					a failure → alert (once, 12h repeat, "working again")
+				</text>
+
+				<rect class="box" x="500" y="316" width="180" height="120" rx="8" />
+				<text x="516" y="342" font-weight="700">Thermal printer</text>
+				<text x="516" y="364" font-size="13">MUNBYN 80mm, USB</text>
+				<text x="516" y="384" font-size="13">brief → screenshot</text>
+				<text x="516" y="404" font-size="13">→ 576px PNG → ESC/POS</text>
+
+				<rect class="box" x="720" y="316" width="160" height="120" rx="8" />
+				<text x="736" y="342" font-weight="700">Kiosk pages</text>
+				<text x="736" y="364" font-size="13">/ clock · weather</text>
+				<text x="736" y="384" font-size="13">/lists · /print/who</text>
+				<text x="736" y="404" font-size="13">/admin (Google login)</text>
+
+				<path class="wire" d="M440 376 H500" />
+			</svg>
+		</div>
+		<div class="legend"><span>Solid: built and running.</span><span>Dashed: planned.</span></div>
+	</section>
+
+	<hr class="tear" />
+
+	<section>
+		<h2>Connectors</h2>
+		<p class="sub">
+			One file per source in <span class="mono">src/lib/server/tools/</span>; the agent sees thin
+			wrappers in <span class="mono">agent/tools/</span>.
+		</p>
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>Source</th>
+						<th>What chota gets</th>
+						<th>Auth</th>
+						<th>Agent can</th>
+						<th>State</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Google Calendar</td>
+						<td>family calendar: ranges, days, search a year either way</td>
+						<td>better-auth OAuth (read-only)</td>
+						<td>read, search</td>
+						<td><span class="pill live">live</span> write planned (👍 to save)</td>
+					</tr>
+					<tr>
+						<td>TickTick</td>
+						<td>Shopping, Family (Reminders · To buy), Watch, Notes</td>
+						<td>MCP API key</td>
+						<td>read, add with owner, section, due, note; tick off</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>Sentral</td>
+						<td>
+							each kid's timetable (.ics); portal JSON has term calendar, newsletters, absences
+						</td>
+						<td>student cookie, self-healing SAML login</td>
+						<td>timetable for a day</td>
+						<td><span class="pill live">live</span> calendar/news planned</td>
+					</tr>
+					<tr>
+						<td>NSW school terms</td>
+						<td>terms, holidays, pupil-free days</td>
+						<td>none</td>
+						<td>"last day of term", "back on"</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>Transport NSW</td>
+						<td>next buses per kid's stop</td>
+						<td>API key</td>
+						<td>next buses</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>Weather · beach</td>
+						<td>forecast, surf report</td>
+						<td>none</td>
+						<td>weather, beach</td>
+						<td><span class="pill live">live</span> home lib replaces</td>
+					</tr>
+					<tr>
+						<td>Volleyball NSW</td>
+						<td>next game, duty roster</td>
+						<td>none (scrape)</td>
+						<td>fixtures</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>TMDB</td>
+						<td>film and TV facts</td>
+						<td>API key</td>
+						<td>look up</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>Web</td>
+						<td>Exa search, Browserbase page fetch</td>
+						<td>AI Gateway</td>
+						<td>search, read a link</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>Jev (TypeSafe)</td>
+						<td>
+							one cheap judgment per untagged group message: shopping, to-do, watch, done, question,
+							none
+						</td>
+						<td>AI Gateway</td>
+						<td>— (router step)</td>
+						<td><span class="pill live">live</span> WhatsApp groups</td>
+					</tr>
+					<tr>
+						<td>Gemini</td>
+						<td>
+							voice-note transcripts (3.5 transcribe); is this photo a flyer? (3.5 Flash Lite)
+						</td>
+						<td>AI Gateway</td>
+						<td>— (router step)</td>
+						<td><span class="pill live">live</span></td>
+					</tr>
+					<tr>
+						<td>Home lib</td>
+						<td>weather blocks, rain at pickup, Hue, Enphase</td>
+						<td>Maps key (rain)</td>
+						<td>—</td>
+						<td><span class="pill plan">waiting on npm</span></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section>
+		<h2>Where the data lives</h2>
+		<div class="grid2">
+			<div class="card">
+				<h3>SQLite · data/home.db</h3>
+				<ul>
+					<li>
+						<code>chat_message</code>: last 50 messages per thread (<code>tg:…</code>,
+						<code>wa:…</code>), text only
+					</li>
+					<li><code>alert</code>: open/resolved alerts, so deploys don't resend</li>
+					<li><code>decision</code>: every Jev verdict with its probabilities, for tuning</li>
+					<li>
+						<code>user</code>, <code>session</code>, <code>account</code>,
+						<code>verification</code>: Google login (better-auth)
+					</li>
+					<li>About 100 KB. Drizzle schema in <code>src/lib/server/db/</code>.</li>
+				</ul>
+			</div>
+			<div class="card">
+				<h3>Files · data/</h3>
+				<ul>
+					<li><code>logs/</code>: LogTape, rotating 8 MB files (~87 MB on the box)</li>
+					<li><code>sentral/</code>: timetable .ics + cookie per kid</li>
+					<li><code>whatsapp-auth/</code>: the WhatsApp login (~900 small files; back up whole)</li>
+					<li><code>files/&lt;chat&gt;/</code>: photos and voice notes people send</li>
+				</ul>
+			</div>
+			<div class="card">
+				<h3>Config &amp; secrets</h3>
+				<ul>
+					<li>
+						<code>chota.config.ts</code>: family (name, aliases, email, WhatsApp, Telegram id),
+						lists, buses, channels, alerts. The only place real names live.
+					</li>
+					<li><code>.env</code>: API keys and tokens</li>
+					<li>Both gitignored, copied to the box on deploy. Backup: open question.</li>
+				</ul>
+			</div>
+			<div class="card">
+				<h3>Content &amp; memory</h3>
+				<ul>
+					<li>
+						<code>../curios/dist</code>: literary-clock quotes (1,431 of 1,440 minutes), puzzles, TV
+						and comic quotes
+					</li>
+					<li>TickTick: the family's shared record of to-dos</li>
+					<li>
+						Planned: a family home folder of markdown (soul, memory, people, projects) the bot reads
+						and edits, synced with git
+					</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<section>
+		<h2>Key libraries</h2>
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>Library</th>
+						<th>Job</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>SvelteKit 2 + adapter-node</td>
+						<td>pages, API, server hooks in one process</td>
+					</tr>
+					<tr>
+						<td>ai 7 (Vercel AI SDK) + AI Gateway</td>
+						<td>the agent loop, tools, model routing, web tools, Jev decisions, transcription</td>
+					</tr>
+					<tr>
+						<td>grammY + auto-retry</td>
+						<td>Telegram long polling, rich-message drafts</td>
+					</tr>
+					<tr>
+						<td>@oxidezap/baileyrs</td>
+						<td>WhatsApp Web as a linked device (Rust core as WASM)</td>
+					</tr>
+					<tr>
+						<td>croner</td>
+						<td>job schedules, Sydney time</td>
+					</tr>
+					<tr>
+						<td>Drizzle + better-sqlite3</td>
+						<td>the database</td>
+					</tr>
+					<tr>
+						<td>better-auth</td>
+						<td>Google login for /admin and calendar</td>
+					</tr>
+					<tr>
+						<td>lru-cache</td>
+						<td><code>withTtl</code>: cached fetches with last-good fallback</td>
+					</tr>
+					<tr>
+						<td>node-thermal-printer + usb</td>
+						<td>ESC/POS bytes over raw USB</td>
+					</tr>
+					<tr>
+						<td>agent-browser</td>
+						<td>screenshots for the printer, Sentral login</td>
+					</tr>
+					<tr>
+						<td>LogTape</td>
+						<td>structured logs to file and journald</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<hr class="tear" />
+
+	<section>
+		<h2>Ideas board</h2>
+		<p class="sub">
+			Now = being built; next = designed, small; later = needs a decision or hardware. Grows as the
+			family asks for things.
+		</p>
+		<div class="lanes">
+			<div class="lane now">
+				<h3><span class="dot" style="background: var(--now)"></span>Now</h3>
+				<div class="idea">
+					<b>Try photos, voice, triage</b
+					><span>A flyer photo and a voice note by DM; untagged "out of milk" in the group.</span>
+				</div>
+				<div class="idea">
+					<b>WhatsApp on the box</b
+					><span>Re-pair there by a code sent on Telegram, unlink the Mac, family group live.</span>
+				</div>
+				<div class="idea">
+					<b>Printer status check</b
+					><span>DLE EOT every 30 min and before each print: paper out, cover open → alert.</span>
+				</div>
+			</div>
+			<div class="lane next">
+				<h3><span class="dot" style="background: var(--next)"></span>Next</h3>
+				<div class="idea">
+					<b>Reminders &amp; nudges</b
+					><span
+						>Dated list items, morning and after-school heads-up, weekly "anything to close?" for
+						parents.</span
+					>
+				</div>
+				<div class="idea">
+					<b>List enrichment</b
+					><span
+						>New Watch item → TMDB + Exa 1–3 line review in its note. New "to buy" item → research
+						with 2–3 links (Exa, HN).</span
+					>
+				</div>
+				<div class="idea">
+					<b>Weekly parent digest</b
+					><span
+						>Last week's open reminders, the kids' week, the oldest "to buy" items: keep, move to
+						Shopping, delete.</span
+					>
+				</div>
+				<div class="idea">
+					<b>Sentral term calendar</b
+					><span>Excursions and permission notes into the brief and nudges; newsletter pings.</span>
+				</div>
+				<div class="idea">
+					<b>WhatsApp polls &amp; edits</b
+					><span>Polls for choices and approvals; "working on it" edited into the answer.</span>
+				</div>
+				<div class="idea">
+					<b>One identity per person</b
+					><span>Telegram ids into config; allowlists and admin from family roles.</span>
+				</div>
+				<div class="idea">
+					<b>Telegram photos, voice, triage</b
+					><span>The same router steps, switched on for Telegram.</span>
+				</div>
+			</div>
+			<div class="lane later">
+				<h3><span class="dot" style="background: var(--later)"></span>Later</h3>
+				<div class="idea">
+					<b>Print tool</b
+					><span
+						>"Print this" from chat: thermal first, laser later, with a parent's OK. Streamline the
+						print path first.</span
+					>
+				</div>
+				<div class="idea">
+					<b>Calendar write</b><span>Bot proposes the event, 👍 saves it.</span>
+				</div>
+				<div class="idea">
+					<b>Approvals</b
+					><span
+						>A parent's "yes" or 👍 resumes a paused agent turn; kids' bigger requests wait for
+						it.</span
+					>
+				</div>
+				<div class="idea">
+					<b>Family memory</b
+					><span>Home folder of markdown: soul, people, projects, trip plans; nightly digest.</span>
+				</div>
+				<div class="idea">
+					<b>Artifacts</b
+					><span>Phone-friendly pages built from a chat ask, at a short web address.</span>
+				</div>
+				<div class="idea">
+					<b>Pi 5 home server</b
+					><span>Node 26, Tailscale, backups, sandboxed agent tools, uptime ping.</span>
+				</div>
+				<div class="idea">
+					<b>Health digest &amp; costs</b
+					><span>A daily admin note; what each agent call cost.</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<footer>
+		Source of truth: the repo's <span class="mono">docs/</span> (agent, jobs, tools, whatsapp,
+		memory, box). This page summarises them.
+	</footer>
+</main>

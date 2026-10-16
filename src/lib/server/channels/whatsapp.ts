@@ -47,7 +47,13 @@ const libLogger = {
 	debug() {},
 	info() {},
 	warn: (...a: unknown[]) => log(SCOPE, `lib: ${a.map((x) => JSON.stringify(x)).join(' ')}`),
-	error: (...a: unknown[]) => logErr(SCOPE, 'lib error', a.map((x) => JSON.stringify(x)).join(' '))
+	// Drops the engine retries itself ("Will retry", "reconnecting") are
+	// routine: log them plainly, and keep errors for the rest.
+	error: (...a: unknown[]) => {
+		const text = a.map((x) => JSON.stringify(x)).join(' ');
+		if (/WebSocket error|Will retry|reconnecting/.test(text)) log(SCOPE, `lib (retrying): ${text}`);
+		else logErr(SCOPE, 'lib error', text);
+	}
 };
 
 const jidOf = (threadId: string) => threadId.slice('wa:'.length);
