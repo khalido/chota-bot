@@ -8,7 +8,7 @@ vi.mock('$lib/server/agent', () => ({ runAgentStream: vi.fn() }));
 vi.mock('$lib/server/agent/history', () => ({}));
 vi.mock('$lib/server/log', () => ({ event: vi.fn(), logErr: vi.fn() }));
 
-const { shouldAnswer } = await import('./index');
+const { followsBot, shouldAnswer } = await import('./index');
 
 const now = new Date('2026-10-16T09:00:00+11:00').getTime();
 const msg = (over: Partial<Incoming> = {}): Incoming => ({
@@ -41,5 +41,15 @@ describe('shouldAnswer', () => {
 
 	it('ignores empty text', () => {
 		expect(shouldAnswer(msg({ isDM: true, text: '  ' }), now)).toBe(false);
+	});
+});
+
+describe('followsBot', () => {
+	it('needs the bot in the last two lines', () => {
+		const bot = 'chota (bot): Added the book';
+		expect(followsBot(['Parent1: [photo]', bot])).toBe(true);
+		expect(followsBot([bot, 'Parent2: nice'])).toBe(true);
+		expect(followsBot([bot, 'Parent2: nice', 'Parent1: dinner?'])).toBe(false);
+		expect(followsBot([])).toBe(false);
 	});
 });

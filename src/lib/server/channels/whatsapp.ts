@@ -168,6 +168,16 @@ export function whatsappChannel(): Channel | null {
 				);
 				return;
 			}
+			// Another connection on the same login took over — a second app
+			// instance (the Mac and the box both linked, or a dev reload). Fighting
+			// back makes the two kick each other off every few seconds.
+			if (code === DisconnectReason.connectionReplaced) {
+				await raiseAlert(
+					ALERT_KEY,
+					'WhatsApp connection replaced by another instance — this one stopped. Restart it if that was wrong.'
+				);
+				return;
+			}
 			// A plain close usually reconnects at once — only a failed reconnect
 			// alerts (scheduleConnect). A temporary ban waits until it lifts.
 			if (code === DisconnectReason.forbidden) {

@@ -11,6 +11,10 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Job run history in the DB:** every fire goes to a `job_run` table (30 days), so `/admin/jobs` and `/api/health` keep it across deploys.
+- **Missed-print alerts:** `job-check` alerts when the 06:45 or Friday 18:00 print's slot passed with no run (box off, restarting, or cut off mid-run).
+- **Group follow-ups:** an untagged group message that follows up on the bot's last reply ("what else can you tell me about this book?") now gets an answer. Jev sees the bot's own lines in its context and has a `follow_up` choice, answered at 0.85.
+- **Run timeout:** each job run is capped at 10 min, so a hung print fails and alerts instead of blocking the job.
 - **Group triage with Jev:** an untagged WhatsApp group message gets one decision-model judgment (shopping item / family to-do / watch / done / question / none; `decisions/group-triage.json`, every verdict in a new `decision` table). A list item runs a quiet agent turn that answers with a reaction only. Untagged photos pass a cheap vision check first.
 - **Photos and voice notes:** photos reach the agent as images (flyers → a dated Family reminder with the details); voice notes are transcribed by Gemini through the Gateway and handled like typed text. Files are kept under `data/files/<chat>/`.
 - **Family roles:** `family[].role` (`parent` / `kid`), shown to the agent.
@@ -78,6 +82,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Changed
 
+- **Channels boot before jobs**, so a job failing at startup has an alert channel to send on. `chota.service` sets `TZ=Australia/Sydney` (a fresh Pi OS box may be on UTC); needs the usual `cp` + `daemon-reload` to take effect.
+
 - **Channel layer** (`src/lib/server/channels/`): one router for every chat app — gate, per-thread queue, history, agent run — with Telegram as the first adapter (`telegram/bot.ts` → `channels/telegram.ts`). Chats now run in parallel; messages sent while the bot is answering become one follow-up turn. History moves to `tg:<id>` thread keys at boot. Config `channels: { default, fallback }`; alerts try the fallback when the default fails.
 
 - **Agent model → `deepseek/deepseek-v4.1-flash-fast`** (from Gemini 3.5 Flash), with web search and page reading moved to AI Gateway's own tools: `web_search` (Exa) and `web_fetch` (Browserbase Fetch, new). Replies with a tool call went from ~6–7s to ~1.3s. `@ai-sdk/google` removed.
@@ -124,6 +130,9 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
   `usb` 3 (untested against the printer).
 
 ### Fixed
+
+- WhatsApp: a dev reload opened a second socket on the same login, and the two knocked each other off every few seconds (a reply was lost). Channels now stop before booting again, and a `440 Connection replaced` stops reconnecting and alerts instead of fighting.
+- `/admin/jobs` showed RUNNING on every job (croner's `isRunning()` means scheduled; `isBusy()` means running).
 
 - **No stale print after the box wakes up.** croner fires any overdue run the
   moment a suspended box wakes, so a laptop shut for weeks printed a morning

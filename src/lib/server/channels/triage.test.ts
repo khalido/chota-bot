@@ -37,7 +37,7 @@ describe('triage', () => {
 			probabilities: { shopping_item: 0.96, none: 0.04 },
 			model: 'typesafe-ai/jev'
 		});
-		expect(await triage(m, [])).toEqual({ kind: 'shopping_item', probability: 0.96 });
+		expect(await triage(m, [])).toEqual({ kind: 'shopping_item', probability: 0.96, reply: false });
 		expect(inserted[0]).toMatchObject({ pick: 'shopping_item', acted: true, messageId: 'M1' });
 	});
 
@@ -52,6 +52,22 @@ describe('triage', () => {
 		}
 		expect(inserted).toHaveLength(3);
 		expect(inserted.every((r) => (r as { acted: boolean }).acted === false)).toBe(true);
+	});
+
+	it('answers a follow-up to the bot only over the higher reply threshold', async () => {
+		decideChoice.mockResolvedValue({
+			pick: 'follow_up',
+			probabilities: { follow_up: 0.9 },
+			model: 'jev'
+		});
+		expect(await triage(m, [])).toEqual({ kind: 'follow_up', probability: 0.9, reply: true });
+		decideChoice.mockResolvedValue({
+			pick: 'follow_up',
+			probabilities: { follow_up: 0.82 },
+			model: 'jev'
+		});
+		expect(await triage(m, [])).toBeNull();
+		expect(inserted.map((r) => (r as { acted: boolean }).acted)).toEqual([true, false]);
 	});
 
 	it('treats a failed call as no suggestion', async () => {

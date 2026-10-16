@@ -3,14 +3,18 @@
 	"model": "typesafe-ai/jev",
 	"threshold": 0.8,
 	"act": ["shopping_item", "family_todo", "watch_item", "done"],
+	"$replyComment": "Picks answered out loud, like a tagged message. Higher bar: a wrong reply in the group is the annoying mistake.",
+	"replyThreshold": 0.85,
+	"reply": ["follow_up"],
 	"question": {
 		"type": "choice",
-		"instructions": "A family group chat that includes a helper bot. The bot was NOT tagged in this message. Decide whether the latest message asks, directly or in passing, for something the bot can do on the family's shared lists. Ordinary conversation between family members is 'none'. Use the recent messages only as context.",
+		"instructions": "A family group chat that includes a helper bot; its lines start 'chota (bot):'. The bot was NOT tagged in the latest message. Decide whether the latest message continues a conversation with the bot, or asks, directly or in passing, for something the bot can do on the family's shared lists. Ordinary conversation between family members is 'none', even about something the bot said. Use the recent messages only as context.",
 		"criteria": {
 			"shopping_item": "Something to buy at the shops is needed or has run out ('we're out of milk', 'need bread').",
 			"family_todo": "A household job or reminder for someone ('remind me to call the plumber', 'someone needs to book the dentist').",
 			"watch_item": "A show or film the family wants to watch later ('we should watch Severance').",
 			"done": "Something on a list was bought or done ('got the milk', 'bins are out').",
+			"follow_up": "Speaks to the bot about what it just said: a follow-up question or reply to the bot's last message ('what else can you tell me about this book?', 'and tomorrow?', 'thanks, can you add it too?'). Only when the bot's line is the most recent or nearly so, and the message is aimed at the bot, not at a family member.",
 			"question": "A question the bot could answer (weather, buses, school, what's on), not addressed to it.",
 			"none": "Chat between family members, or anything else."
 		}

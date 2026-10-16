@@ -1,8 +1,9 @@
 /**
  * Pipeline step 3 (docs/agent.md §Channels): a family-group message that
- * doesn't tag the bot gets one Jev judgment — is it something for the lists?
- * Question and threshold live in `decisions/group-triage.json`; every verdict
- * is stored in the `decision` table. A throw (Jev down) means no suggestion.
+ * doesn't tag the bot gets one Jev judgment — is it something for the lists,
+ * or a follow-up to what the bot just said? Question and thresholds live in
+ * `decisions/group-triage.json`; every verdict is stored in the `decision`
+ * table. A throw (Jev down) means no suggestion.
  */
 import { generateId, generateText, Output } from 'ai';
 import { z } from 'zod';
@@ -20,6 +21,8 @@ const hash = questionsHash(question);
 export interface TriageHit {
 	kind: string;
 	probability: number;
+	/** Answer out loud, like a tagged message (a follow-up to the bot). */
+	reply: boolean;
 }
 
 /** Judge one untagged group message against the recent lines for context. */
@@ -32,7 +35,8 @@ export async function triage(m: Incoming, recent: string[]): Promise<TriageHit |
 			question
 		);
 		const probability = probabilities[pick] ?? 0;
-		const acted = spec.act.includes(pick) && probability >= spec.threshold;
+		const reply = spec.reply.includes(pick) && probability >= spec.replyThreshold;
+		const acted = reply || (spec.act.includes(pick) && probability >= spec.threshold);
 		db.insert(decision)
 			.values({
 				id: generateId(),
@@ -46,7 +50,7 @@ export async function triage(m: Incoming, recent: string[]): Promise<TriageHit |
 				acted
 			})
 			.run();
-		return acted ? { kind: pick, probability } : null;
+		return acted ? { kind: pick, probability, reply } : null;
 	} catch (err) {
 		logErr('triage', 'group triage failed — no suggestion', err);
 		return null;

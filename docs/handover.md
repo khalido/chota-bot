@@ -1,4 +1,4 @@
-# Handover — 2026-10-16 (late)
+# Handover — 2026-10-16 (night)
 
 Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota Bot Map](https://claude.ai/artifact/2xkHYp6pkL5yb3EVZ3fTSR); its source is `docs/chota-map.html` (to update it from a new session, publish with that artifact's `url`).
 
@@ -9,10 +9,12 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 - **Built, not yet tried by the family:** Jev triage of untagged WhatsApp group messages (quiet turns, reaction only, `decision` table); photos to the agent (DeepSeek reads them — checked); voice notes via `google/gemini-3.5-transcribe` (checked with a synthetic clip); a Gemini Flash Lite gate for untagged group photos.
 - **TickTick:** Shopping, Family (sections _Reminders_, _To buy at some point_), Watch, Notes. The bot assigns (`family[].email` = TickTick account, default the sender) and files into sections.
 - **Config:** `family[]` has `role`, `email`, `whatsapp`, `telegram`. Missing: partner's TickTick email, everyone's Telegram user ids (`/start` shows them). `channels: { default: 'telegram', fallback: 'whatsapp' }`.
+- **Shipped tonight, not deployed yet:** jobs — `job_run` history table, `job-check` missed-print alerts, 10-min run timeout, channels boot first, `TZ` in `chota.service`; WhatsApp — reload-safe channels, `440` stops reconnecting, group `follow_up` triage (Jev sees the bot's lines; code also requires the bot in the last 2 lines). Watch early `follow_up` verdicts in `decision`: after a restart the seeded context leans to bot lines.
 - **Reviews applied:** Gemini (design; triage table in the Claude Doc "chota — Gemini feedback"), GPT-6 Astra via OpenCode, `/ko-review` on every commit.
 
 ## Next, in order
 
+0. **Pi 5 first boot (17 Oct):** SD card flashed with Raspberry Pi Imager (pre-config: hostname `chota`, user `ko`, SSH key, Wi-Fi, `Australia/Sydney`), then `docs/box.md` §First boot. Check on the Pi: `.env` has `KIOSK=true` (else prints skip without failing), Chromium from apt + `AGENT_BROWSER_EXECUTABLE_PATH`, one print by hand. Pair WhatsApp on the Pi, not on `pop-os` (that replaces step 2's box). The new hostname means updating `pop-os` URLs in CLAUDE.md and the deploy docs.
 1. **KO tries it on WhatsApp:** a flyer photo and a voice note by DM; untagged "we're out of milk" (text and voice) and an ordinary photo in the group. Check `decision` rows and tune `decisions/group-triage.json` if needed.
 2. **WhatsApp onto the box:** KO runs `! ssh pop-os 'echo WHATSAPP_ENABLED=true >> ~/code/chota-bot/.env'`; deploy; the pairing code arrives on Telegram; KO types it on the bot phone; stop the Mac dev server and unlink the Mac device; back up `data/whatsapp-auth/`.
 3. **Printer check** (`docs/jobs.md` §Alerts → Device checks): `DLE EOT`, `printer-check` every 30 min `{ logOk: false }`, check before each print. Needs the box + MUNBYN.

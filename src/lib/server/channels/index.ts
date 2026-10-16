@@ -30,7 +30,13 @@ interface Turn {
 	m: Incoming;
 }
 
-const channels: Channel[] = [];
+// Shared via globalThis so a dev reload of this module can stop the previous
+// sockets and pollers before starting new ones (see bootChannels).
+declare global {
+	var __chotaChannels: Channel[] | undefined;
+}
+if (!globalThis.__chotaChannels) globalThis.__chotaChannels = [];
+const channels: Channel[] = globalThis.__chotaChannels;
 const queue = new ThreadQueue<Turn>(runTurn);
 
 /** Should the bot answer this at all? */
@@ -41,9 +47,38 @@ export function shouldAnswer(m: Incoming, now = Date.now()): boolean {
 	return true;
 }
 
-/** The last few lines of each group, for the triage judgment's context. */
+/** The last few lines of each group, for the triage judgment's context —
+ *  the bot's own replies included, so Jev can tell a follow-up to the bot. */
 const recentLines = new Map<string, string[]>();
 const RECENT = 6;
+const BOT_LINE = 'chota (bot)';
+/** A bot reply is clipped in the context: Jev needs the topic, not the essay. */
+const BOT_CLIP = 300;
+
+/** A group's recent lines; after a restart, seeded from stored history (the
+ *  addressed turns — quiet replies were never shown, so they're left out). */
+function recentFor(threadId: string): string[] {
+	let lines = recentLines.get(threadId);
+	if (!lines) {
+		lines = loadHistory(threadId, RECENT)
+			.filter((h) => !(h.role === 'assistant' && String(h.content).startsWith('(quietly)')))
+			.map((h) => (h.role === 'user' ? String(h.content) : botLine(String(h.content))));
+		recentLines.set(threadId, lines);
+	}
+	return lines;
+}
+
+function remember(threadId: string, line: string) {
+	recentLines.set(threadId, [...recentFor(threadId), line].slice(-RECENT));
+}
+
+/** A follow-up needs the bot to have spoken in the last two lines — a code
+ *  check on top of Jev, since a wrong reply in the group is the costly mistake. */
+export const followsBot = (recent: string[]) =>
+	recent.slice(-2).some((line) => line.startsWith(`${BOT_LINE}:`));
+
+const botLine = (reply: string) =>
+	`${BOT_LINE}: ${reply.length > BOT_CLIP ? `${reply.slice(0, BOT_CLIP)}…` : reply}`;
 
 /** Untagged group messages go to Jev — WhatsApp only for now. */
 const triages = (m: Incoming) => m.channel === 'whatsapp' && !m.isDM && !m.catchUp;
@@ -71,8 +106,8 @@ async function route(channel: Channel, incoming: Incoming): Promise<void> {
 		if (!said) return;
 		m = { ...m, text: `[voice note] ${said}`, media: undefined };
 	}
-	const recent = recentLines.get(m.threadId) ?? [];
-	if (!m.isDM) recentLines.set(m.threadId, [...recent, asHistoryLine(m)].slice(-RECENT));
+	const recent = m.isDM ? [] : recentFor(m.threadId);
+	if (!m.isDM) remember(m.threadId, asHistoryLine(m));
 
 	if (addressed) return void queue.push(m.threadId, { channel, m });
 	if (!triaged) return;
@@ -87,7 +122,13 @@ async function route(channel: Channel, incoming: Incoming): Promise<void> {
 	}
 	if (!m.text.trim()) return;
 	const hit = await triage(m, recent);
-	if (hit) void queue.push(quietKey, { channel, m: { ...m, triage: { hint: triageHint(hit) } } });
+	if (!hit) return;
+	// A follow-up to the bot is answered like a tagged message.
+	if (hit.reply) {
+		if (followsBot(recent)) void queue.push(m.threadId, { channel, m });
+		return;
+	}
+	void queue.push(quietKey, { channel, m: { ...m, triage: { hint: triageHint(hit) } } });
 }
 
 /** Each line names its sender — several people share a group's history, and
@@ -139,6 +180,7 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		// turns don't think they said it to anyone.
 		if (reply)
 			appendMessage(m.threadId, turnId, 'assistant', m.triage ? `(quietly) ${reply}` : reply);
+		if (reply && !m.triage && !m.isDM) remember(m.threadId, botLine(reply));
 		ev.done();
 	} catch (err) {
 		logErr(SCOPE, `agent turn failed (${m.threadId})`, err);
@@ -154,9 +196,14 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 	}
 }
 
-/** Start every configured channel. Safe to call more than once. */
+/** Start every configured channel. Calling it again (a dev reload re-runs the
+ *  init hook) stops the running channels first — two WhatsApp sockets on one
+ *  login knock each other off, two Telegram pollers get 409s. */
 export async function bootChannels(): Promise<void> {
-	if (channels.length) return;
+	if (channels.length) {
+		await Promise.allSettled(channels.map((c) => c.stop()));
+		channels.length = 0;
+	}
 	try {
 		migrateThreadKeys();
 	} catch (err) {
