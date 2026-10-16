@@ -9,7 +9,7 @@
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { addToList, getList } from '$lib/server/tools/ticktick';
+import { addToList, completeOnList, getList } from '$lib/server/tools/ticktick';
 import { errorMessage } from '$lib/server/log';
 import { sydneyYMD } from '$lib/time';
 import { ymd as ymdSchema } from './schemas';
@@ -69,6 +69,29 @@ export const ticktickAddTool = tool({
 			return {
 				error: `couldn't add to ${list}: ${errorMessage(err)}`
 			};
+		}
+	}
+});
+
+export const ticktickDoneTool = tool({
+	description:
+		'Tick items off a family TickTick list (mark them done): "got the milk", "we watched Wildwood", "bought the boots". Give each item as it appears on the list; several at once is fine. Only reports items it actually ticked off — if one is not found or matches several, say so and ask, never guess.',
+	inputSchema: z.object({
+		list: z.enum(ADDABLE).describe('Which family list.'),
+		titles: z.array(z.string().trim().min(1)).min(1).max(20).describe('The items to tick off.')
+	}),
+	execute: async ({ list, titles }) => {
+		try {
+			const r = await completeOnList(list, titles);
+			return {
+				list,
+				done: r.done,
+				...(r.failed.length && { failed: r.failed }),
+				...(r.notFound.length && { notFound: r.notFound }),
+				...(r.ambiguous.length && { ambiguous: r.ambiguous })
+			};
+		} catch (err) {
+			return { error: `couldn't update ${list}: ${errorMessage(err)}` };
 		}
 	}
 });

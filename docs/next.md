@@ -35,7 +35,7 @@ From a code review of the agent tools and print pipeline, plus a look at what pe
 
 **Agent tools, in order:**
 
-1. ~~`bus`, `ticktick_add` (with a `due` date for the buying list), `chores`, calendar `search`~~ — built 2026-10-16. `school_day` and `school_dates` too. Ticking items off needs a title→ID lookup first (TickTick's REST search, see kotools).
+1. ~~`bus`, `ticktick_add` (with a `due` date for the buying list), `chores`, calendar `search`~~ — built 2026-10-16. `school_day` and `school_dates` too. `ticktick_done` ticks items off by title (built 2026-10-16).
 2. **Personal layer** — per-person prompt files so chota can take over KO's yaad bot ([`memory.md`](memory.md) §Prompt layers). yaad's other pieces KO uses: reminders/scheduled jobs (the biggest gap), a dated personal stream with todos, saved links and content, news feeds, morning briefing.
 3. **Reactions and the group gate** — [`whatsapp.md`](whatsapp.md) §How it fits chota.
 4. **Artifacts** — quick phone-friendly pages built from a chat ask, published at `<word>.<domain>`, one-time-token login. Idea: [`artifacts.md`](artifacts.md).

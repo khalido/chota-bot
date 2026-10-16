@@ -306,6 +306,7 @@ Candidates, roughly in order of value:
 
 - **Approval policy:** inside the `print` tool's approval function — "is this appropriate to print for a kid without a parent?" as a boolean.
 - **Group gate:** in the family group, "is this addressed to chota?" for messages that say its name without an @mention. On the reply path, so it must fail open to the plain mention rule.
+- **List intents in untagged group messages:** one `choice` per message — `shopping_item` | `watch_item` | `bought_or_done` (tick off) | `family_todo` | `none` — over the message text, plus a link's page title when there is one. Above a threshold, run the agent with the message and a hint ("Jev: 0.91 this is a shopping item"); the agent still makes the call and does the add or tick-off. Below it, stay silent. Reply with an emoji reaction rather than a message so the group isn't noisy (yaad's `TOOL_EMOJIS`). Labels come from the family's undo/correct replies. Off the reply path for tagged messages, so latency is fine.
 - **Morning brief:** weather/surf warning worth a line? print or skip on a holiday?
 - **Memory inbox:** "is this a durable family fact?" before appending to `bot/inbox.md` ([`memory.md`](memory.md)).
 - **Repeats:** "is this the same ask as one from the last few days?" — feeds the crystallize-into-jobs idea.

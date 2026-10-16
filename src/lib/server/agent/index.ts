@@ -23,7 +23,7 @@ import { event } from '$lib/server/log';
 import { buildSystemPrompt } from './prompts';
 import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
-import { ticktickAddTool, ticktickTool } from './tools/ticktick';
+import { ticktickAddTool, ticktickDoneTool, ticktickTool } from './tools/ticktick';
 import { busTool } from './tools/bus';
 import { choresTool } from './tools/chores';
 import { schoolDatesTool, schoolDayTool } from './tools/school';
@@ -55,6 +55,7 @@ export const chotaAgent = new ToolLoopAgent({
 		calendar: calendarTool,
 		ticktick: ticktickTool,
 		ticktick_add: ticktickAddTool,
+		ticktick_done: ticktickDoneTool,
 		bus: busTool,
 		chores: choresTool,
 		school_day: schoolDayTool,

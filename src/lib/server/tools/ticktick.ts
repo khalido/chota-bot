@@ -227,18 +227,24 @@ export async function listConfiguredVsActual(): Promise<
  *   getList('watch')     → "Watch"
  */
 export async function getList(internalName: string): Promise<ProjectWithTasks | null> {
+	const project = await findProject(internalName);
+	return project ? getProjectWithTasks(project.id) : null;
+}
+
+/** The TickTick project for a configured list's internal name, or null. */
+async function findProject(internalName: string): Promise<Project | null> {
 	const cfg = listsConfig();
 	const external = cfg[internalName];
 	if (!external) {
-		log('ticktick', `getList("${internalName}"): no mapping in config`);
+		log('ticktick', `list "${internalName}": no mapping in config`);
 		return null;
 	}
 	const project = (await projectsByCleanName()).get(matchKey(external));
 	if (!project) {
-		log('ticktick', `getList("${internalName}"): "${external}" not found in TickTick`);
+		log('ticktick', `list "${internalName}": "${external}" not found in TickTick`);
 		return null;
 	}
-	return getProjectWithTasks(project.id);
+	return project;
 }
 
 /**
@@ -348,6 +354,80 @@ export async function getProjectWithTasks(projectId: string): Promise<ProjectWit
 
 export async function completeTask(projectId: string, taskId: string): Promise<unknown> {
 	return callTool('complete_task', { project_id: projectId, task_id: taskId });
+}
+
+export interface TitleMatches {
+	found: { asked: string; task: Task }[];
+	notFound: string[];
+	/** Asked titles that fit more than one open item — completing any would be a guess. */
+	ambiguous: { asked: string; candidates: string[] }[];
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+const words = (s: string) =>
+	s
+		.toLowerCase()
+		.split(/[^\p{L}\p{N}]+/u)
+		.filter(Boolean);
+
+/**
+ * Match asked titles ("milk") to open tasks: an exact title (ignoring case and
+ * spacing) wins; otherwise a task whose title has every asked word as a whole
+ * word ("onions" → "Spring onions", never "tea" → "Steak"), if exactly one
+ * does. Never picks between several; a task asked for twice is found once.
+ */
+export function matchTitles(tasks: Task[], asked: string[]): TitleMatches {
+	const out: TitleMatches = { found: [], notFound: [], ambiguous: [] };
+	for (const a of asked) {
+		const q = norm(a);
+		const qWords = words(a);
+		const exact = tasks.filter((t) => norm(t.title) === q);
+		const hits = exact.length
+			? exact
+			: qWords.length
+				? tasks.filter((t) => {
+						const tWords = new Set(words(t.title));
+						return qWords.every((w) => tWords.has(w));
+					})
+				: [];
+		if (hits.length === 1) {
+			if (!out.found.some((f) => f.task.id === hits[0].id))
+				out.found.push({ asked: a, task: hits[0] });
+		} else if (hits.length === 0) out.notFound.push(a);
+		else out.ambiguous.push({ asked: a, candidates: hits.map((t) => t.title) });
+	}
+	return out;
+}
+
+/**
+ * Tick items off a configured list by title. Reads the list fresh (the app
+ * may have changed it since the cache), completes only unambiguous matches,
+ * and drops the list's cache.
+ */
+export async function completeOnList(
+	internalName: string,
+	titles: string[]
+): Promise<TitleMatches & { done: string[]; failed: string[] }> {
+	const project = await findProject(internalName);
+	if (!project) throw new Error(`Cannot complete on "${internalName}" — no such configured list`);
+	projectDataCache.delete(project.id);
+	const list = await getProjectWithTasks(project.id);
+	const matches = matchTitles(list.tasks, titles);
+	const results = await Promise.allSettled(
+		matches.found.map(({ task }) => completeTask(project.id, task.id))
+	);
+	projectDataCache.delete(project.id);
+	const done: string[] = [];
+	const failed: string[] = [];
+	results.forEach((r, i) => {
+		const title = matches.found[i].task.title;
+		if (r.status === 'fulfilled') done.push(title);
+		else {
+			failed.push(title);
+			logErr('ticktick', `complete_task "${title}" failed`, r.reason);
+		}
+	});
+	return { ...matches, done, failed };
 }
 
 /**
