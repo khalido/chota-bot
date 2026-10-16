@@ -28,6 +28,12 @@ export interface Incoming {
 	/** Delivered late, after a reconnect (WhatsApp `append`). */
 	catchUp: boolean;
 	sentAt: Date;
+	/** A photo or voice note. Downloaded only once the message passes the
+	 *  gates — never on arrival. */
+	media?: { kind: 'image' | 'audio'; mimetype: string; download: () => Promise<Buffer> };
+	/** Set by the router for a triaged (untagged) message: a note for the
+	 *  agent, and answer with a reaction only, no message. */
+	triage?: { hint: string };
 }
 
 export type Outgoing =

@@ -64,6 +64,9 @@ export interface Activity {
 export interface FamilyMember {
 	/** Display name shown on chips + in print. Acts as the canonical id. */
 	name: string;
+	/** Parents get the weekly review, approve gated actions and get alerts;
+	 *  kids get their own reminders. */
+	role: 'parent' | 'kid';
 	/** All names this person goes by in calendar event titles. Include the
 	 *  canonical name. Whole-word, case-insensitive match. */
 	aliases: string[];

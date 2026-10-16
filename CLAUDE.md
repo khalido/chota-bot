@@ -89,7 +89,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - **New print format:** one file in `src/lib/server/print/<kind>.ts` + composer registration in `composers.ts` + button in `routes/admin/print/+page.svelte`.
 - **New job:** drop a TS file in `src/lib/server/jobs/`, call `defineJob(name, cron, fn)` at module top. Auto-discovered — see [`src/lib/server/jobs/CLAUDE.md`](src/lib/server/jobs/CLAUDE.md).
 - **Per-family data:** add a typed field to `ChotaConfig` in `src/lib/config.ts`, fill in both `chota.config.example.ts` and your real `chota.config.ts`. No JSON files, no zod — TypeScript catches shape mismatches at compile time.
-- **AI calls** through AI Gateway (one key) except voice transcription (Groq direct).
+- **AI calls** through AI Gateway (one key), voice transcription included (`google/gemini-3.5-transcribe`, `src/lib/server/transcribe.ts`).
 - **Auth** — Google OAuth (better-auth). Deny-by-default guard in `hooks.server.ts`: `/admin` and every `/api/*` require a session whose email is in `chota.config.ts > adminEmails` (fail-closed; sign-in at `/login`), except the deliberately-public `/api/auth`, `/api/health`, `/api/print` plus the kiosk dashboard + `/print/<who>` pages (LAN-open by design). A new API route is gated unless you add it to the public allowlist.
 
 ## Where to read more

@@ -38,6 +38,7 @@ const STYLE = `Style guide:
 - Calendar entries (including the snapshot below) are hand-typed reminders. When a domain has its own tool — volleyball fixtures, school timetable and term dates, buses, chores, weather — call that tool for details (times, courts, rooms, stops); never answer domain details from a calendar line that merely mentions the activity.
 - Prefer your own knowledge for well-known facts (science, history, established media). Reach for web_search when the question is time-sensitive (news, latest releases, what's on this week), specific (opening hours, prices, schedules), or you're genuinely unsure. Don't search for things you already know. When you have a URL (one the family sent, or from a search result), read it with web_fetch rather than guessing from the snippet. Don't announce tool calls ("I'll fetch that page") — just answer. Don't offer follow-ups you have no tool for ("I'll keep an eye out", "say the word and I'll remove it").
 - Facts come from this turn's tool results: say "added" or "ticked off" only when the tool result shows it; a count you state must match the items you list; copy links exactly from the tool's url field, never retype them.
+- A photo arrives as an image with the message. Work out what would help the family and do it: an event flyer or school notice → reply with what, when and where, and add a dated Family reminder with those details in its note; something to buy → the list; otherwise answer what they asked about it. A "[voice note]" is what the person said aloud — treat it like a typed message.
 - Messages from family chats start with the sender's name ("Name: …"). "I", "me" and "my" mean that person; answer them, don't repeat the prefix.
 - Don't volunteer private family details that weren't asked for, and don't speculate beyond what a tool returned.`;
 
@@ -69,7 +70,8 @@ function householdBlock(): string {
 		const roster = family
 			.map((m) => {
 				const others = m.aliases.filter((a) => a.toLowerCase() !== m.name.toLowerCase());
-				return others.length > 0 ? `${m.name} (also: ${others.join(', ')})` : m.name;
+				const also = others.length > 0 ? `, also ${others.join(', ')}` : '';
+				return `${m.name} (${m.role}${also})`;
 			})
 			.join('; ');
 		lines.push(`- People: ${roster}.`);

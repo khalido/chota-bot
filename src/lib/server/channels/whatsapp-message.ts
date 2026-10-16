@@ -53,6 +53,17 @@ function textAndContext(message: Record<string, unknown>): { text: string; ctx?:
 	return { text: '' };
 }
 
+/** Which attachment, if any, a message carries (photo or voice note). */
+export function mediaOf(
+	message: Record<string, unknown>
+): { kind: 'image' | 'audio'; mimetype: string } | undefined {
+	const image = message.imageMessage as { mimetype?: string } | undefined;
+	if (image) return { kind: 'image', mimetype: image.mimetype ?? 'image/jpeg' };
+	const audio = message.audioMessage as { mimetype?: string } | undefined;
+	if (audio) return { kind: 'audio', mimetype: audio.mimetype ?? 'audio/ogg' };
+	return undefined;
+}
+
 export function toIncoming(
 	m: WaMessage,
 	type: 'notify' | 'append' | string,

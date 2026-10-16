@@ -13,7 +13,10 @@ import {
 	newTurnId
 } from '$lib/server/agent/history';
 import { event, logErr } from '$lib/server/log';
+import { transcribeAudio } from '$lib/server/transcribe';
+import { saveFile } from './files';
 import { ThreadQueue } from './queue';
+import { photoIsActionable, triage, triageHint } from './triage';
 import { telegramChannel } from './telegram';
 import { whatsappChannel } from './whatsapp';
 import type { Channel, Incoming } from './types';
@@ -32,22 +35,67 @@ const queue = new ThreadQueue<Turn>(runTurn);
 
 /** Should the bot answer this at all? */
 export function shouldAnswer(m: Incoming, now = Date.now()): boolean {
-	if (!m.text.trim()) return false;
+	if (!m.text.trim() && !m.media) return false;
 	if (!m.isDM && !m.isMention) return false;
 	if (m.catchUp && now - m.sentAt.getTime() > CATCH_UP_MS) return false;
 	return true;
 }
 
+/** The last few lines of each group, for the triage judgment's context. */
+const recentLines = new Map<string, string[]>();
+const RECENT = 6;
+
+/** Untagged group messages go to Jev — WhatsApp only for now. */
+const triages = (m: Incoming) => m.channel === 'whatsapp' && !m.isDM && !m.catchUp;
+
+/** For an untagged photo: Jev can't see images, so the agent decides, quietly. */
+const PHOTO_HINT =
+	"[A photo posted in the group, not addressed to you. If it's an event flyer, school notice, schedule or something to buy, act on it with your tools (a dated Family reminder with the details in its note, a list item). Nobody sees your reply in the group, only a reaction, so keep it to a few words. Otherwise do nothing.]";
+
 function accept(channel: Channel, m: Incoming): Promise<void> {
-	if (!shouldAnswer(m)) return Promise.resolve();
 	// Not awaited by the adapter: a turn in one chat mustn't hold up the rest.
-	void queue.push(m.threadId, { channel, m });
+	route(channel, m).catch((err) => logErr(SCOPE, `routing failed (${m.threadId})`, err));
 	return Promise.resolve();
 }
 
+async function route(channel: Channel, incoming: Incoming): Promise<void> {
+	let m = incoming;
+	const addressed = shouldAnswer(m);
+	const triaged = !addressed && triages(m);
+	// A voice note is a typed message once transcribed; it then takes the
+	// same path (answered, or triaged by Jev in the group).
+	if ((addressed || triaged) && m.media?.kind === 'audio') {
+		const audio = await m.media.download();
+		await saveFile(m.threadId, m.messageId, m.media.mimetype, audio);
+		const said = await transcribeAudio(audio);
+		if (!said) return;
+		m = { ...m, text: `[voice note] ${said}`, media: undefined };
+	}
+	const recent = recentLines.get(m.threadId) ?? [];
+	if (!m.isDM) recentLines.set(m.threadId, [...recent, asHistoryLine(m)].slice(-RECENT));
+
+	if (addressed) return void queue.push(m.threadId, { channel, m });
+	if (!triaged) return;
+	// Quiet turns get their own queue key, so they never merge with a message
+	// someone addressed to the bot (which must get its reply).
+	const quietKey = `${m.threadId}#quiet`;
+	if (m.media?.kind === 'image') {
+		const image = await m.media.download();
+		if (!(await photoIsActionable(image, m.media.mimetype, m.text))) return;
+		const media = { ...m.media, download: async () => image };
+		return void queue.push(quietKey, { channel, m: { ...m, media, triage: { hint: PHOTO_HINT } } });
+	}
+	if (!m.text.trim()) return;
+	const hit = await triage(m, recent);
+	if (hit) void queue.push(quietKey, { channel, m: { ...m, triage: { hint: triageHint(hit) } } });
+}
+
 /** Each line names its sender — several people share a group's history, and
- *  in a DM it's how the agent knows who "me" is. */
-const asHistoryLine = (m: Incoming) => `${m.person?.name ?? m.senderName}: ${m.text}`;
+ *  in a DM it's how the agent knows who "me" is. A photo is marked, not kept. */
+const asHistoryLine = (m: Incoming) => {
+	const photo = m.media?.kind === 'image' ? '[photo] ' : '';
+	return `${m.person?.name ?? m.senderName}: ${photo}${m.text}`.trimEnd();
+};
 
 async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 	const { channel, m } = latest;
@@ -65,18 +113,42 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		for (const t of [...skipped, latest]) {
 			appendMessage(m.threadId, turnId, 'user', asHistoryLine(t.m));
 		}
-		const result = await runAgentStream({ messages: loadHistory(m.threadId) }, (r) =>
-			channel.reply(m, r)
-		);
+		const messages = loadHistory(m.threadId);
+		// This turn's own extras ride on the last message only — a triage note
+		// and the photo itself. History keeps the text line.
+		const last = messages.at(-1);
+		if (last?.role === 'user' && (m.triage || m.media?.kind === 'image')) {
+			const text = m.triage ? `${last.content}\n\n${m.triage.hint}` : String(last.content);
+			if (m.media?.kind === 'image') {
+				const image = await m.media.download();
+				await saveFile(m.threadId, m.messageId, m.media.mimetype, image);
+				messages[messages.length - 1] = {
+					role: 'user',
+					content: [
+						{ type: 'text', text },
+						{ type: 'file', data: image, mediaType: m.media.mimetype }
+					]
+				};
+			} else {
+				messages[messages.length - 1] = { role: 'user', content: text };
+			}
+		}
+		const result = await runAgentStream({ messages }, (r) => channel.reply(m, r));
 		const reply = (await result.text).trim();
-		if (reply) appendMessage(m.threadId, turnId, 'assistant', reply);
+		// A quiet turn's reply was never shown: keep it as a note, so later
+		// turns don't think they said it to anyone.
+		if (reply)
+			appendMessage(m.threadId, turnId, 'assistant', m.triage ? `(quietly) ${reply}` : reply);
 		ev.done();
 	} catch (err) {
 		logErr(SCOPE, `agent turn failed (${m.threadId})`, err);
 		ev.fail(err);
-		await channel
-			.send(m.threadId, { markdown: "Sorry, I hit a snag and couldn't answer that one." })
-			.catch(() => {});
+		// A quiet (triaged) turn fails silently — nobody asked.
+		if (!m.triage) {
+			await channel
+				.send(m.threadId, { markdown: "Sorry, I hit a snag and couldn't answer that one." })
+				.catch(() => {});
+		}
 	} finally {
 		stopTyping();
 	}

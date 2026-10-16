@@ -26,3 +26,6 @@ const TOOL_EMOJI: Record<string, string> = {
 };
 
 export const toolEmoji = (tool: string) => TOOL_EMOJI[tool] ?? DEFAULT;
+
+/** Tools that change something — the only ones a quiet turn shows. */
+export const WRITE_TOOLS = new Set(['ticktick_add', 'ticktick_done']);

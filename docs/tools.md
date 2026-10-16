@@ -33,10 +33,10 @@ Tools = typed TS functions in `src/lib/server/tools/<domain>.ts`. One file per d
 
 ### Phase 3 (voice, chat, polish)
 
-| Tool         | Purpose                         | Source                                                | Keys / config                  |
-| ------------ | ------------------------------- | ----------------------------------------------------- | ------------------------------ |
-| `transcribe` | Voice → text                    | direct Groq Whisper (cheaper/faster than via Gateway) | `GROQ_API_KEY`                 |
-| `news`       | RSS digest for dashboard ticker | `rss-parser`                                          | feed list in `chota.config.ts` |
+| Tool         | Purpose                         | Source                                                                         | Keys / config                  |
+| ------------ | ------------------------------- | ------------------------------------------------------------------------------ | ------------------------------ |
+| `transcribe` | Voice → text                    | AI Gateway, `google/gemini-3.5-transcribe` (built 2026-10-16, `transcribe.ts`) | AI Gateway key                 |
+| `news`       | RSS digest for dashboard ticker | `rss-parser`                                                                   | feed list in `chota.config.ts` |
 
 ## Future ideas
 

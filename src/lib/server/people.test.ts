@@ -6,11 +6,11 @@ import type { FamilyMember } from '$lib/config';
 // These exist purely to exercise the matcher (token boundaries, initials,
 // nicknames, separators) so any plausible alias shape is covered.
 const FAMILY: FamilyMember[] = [
-	{ name: 'Parent1', aliases: ['Parent1', 'P1'] },
-	{ name: 'Parent2', aliases: ['Parent2', 'P2'] },
-	{ name: 'Kid1', aliases: ['Kid1', 'K1', 'Sparky'] }, // multi-alias incl. nickname
-	{ name: 'Kid2', aliases: ['Kid2', 'K2'] },
-	{ name: 'Kid3', aliases: ['Kid3', 'K3'] }
+	{ name: 'Parent1', role: 'parent', aliases: ['Parent1', 'P1'] },
+	{ name: 'Parent2', role: 'parent', aliases: ['Parent2', 'P2'] },
+	{ name: 'Kid1', role: 'kid', aliases: ['Kid1', 'K1', 'Sparky'] }, // multi-alias incl. nickname
+	{ name: 'Kid2', role: 'kid', aliases: ['Kid2', 'K2'] },
+	{ name: 'Kid3', role: 'kid', aliases: ['Kid3', 'K3'] }
 ];
 
 describe('parseEventPeople', () => {

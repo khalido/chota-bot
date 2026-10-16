@@ -20,15 +20,16 @@ export default defineChota({
 		// `whatsapp` (E.164) puts someone on the WhatsApp allowlist.
 		{
 			name: 'Parent1',
+			role: 'parent',
 			aliases: ['Parent1', 'P1'],
 			whatsapp: '+61400000001',
 			email: 'parent1@example.com', // their TickTick account, for assigning tasks
 			telegram: 100000001 // Telegram user id — /start shows it
 		},
-		{ name: 'Parent2', aliases: ['Parent2', 'P2'] },
-		{ name: 'Kid1', aliases: ['Kid1', 'K1'] },
-		{ name: 'Kid2', aliases: ['Kid2', 'K2'] },
-		{ name: 'Kid3', aliases: ['Kid3', 'K3'] }
+		{ name: 'Parent2', role: 'parent', aliases: ['Parent2', 'P2'] },
+		{ name: 'Kid1', role: 'kid', aliases: ['Kid1', 'K1'] },
+		{ name: 'Kid2', role: 'kid', aliases: ['Kid2', 'K2'] },
+		{ name: 'Kid3', role: 'kid', aliases: ['Kid3', 'K3'] }
 	],
 	kids: [
 		{

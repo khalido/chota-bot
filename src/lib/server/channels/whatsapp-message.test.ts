@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { toIncoming, type WaMessage } from './whatsapp-message';
+import type { FamilyMember } from '$lib/config';
 
 const bot = { phone: '61400000000', lid: '111111111111111' };
-const family = [
-	{ name: 'Parent1', aliases: ['Parent1'], whatsapp: '+61 400 000 001' },
-	{ name: 'Kid1', aliases: ['Kid1'] }
+const family: FamilyMember[] = [
+	{ name: 'Parent1', role: 'parent', aliases: ['Parent1'], whatsapp: '+61 400 000 001' },
+	{ name: 'Kid1', role: 'kid', aliases: ['Kid1'] }
 ];
 const group = '120000000000000000@g.us';
 

@@ -1,0 +1,18 @@
+{
+	"$comment": "Jev judgment for family-group WhatsApp messages that don't tag @chota (docs/agent.md §Channels, pipeline step 3). Tune here, not in code: an edit changes the stored questions hash, so old verdicts stay readable.",
+	"model": "typesafe-ai/jev",
+	"threshold": 0.8,
+	"act": ["shopping_item", "family_todo", "watch_item", "done"],
+	"question": {
+		"type": "choice",
+		"instructions": "A family group chat that includes a helper bot. The bot was NOT tagged in this message. Decide whether the latest message asks, directly or in passing, for something the bot can do on the family's shared lists. Ordinary conversation between family members is 'none'. Use the recent messages only as context.",
+		"criteria": {
+			"shopping_item": "Something to buy at the shops is needed or has run out ('we're out of milk', 'need bread').",
+			"family_todo": "A household job or reminder for someone ('remind me to call the plumber', 'someone needs to book the dentist').",
+			"watch_item": "A show or film the family wants to watch later ('we should watch Severance').",
+			"done": "Something on a list was bought or done ('got the milk', 'bins are out').",
+			"question": "A question the bot could answer (weather, buses, school, what's on), not addressed to it.",
+			"none": "Chat between family members, or anything else."
+		}
+	}
+}

@@ -20,9 +20,9 @@ import type { FamilyMember } from '$lib/config';
 import type { SchedulePeriod } from '$lib/server/tools/sentral';
 
 const FAMILY: FamilyMember[] = [
-	{ name: 'Parent1', aliases: ['Parent1', 'P1'] },
-	{ name: 'Kid1', aliases: ['Kid1'] },
-	{ name: 'Kid2', aliases: ['Kid2'] }
+	{ name: 'Parent1', role: 'parent', aliases: ['Parent1', 'P1'] },
+	{ name: 'Kid1', role: 'kid', aliases: ['Kid1'] },
+	{ name: 'Kid2', role: 'kid', aliases: ['Kid2'] }
 ];
 
 const EVENTS: CalendarEvent[] = [

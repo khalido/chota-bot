@@ -11,6 +11,10 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Group triage with Jev:** an untagged WhatsApp group message gets one decision-model judgment (shopping item / family to-do / watch / done / question / none; `decisions/group-triage.json`, every verdict in a new `decision` table). A list item runs a quiet agent turn that answers with a reaction only. Untagged photos pass a cheap vision check first.
+- **Photos and voice notes:** photos reach the agent as images (flyers → a dated Family reminder with the details); voice notes are transcribed by Gemini through the Gateway and handled like typed text. Files are kept under `data/files/<chat>/`.
+- **Family roles:** `family[].role` (`parent` / `kid`), shown to the agent.
+
 - **WhatsApp channel** (`channels/whatsapp.ts`, baileyrs): the same agent answers DMs and @mentions in the family group, for family members with a number in config. Replies quote the message in groups, links become footnotes, and a reaction tracks the work (🤔, then each tool's emoji). Pairing by code sent as an alert; reconnects with backoff. On where `WHATSAPP_ENABLED=true`.
 - **TickTick assignees and sections:** `ticktick_add` assigns to a family member (by their TickTick email, default the sender) and files into a list section; reads show both. Every history line now names its sender.
 - **Person config:** `family[]` holds `email`, `whatsapp`, `telegram` per person; `/start` shows your Telegram user id.

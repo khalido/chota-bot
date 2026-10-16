@@ -20,6 +20,7 @@
 import makeWASocket, {
 	type ConnectionState,
 	DisconnectReason,
+	downloadMediaMessage,
 	fetchLatestWaWebVersion,
 	useMultiFileAuthState
 } from '@oxidezap/baileyrs';
@@ -27,9 +28,9 @@ import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
 import { clearAlert, raiseAlert, registerAlertChannel } from '$lib/server/alerts';
 import { errorMessage, log, logErr } from '$lib/server/log';
-import { toIncoming, userOf, type WaMessage } from './whatsapp-message';
+import { mediaOf, toIncoming, userOf, type WaMessage } from './whatsapp-message';
 import { toWhatsApp } from './whatsapp-format';
-import { FAILED, THINKING, toolEmoji } from './reactions';
+import { FAILED, THINKING, toolEmoji, WRITE_TOOLS } from './reactions';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'whatsapp';
@@ -52,8 +53,15 @@ const libLogger = {
 const jidOf = (threadId: string) => threadId.slice('wa:'.length);
 const phoneJid = (e164: string) => `${e164.replace(/\D/g, '')}@s.whatsapp.net`;
 
-/** The raw message behind each Incoming, for quoting and reactions. */
-const raws = new WeakMap<Incoming, WaMessage>();
+/** The raw message behind each Incoming, for quoting and reactions — keyed by
+ *  thread + message id (the router may hand back a copy of the Incoming). */
+const raws = new Map<string, WaMessage>();
+const rawKey = (m: Incoming) => `${m.threadId}|${m.messageId}`;
+const RAW_KEEP = 200;
+function keepRaw(m: Incoming, raw: WaMessage) {
+	raws.set(rawKey(m), raw);
+	if (raws.size > RAW_KEEP) raws.delete(raws.keys().next().value!);
+}
 
 export function whatsappChannel(): Channel | null {
 	const configured = getConfig().whatsapp?.botNumber;
@@ -178,7 +186,14 @@ export function whatsappChannel(): Channel | null {
 			for (const raw of messages) {
 				const m = toIncoming(raw as WaMessage, type, bot, family);
 				if (!m) continue;
-				raws.set(m, raw as WaMessage);
+				const media = raw.message ? mediaOf(raw.message as Record<string, unknown>) : undefined;
+				if (media) {
+					m.media = {
+						...media,
+						download: () => downloadMediaMessage(raw, 'buffer', {}) as Promise<Buffer>
+					};
+				}
+				keepRaw(m, raw as WaMessage);
 				onMessage(m).catch((err) => logErr(SCOPE, 'message handling failed', err));
 			}
 		});
@@ -209,17 +224,27 @@ export function whatsappChannel(): Channel | null {
 			// work (🤔, then each tool's emoji), typing… runs alongside, then one
 			// message and the reaction clears. 💔 stays if it failed.
 			const react = (emoji: string) => this.react?.(m, emoji).catch(() => {});
-			await react(THINKING);
+			// A quiet (triaged) turn shows nothing until it changes a list.
+			if (!m.triage) await react(THINKING);
 			try {
+				let wrote: string | undefined;
 				for await (const part of result.fullStream) {
-					if (part.type === 'tool-input-start') await react(toolEmoji(part.toolName));
+					if (part.type !== 'tool-input-start') continue;
+					if (WRITE_TOOLS.has(part.toolName)) wrote = part.toolName;
+					if (!m.triage || WRITE_TOOLS.has(part.toolName)) await react(toolEmoji(part.toolName));
+				}
+				// A triaged message gets no message — the write's emoji stays as the
+				// answer (✍️ added, ✅ ticked off); lookups only leave no trace.
+				if (m.triage) {
+					if (!wrote) await react('');
+					return;
 				}
 				const text = (await result.text).trim();
 				if (!text) {
 					await react('');
 					return;
 				}
-				const quoted = m.isDM ? undefined : raws.get(m);
+				const quoted = m.isDM ? undefined : raws.get(rawKey(m));
 				await requireSock().sendMessage(
 					jidOf(m.threadId),
 					{ text: toWhatsApp(text) },
@@ -227,7 +252,7 @@ export function whatsappChannel(): Channel | null {
 				);
 				await react('');
 			} catch (err) {
-				await react(FAILED);
+				await react(m.triage ? '' : FAILED);
 				throw err;
 			}
 		},
@@ -244,7 +269,7 @@ export function whatsappChannel(): Channel | null {
 		},
 
 		async react(m, emoji) {
-			const raw = raws.get(m);
+			const raw = raws.get(rawKey(m));
 			if (raw)
 				await requireSock().sendMessage(jidOf(m.threadId), {
 					react: { text: emoji, key: raw.key as never }
