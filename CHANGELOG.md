@@ -68,7 +68,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 - **Agent model → `deepseek/deepseek-v4.1-flash-fast`** (from Gemini 3.5 Flash), with web search and page reading moved to AI Gateway's own tools: `web_search` (Exa) and `web_fetch` (Browserbase Fetch, new). Replies with a tool call went from ~6–7s to ~1.3s. `@ai-sdk/google` removed.
 - **Telegram streaming:** draft updates every 300ms (was 1.2s) and no longer block reading the model's stream, so fast replies visibly stream.
-- **Calendar locations link to Google Maps:** each event the agent sees carries a Maps search link for its location (the Calendar API doesn't return the app's place link); replies show the place as a short link.
+- **Calendar locations have a Google Maps link** the agent gives when asked (the Calendar API doesn't return the app's place link; WhatsApp can't render short links, so it isn't shown by default).
+- **Watch list from a link:** send a link about a show and the agent reads it and adds the show to Watch with a 1–2 line note and the link. `ticktick_add` takes a `note`; reads return notes (except the notes list's bodies).
 - **Deps:** in-range catch-up (`ai` 7.0.142, `better-auth` + `auth` 1.7.10, `vitest` 5.0.5).
 - **iCal parsing via node-ical.** One shared `ics.ts` wraps node-ical for
   both feeds (NSW school terms, Sentral timetables), replacing two

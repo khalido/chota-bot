@@ -50,7 +50,7 @@ export const calendarTool = tool({
 		'  - `date` for one specific Sydney YYYY-MM-DD.\n' +
 		'  - `search` to find events by words in the title, place or notes, up to a year ahead — "when are we going to the Opera House", "when\'s our next dinner out". Give 1–4 alternative wordings (["opera", "Opera House"], ["dinner", "restaurant"]); set `past: true` for "when did we last…".\n' +
 		"Today's Sydney date is in the system prompt — resolve relative phrases yourself.\n" +
-		'Show a location that has a `mapsUrl` as a Markdown link with a short place name, e.g. [Coogee Beach](mapsUrl), copying `mapsUrl` exactly.',
+		'Name a location by its short place name. Give its `mapsUrl` only when asked for a map, directions or a link, copied exactly.',
 	inputSchema: z
 		.object({
 			range: z

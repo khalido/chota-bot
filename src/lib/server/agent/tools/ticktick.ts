@@ -3,8 +3,9 @@
  *
  * Wraps `$lib/server/tools/ticktick`. The list arg is the stable internal
  * name from `chota.config.ts > ticktick.lists` (`shopping` etc.), never
- * the raw TickTick display name. Reads return titles, tags and a due date
- * (the buying list uses due dates as "buy around then") — no IDs.
+ * the raw TickTick display name. Reads return titles, tags, a due date (the
+ * buying list uses due dates as "buy around then") and the item's note — no
+ * IDs. The notes list's bodies stay out: it holds things like card numbers.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
@@ -30,7 +31,8 @@ export const ticktickTool = tool({
 			tasks: data.tasks.map((t) => ({
 				title: t.title,
 				tags: t.tags ?? [],
-				due: t.dueDate ? sydneyYMD(new Date(t.dueDate)) : null
+				due: t.dueDate ? sydneyYMD(new Date(t.dueDate)) : null,
+				note: list === 'notes' ? null : t.content || null
 			}))
 		};
 	}
@@ -41,7 +43,8 @@ const ADDABLE = ['shopping', 'buying', 'family', 'watch'] as const;
 
 export const ticktickAddTool = tool({
 	description:
-		'Add one item to a family TickTick list. shopping=groceries and everyday items; buying=bigger purchases bought over time (shoes, a watch) — give `due` as roughly when to buy; family=shared todos; watch=movies/TV. One call per item. Say what you added.',
+		'Add one item to a family TickTick list. shopping=groceries and everyday items; buying=bigger purchases bought over time (shoes, a watch) — give `due` as roughly when to buy; family=shared todos; watch=movies/TV. One call per item. Say what you added.\n' +
+		"When the family sends a link about a show or film (a trailer, review, streaming page), read it with web_fetch, then add it to watch: the title is the show's name, and the note is 1–2 lines on what it is and where it streams, then the link.",
 	inputSchema: z.object({
 		list: z.enum(ADDABLE).describe('Which family list to add to.'),
 		title: z
@@ -51,12 +54,17 @@ export const ticktickAddTool = tool({
 			.describe('The item, short and plain: "milk", "Kid1 school shoes".'),
 		due: ymdSchema
 			.describe('Optional Sydney date to buy/do it by, e.g. next month for a buying item.')
+			.optional(),
+		note: z
+			.string()
+			.max(1000)
+			.describe("Optional detail shown under the item, e.g. a watch item's summary and link.")
 			.optional()
 	}),
-	execute: async ({ list, title, due }) => {
+	execute: async ({ list, title, due, note }) => {
 		try {
-			const task = await addToList(list, title, { due });
-			return { added: task.title, list, due: due ?? null };
+			const task = await addToList(list, title, { due, content: note });
+			return { added: task.title, list, due: due ?? null, note: note ?? null };
 		} catch (err) {
 			return {
 				error: `couldn't add to ${list}: ${errorMessage(err)}`
