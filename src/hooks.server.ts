@@ -6,7 +6,7 @@ import { auth } from '$lib/server/auth';
 import { isAdminEmail } from '$lib/server/config';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { bootJobs, stopJobs } from '$lib/server/scheduler';
-import { bootBot, stopBot } from '$lib/server/telegram/bot';
+import { bootChannels, stopChannels } from '$lib/server/channels';
 import { configureLogging, shutdownLogging } from '$lib/server/log';
 import { runPreflight } from '$lib/server/preflight';
 
@@ -19,20 +19,21 @@ export const init: ServerInit = async () => {
 	// logged as WARN; chota keeps running degraded.
 	runPreflight();
 	await bootJobs();
-	// Telegram long polling boots after jobs — no-ops cleanly if no token is
-	// set (dev machines without a dev token). One poller per token: see bot.ts.
-	await bootBot();
+	// Chat channels (Telegram long polling, later WhatsApp) boot after jobs —
+	// each no-ops cleanly when unconfigured. One poller per token: see
+	// channels/telegram.ts.
+	await bootChannels();
 
 	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
 	// cron timers (croner's intervals outlive adapter-node's server.close()
-	// otherwise), stop the Telegram poller, then flush LogTape so the OTel
+	// otherwise), stop the channels (letting a streaming reply finish), then flush LogTape so the OTel
 	// batch processor exports its queued records before the process exits. The
 	// unbuffered file sink doesn't need a flush — it writes through — but the
 	// OTel batch would otherwise drop on every deploy.
 	for (const signal of ['SIGTERM', 'SIGINT'] as const) {
 		process.once(signal, async () => {
 			await stopJobs();
-			await stopBot();
+			await stopChannels();
 			await shutdownLogging();
 		});
 	}

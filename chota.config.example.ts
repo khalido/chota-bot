@@ -104,6 +104,8 @@ export default defineChota({
 	// IDs from `lsusb` / `system_profiler SPUSBDataType`. Column width is set in
 	// code (Font A ≈ 46 cols on an 80mm head); the "test" print's ruler confirms.
 	printer: { vendorId: 0x0483, productId: 0x5743 },
+	// Where the bot's own messages (alerts, later nudges) go; fallback if that fails.
+	channels: { default: 'telegram', fallback: 'whatsapp' },
 	// Alerts (failed jobs, printer problems) go to telegram.notifyChatIds;
 	// during quietHours they arrive without a sound.
 	alerts: { quietHours: { from: '21:00', to: '06:30' } },

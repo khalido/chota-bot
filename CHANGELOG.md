@@ -70,6 +70,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Changed
 
+- **Channel layer** (`src/lib/server/channels/`): one router for every chat app — gate, per-thread queue, history, agent run — with Telegram as the first adapter (`telegram/bot.ts` → `channels/telegram.ts`). Chats now run in parallel; messages sent while the bot is answering become one follow-up turn. History moves to `tg:<id>` thread keys at boot. Config `channels: { default, fallback }`; alerts try the fallback when the default fails.
+
 - **Agent model → `deepseek/deepseek-v4.1-flash-fast`** (from Gemini 3.5 Flash), with web search and page reading moved to AI Gateway's own tools: `web_search` (Exa) and `web_fetch` (Browserbase Fetch, new). Replies with a tool call went from ~6–7s to ~1.3s. `@ai-sdk/google` removed.
 - **Jobs fail honestly:** `morning-print`, `weekend-print` and `sentral-refresh` try every recipient, then fail naming who didn't print (they used to report ok). Heartbeat and bus-refresh no longer log every ok run.
 - **Telegram streaming:** draft updates every 300ms (was 1.2s) and no longer block reading the model's stream, so fast replies visibly stream.

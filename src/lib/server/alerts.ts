@@ -11,8 +11,9 @@
  * is also logged; the table is just the send/no-send state.
  *
  * Delivery goes through a channel the transport registers at boot
- * (`registerAlertChannel('telegram', …)` in telegram/bot.ts), so this module
- * doesn't import the bot. During `alerts.quietHours` messages go out silent.
+ * (`registerAlertChannel('telegram', …)` in channels/telegram.ts), so this module
+ * doesn't import the bot. It tries `alerts.channel` (else `channels.default`),
+ * then `channels.fallback`. During `alerts.quietHours` messages go out silent.
  * Alerting never throws: a broken channel must not fail the job that called it.
  */
 import { eq } from 'drizzle-orm';
@@ -41,20 +42,30 @@ export function inQuietHours(hhmm: string, quiet?: { from: string; to: string })
 	return from <= to ? hhmm >= from && hhmm < to : hhmm >= from || hhmm < to;
 }
 
+/** Send on the alert channel, then the fallback channel if that fails. */
 async function send(text: string, now: Date): Promise<boolean> {
-	const cfg = getConfig().alerts;
-	const channel = channels.get(cfg?.channel ?? 'telegram');
-	if (!channel) {
-		log(SCOPE, `no alert channel registered — not sent: ${text}`);
-		return false;
+	const cfg = getConfig();
+	const silent = inQuietHours(sydneyHHMM(now), cfg.alerts?.quietHours);
+	const order = [
+		cfg.alerts?.channel ?? cfg.channels?.default ?? 'telegram',
+		cfg.channels?.fallback
+	];
+	for (const name of new Set(order)) {
+		if (!name) continue;
+		const channel = channels.get(name);
+		if (!channel) {
+			log(SCOPE, `alert channel ${name} not registered`);
+			continue;
+		}
+		try {
+			await channel(text, { silent });
+			return true;
+		} catch (err) {
+			logErr(SCOPE, `alert send on ${name} failed`, err);
+		}
 	}
-	try {
-		await channel(text, { silent: inQuietHours(sydneyHHMM(now), cfg?.quietHours) });
-		return true;
-	} catch (err) {
-		logErr(SCOPE, 'alert send failed', err);
-		return false;
-	}
+	log(SCOPE, `alert not sent: ${text}`);
+	return false;
 }
 
 /** Open (or keep open) a problem under `key`, sending it if it's news.

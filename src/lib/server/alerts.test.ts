@@ -10,15 +10,24 @@ sqlite.exec(`CREATE TABLE alert (
 	resolved_at integer)`);
 vi.mock('$lib/server/db', () => ({ db: drizzle(sqlite, { schema }) }));
 vi.mock('$lib/server/config', () => ({
-	getConfig: () => ({ alerts: { quietHours: { from: '21:00', to: '07:00' } } })
+	getConfig: () => ({
+		channels: { default: 'telegram', fallback: 'whatsapp' },
+		alerts: { quietHours: { from: '21:00', to: '07:00' } }
+	})
 }));
 vi.mock('$lib/server/log', () => ({ log: vi.fn(), logErr: vi.fn() }));
 
 const { clearAlert, inQuietHours, raiseAlert, registerAlertChannel } = await import('./alerts');
 
 const sent: { text: string; silent: boolean }[] = [];
+let telegramDown = false;
+const viaWhatsapp: string[] = [];
 registerAlertChannel('telegram', async (text, { silent }) => {
+	if (telegramDown) throw new Error('telegram down');
 	sent.push({ text, silent });
+});
+registerAlertChannel('whatsapp', async (text) => {
+	viaWhatsapp.push(text);
 });
 
 const at = (iso: string) => new Date(iso);
@@ -26,6 +35,8 @@ const at = (iso: string) => new Date(iso);
 beforeEach(() => {
 	sqlite.exec('DELETE FROM alert');
 	sent.length = 0;
+	viaWhatsapp.length = 0;
+	telegramDown = false;
 });
 
 describe('raiseAlert / clearAlert', () => {
@@ -51,6 +62,12 @@ describe('raiseAlert / clearAlert', () => {
 		await clearAlert('printer', { okNeeded: 2 });
 		await clearAlert('printer', { okNeeded: 2, recovered: 'Printer OK' });
 		expect(sent.map((s) => s.text)).toEqual(['⚠️ Printer: cover open', '✅ Printer OK']);
+	});
+
+	it('falls back to the fallback channel when the default fails', async () => {
+		telegramDown = true;
+		expect(await raiseAlert('printer', 'Printer: paper out')).toBe(true);
+		expect(viaWhatsapp).toEqual(['⚠️ Printer: paper out']);
 	});
 
 	it('clearing something never raised sends nothing', async () => {

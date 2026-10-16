@@ -9,7 +9,8 @@ value import that leaks is a build error.
 - `jobs/` — croner-scheduled jobs, auto-discovered, one file per job. See `jobs/CLAUDE.md`.
 - `print/` — the daily brief → thermal-print pipeline. See `print/CLAUDE.md`.
 - `agent/` — the ToolLoopAgent (one instance + per-tool wrappers). See `agent/CLAUDE.md`.
-- `telegram/` — grammY long-polling bot + rich-message reply streamer (consumes the agent).
+- `channels/` — the chat channel layer: router (`index.ts`: gate, per-thread queue, history, agent run) + one adapter per app (`telegram.ts`, WhatsApp next). See docs/agent.md §Channels.
+- `telegram/` — the Telegram rich-message reply streamer (`stream.ts`).
 - `db/` — Drizzle schema + better-sqlite3 client (`data/home.db`).
 
 Loose files: `config.ts` (loads the gitignored `chota.config.ts`), `chores.ts`,

@@ -31,7 +31,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 - **SvelteKit** TS, Tailwind, adapter-node — UI + API in one process
 - **Drizzle + better-sqlite3** at `data/home.db`
 - **Better-auth** Google OAuth — powers the calendar tool AND the admin gate: `hooks.server.ts` is **deny-by-default** — `/admin` and every `/api/*` need a session whose email is in `chota.config.ts > adminEmails`, except the public `/api/auth`, `/api/health`, `/api/print`. New API routes are gated unless allow-listed. Sign-in at `/login`
-- **grammY (Telegram)** — long-polling bot at `src/lib/server/telegram/`, chat-ID allowlisted, streams agent replies as rich messages — see [`docs/telegram.md`](docs/telegram.md)
+- **grammY (Telegram)** — long-polling bot at `src/lib/server/channels/telegram.ts` (behind the shared channel router), chat-ID allowlisted, streams agent replies as rich messages — see [`docs/telegram.md`](docs/telegram.md)
 - **Vitest** unit tests + inline-snapshot tests for print formats
 - **croner** auto-discovered jobs (one file per job in `src/lib/server/jobs/`) — see [`docs/jobs.md`](docs/jobs.md)
 - **node-thermal-printer + node-usb (libusb)** — see [`docs/printers.md`](docs/printers.md)
@@ -66,7 +66,8 @@ src/
     print/               # gather (brief) → model (sections) → renderers (BriefSheet/canvas/text) → snapshot + printer
     jobs/                # croner-scheduled jobs (auto-discovered; one file = one job)
     agent/               # ToolLoopAgent + prompts.ts + per-tool agent wrappers
-    telegram/            # grammY long-polling bot + rich-message reply streamer
+    channels/            # chat channels: router (queue, history, agent run) + telegram adapter
+    telegram/            # Telegram rich-message reply streamer
     db/                  # Drizzle schema + client
     auth.ts              # better-auth config
     browser-lock.ts      # process-wide agent-browser mutex (print screenshots + Sentral login)

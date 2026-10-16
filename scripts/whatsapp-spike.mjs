@@ -5,6 +5,9 @@
  *
  * Usage (numbers as digits with country code, no +; they stay out of the repo):
  *   node scripts/whatsapp-spike.mjs <botNumber> <yourNumber>
+ *   node scripts/whatsapp-spike.mjs <botNumber> <toNumber|groupJid> --send <file>
+ *     (one message from a text file, then exit; stop the echo run first —
+ *     two connections on one login fight each other)
  *
  * First run prints an 8-character pairing code. On the bot's phone: WhatsApp
  * Business → Linked devices → Link a device → "Link with phone number instead",
@@ -14,17 +17,21 @@
  */
 import makeWASocket, {
 	DisconnectReason,
+	downloadMediaMessage,
 	fetchLatestWaWebVersion,
 	useMultiFileAuthState
 } from '@oxidezap/baileyrs';
-import { readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const [bot, to] = process.argv.slice(2);
-if (!/^\d{8,15}$/.test(bot ?? '') || !/^\d{8,15}$/.test(to ?? '')) {
+const sendFile = process.argv.includes('--send')
+	? process.argv[process.argv.indexOf('--send') + 1]
+	: null;
+if (!/^\d{8,15}$/.test(bot ?? '') || !/^(\d{8,15}|\d+@g\.us)$/.test(to ?? '')) {
 	console.error('usage: node scripts/whatsapp-spike.mjs <botNumber> <yourNumber>  (digits only)');
 	process.exit(1);
 }
-const toJid = `${to}@s.whatsapp.net`;
+const toJid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
 const say = (...a) => console.log('SPIKE', new Date().toISOString().slice(11, 19), ...a);
 
 /** warn and above only — the library's info stream is very chatty. */
@@ -46,6 +53,8 @@ const mentionsOf = (m) =>
 	m.message?.extendedTextMessage?.contextInfo?.mentionedJid ??
 	m.message?.imageMessage?.contextInfo?.mentionedJid ??
 	[];
+
+const MEDIA = ['imageMessage', 'audioMessage', 'videoMessage', 'documentMessage'];
 
 const textOf = (m) =>
 	m.message?.conversation ??
@@ -73,6 +82,13 @@ async function connect() {
 		if (connection) say('connection', connection);
 		if (connection === 'open') {
 			say('linked as', JSON.stringify(sock.user));
+			if (sendFile) {
+				const text = (await readFile(sendFile, 'utf8')).trim();
+				await sock.sendMessage(toJid, { text });
+				say('sent', text.length, 'chars to', toJid);
+				setTimeout(() => process.exit(0), 3_000); // let the send flush
+				return;
+			}
 			if (!greeted) {
 				greeted = true;
 				await sock.sendMessage(toJid, {
@@ -116,29 +132,55 @@ async function connect() {
 				})
 			);
 			if (type !== 'notify' || k.fromMe) continue;
-			const text = textOf(m);
-			if (!text) continue;
 			const isGroup = k.remoteJid?.endsWith('@g.us');
+			// Keep everything family members send — ideas for the bot. Media goes
+			// to data/files/<chat>/ (images, voice notes) for later.
+			const kind = MEDIA.find((t) => m.message?.[t]);
+			let file = null;
+			if (kind) {
+				try {
+					const buf = await downloadMediaMessage(m, 'buffer', {});
+					const ext = {
+						imageMessage: 'jpg',
+						audioMessage: 'ogg',
+						videoMessage: 'mp4',
+						documentMessage: 'bin'
+					}[kind];
+					// One folder per chat: a person's DMs, or the group.
+					const dir = `data/files/${isGroup ? `group-${userOf(k.remoteJid)}` : `dm-${userOf(k.remoteJidAlt ?? k.remoteJid)}`}`;
+					await mkdir(dir, { recursive: true });
+					file = `${dir}/${Number(m.messageTimestamp)}-${k.id}.${ext}`;
+					await writeFile(file, buf);
+					say('saved', kind, file, buf.length, 'bytes');
+				} catch (err) {
+					say('media download failed', kind, err?.message);
+				}
+			}
+			await appendFile(
+				'data/whatsapp-inbox.jsonl',
+				JSON.stringify({
+					at: new Date(Number(m.messageTimestamp) * 1000).toISOString(),
+					chat: isGroup ? 'group' : 'dm',
+					from: m.pushName,
+					phone: userOf(k.participantAlt ?? k.remoteJidAlt),
+					text: textOf(m),
+					kind: kind ?? null,
+					file
+				}) + '\n'
+			);
+			const text = textOf(m);
 			// The bot may be mentioned by phone number or by LID — check both.
 			const me = new Set([userOf(sock.user?.id), userOf(sock.user?.lid)]);
 			const mentioned = mentionsOf(m).some((j) => me.has(userOf(j)));
 			if (isGroup && !mentioned) continue;
-			if (/\bpng\b/i.test(text)) {
+			if (text && /\bpng\b/i.test(text)) {
 				const image = await readFile('data/morning/brief-family.png');
 				await sock.sendMessage(k.remoteJid, { image, caption: 'family brief (image)' });
-				await sock.sendMessage(k.remoteJid, {
-					document: image,
-					mimetype: 'image/png',
-					fileName: 'brief-family.png'
-				});
-				say('sent png as image + document');
-			} else {
-				await sock.sendMessage(
-					k.remoteJid,
-					{ text: `echo${isGroup ? ' (mentioned)' : ''}: ${text}` },
-					{ quoted: m }
-				);
+				say('sent png');
+				continue;
 			}
+			// Addressed (a DM, or @chota in the group): acknowledge with a reaction.
+			await sock.sendMessage(k.remoteJid, { react: { text: '👍', key: k } });
 		}
 	});
 }

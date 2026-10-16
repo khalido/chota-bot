@@ -150,11 +150,20 @@ export interface ChotaConfig {
 	};
 	/** Activity → packing-list mapping for the after-school gear tool (later). */
 	activities?: Activity[];
+	/** Chat channels (`$lib/server/channels`). `default` carries messages the
+	 *  bot starts itself — alerts, later nudges; `fallback` is tried when the
+	 *  default fails (its connection is down). */
+	channels?: {
+		/** Default 'telegram'. */
+		default?: 'telegram' | 'whatsapp';
+		fallback?: 'telegram' | 'whatsapp';
+	};
 	/** Alerts (`$lib/server/alerts.ts`): problems the bot tells someone about —
-	 *  a failed job, the printer out of paper. Sent on the default channel. */
+	 *  a failed job, the printer out of paper. */
 	alerts?: {
-		/** Channel alerts go out on. Default 'telegram' (to `telegram.notifyChatIds`). */
-		channel?: 'telegram';
+		/** Override `channels.default` for alerts. Telegram sends to
+		 *  `telegram.notifyChatIds`. */
+		channel?: 'telegram' | 'whatsapp';
 		/** Sydney "HH:MM" span when alerts arrive without a sound, e.g.
 		 *  { from: '21:00', to: '06:30' } — ending before the 06:45 print, so a
 		 *  failed brief buzzes. Omit to always notify. */

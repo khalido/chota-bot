@@ -258,9 +258,45 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 
 chota is reached from more than one chat app: Telegram now, WhatsApp next ([`whatsapp.md`](whatsapp.md)), a business's staff bot later. Everything that isn't transport lives once, in shared code; each channel is a thin adapter.
 
-**Channel adapter** (`telegram/`, `whatsapp/`): receives a message, checks the allowlist, resolves the sender to a person, queues the turn per chat, calls the agent, renders the reply in its own format. Owns only transport, identity and formatting.
+**Channel layer** (`src/lib/server/channels/`, decided 2026-10-16). Our own thin layer in the shape of Vercel's Chat SDK, not the SDK itself: its approvals need the Workflow SDK, its Telegram adapter drops our `<tg-thinking>` status, and adopting it means a full baileyrs adapter plus an 18-method SQLite state adapter for a serverless framework. Borrowed: one normalized message, string thread IDs, markdown written once and rendered per channel, a per-thread queue that runs the latest message with the skipped ones attached, adapter-computed `isMention` / echo guard.
 
-**Slash commands — one registry, every channel.** `src/lib/server/commands/`: one file per command, `{ name, description, args, run(ctx) → reply }`, where a reply is text, an image, a document, or a list of choices. Adapters map it: Telegram registers each with `setMyCommands` and renders choices as inline buttons; WhatsApp parses a leading `/` and renders choices as a numbered list ("reply 1–3"). `/print` and `/start` move here out of `telegram/bot.ts`. A new command is one file and every channel has it.
+`channels/types.ts` is the source of truth; in short:
+
+```ts
+interface Incoming {
+	threadId: string; // 'tg:<chatId>' | 'wa:<jid>' — the history and queue key
+	channel: 'telegram' | 'whatsapp';
+	messageId: string;
+	person: FamilyMember | null; // resolved from config when the adapter can
+	senderName: string;
+	text: string; // mentions rewritten to @chota
+	isDM: boolean;
+	isMention: boolean; // @chota, or a reply to the bot
+	catchUp: boolean; // arrived while we were down (WA 'append')
+	sentAt: Date;
+	// later: download?() for images / voice notes, fetched only after the gates
+}
+interface Channel {
+	name: 'telegram' | 'whatsapp';
+	start(onMessage: (m: Incoming) => Promise<void>): Promise<void>;
+	stop(): Promise<void>;
+	send(threadId: string, out: Outgoing): Promise<void>; // markdown | image | document
+	reply(m: Incoming, result: ChotaStreamResult): Promise<void>; // TG rich drafts + thinking; WA typing then one message
+	typing(m: Incoming): () => void;
+	react?(m: Incoming, emoji: string): Promise<void>;
+	// later: ask?() — TG buttons, WA "reply 1–3" — with the approvals below
+}
+```
+
+`channels/index.ts` is the shared part: allowlist (adapters deliver only allowed senders — Telegram by `telegram.allowedChatIds` as today, WhatsApp by `family[].whatsapp`; an unresolved LID fails closed), group gate (mention or reply; Jev later), catch-up rule (answer under ~10 min old, else ignore), per-thread queue (grammY's `sequentialize` idea: one turn per thread at a time; messages that arrive mid-turn run next, latest with the skipped ones attached), history (`chat_message`, keyed by `threadId`), the agent run, and each channel registering as an alert channel. Adapters own only transport, identity and formatting. Files people send are saved per chat — `data/files/<thread>/` (a person's DMs, the family group) — with an index row, so the agent can find them later; downloaded lazily, only after a message passes the gates. WhatsApp DM threads key on the phone JID, not the LID. Existing history moves to the new keys with one `UPDATE chat_message SET chat_id = 'tg:' || chat_id` at boot.
+
+**Approvals (before `print` and calendar write):** a turn that asks (a `toolApproval` request, or "save this event?") parks a pending approval for its thread — the assistant's tool call plus the request, which `chat_message` doesn't store. The router checks it **before** the queue: a "yes" / 👍 / button tap resolves it and resumes the agent; anything else cancels it and runs as a normal turn.
+
+Step 1 (built 2026-10-16) changes two behaviours on purpose: different chats now run in parallel (before, one Telegram update at a time across all chats — a `/print` tap waited behind a running answer), and a burst in one chat becomes one turn: messages sent while the bot is answering wait, then the newest runs with the others attached, so "milk" / "and bread" get one reply.
+
+Build order, each verified before the next: (1) Telegram behind the interface (done; see the two intended changes below); (2) WhatsApp adapter from the spike; (3) images to the agent, voice notes via transcription; (4) deploy, re-pair on the box, unlink the Mac.
+
+**Slash commands — one registry, every channel.** `src/lib/server/commands/`: one file per command, `{ name, description, args, run(ctx) → reply }`, where a reply is text, an image, a document, or a list of choices. Adapters map it: Telegram registers each with `setMyCommands` and renders choices as inline buttons; WhatsApp parses a leading `/` and renders choices as a numbered list ("reply 1–3"). `/print` and `/start` move here out of `channels/telegram.ts`. A new command is one file and every channel has it.
 
 **Print as an agent tool, not only a command.** The common case is a kid sending a photo and "print this", or "give me a math puzzle" — the agent should work out what to print. `print` tool:
 
@@ -272,7 +308,7 @@ chota is reached from more than one chat app: Telegram now, WhatsApp next ([`wha
 
 **Calendar write (planned).** Add, move or cancel events and answer invitations. Needs the `calendar.events` Google scope (re-consent). Every write is a proposal first: the bot replies with the event as it will be saved ("Sat 18 Oct 9:00–10:00, Kid1 volleyball, Tempe") and waits for "yes / go / ok" or a 👍 reaction; anything else cancels or edits. Same approval shape as `print`.
 
-**A message that arrives mid-turn.** The per-chat queue holds it. If the agent is between steps, `prepareStep` appends it to `messages` so the next step sees it (it can't enter mid-token); if the turn already finished, it runs as the next turn. No aborting a turn halfway.
+**A message that arrives mid-turn.** The per-chat queue holds it and it runs as the next turn, the newest with any others it overtook. Not injected into the running turn via `prepareStep`: that answers it twice unless it's marked consumed, and puts its history row out of order. No aborting a turn halfway.
 
 **Short replies, per channel.** `STYLE` already says one short sentence. The adapter passes `channel` into the per-call layer of the prompt, which adds that channel's formatting: Telegram rich text; WhatsApp `*bold*`/`_italic_`, no tables or headings, bare URLs; print output sized for the 80mm thermal roll (576px). No streaming on WhatsApp — typing indicator, then the reply.
 

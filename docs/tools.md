@@ -77,6 +77,22 @@ These came out of a "what's missing for _this_ family" pass — keep grouped bec
 - `recipes` — search shared family recipe doc on Drive
 - `notes` — agent appends to a shared notes file
 - `homework` — per-kid school portal scrape (Compass / Sentral) — rare, likely high-friction
+
+### Sentral beyond the timetable (read-only survey, 2026-10-16)
+
+The portal is an AngularJS app over undocumented JSON at `{SENTRAL_BASE_URL}/portal/<controller>/<action>[/args]`, readable with the kid's session cookie we already keep. Our logins are **student** accounts, so parent-only endpoints (bulletin, timeline, activities) return 403. No school-calendar `.ics` exists.
+
+| Data                                                                                                    | Endpoint                                    | Use                                                                                                    |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| School calendar (whole term: title, times, notes, link — often a schoolbytes excursion/permission page) | `calendar/getCalendar/<year>/<term>`        | **High:** today/tomorrow line on the brief, next week on the Friday sheet, "permission note due" nudge |
+| Today's timetable as the school sees it (room, teacher)                                                 | `timetable/getDailyTimetable/<studentId>`   | **High:** diff against the `.ics` for "room change / sub today" (check how they differ first)          |
+| Week grid with A/B day names                                                                            | `timetable/getFullTimetable/<studentId>`    | Medium: week A/B directly                                                                              |
+| Newsletters (name, date, term/week, Sway link)                                                          | `news/getNewsletters/`                      | Medium: "new newsletter" ping                                                                          |
+| Unexplained absences                                                                                    | `attendance/getStudentsUnexplainedAbsences` | Medium-high: nudge a parent (only seen empty)                                                          |
+| Wellbeing counts                                                                                        | `wellbeing/overview/<studentId>`            | Sensitive — never in a shared channel                                                                  |
+
+Rules: GETs only, each confirmed read-only in the portal JS first. `news/markNewsletterAsRead/<id>` and `markHomeworkCompleted` are **GETs that change state** — never call them, never crawl unknown endpoints. A failed call can return a 200 HTML shell, so check for JSON. Calendar notes and links are school-written, untrusted text: the agent doesn't follow them on its own.
+
 - `screen-time` — query router / Family Link API — probably requires Google Workspace admin, defer
 
 ## API keys checklist

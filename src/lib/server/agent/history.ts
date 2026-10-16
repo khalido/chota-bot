@@ -1,7 +1,8 @@
 /**
  * Conversation history — the agent's short-term memory, backed by the
- * `chat_message` table. The Telegram handler loads the last N messages for a
- * chat and passes them to the agent so a reply has context, then records the
+ * `chat_message` table, keyed by thread id (`tg:<chatId>`, `wa:<jid>`). The
+ * channel router (`$lib/server/channels`) loads the last N messages for a
+ * thread and passes them to the agent so a reply has context, then records the
  * user message + the final reply text. Tool calls + thinking are NOT stored
  * (scrubbed): they're noise for context and their cost already rides the
  * `agent.run` wide event.
@@ -30,6 +31,13 @@ export function appendMessage(
 	content: string
 ): void {
 	db.insert(chatMessage).values({ id: generateId(), chatId, turnId, role, content }).run();
+}
+
+/** One-off: history rows written before threads had a channel prefix were
+ *  bare Telegram chat ids. Prefix them so they stay in the same thread.
+ *  Idempotent; runs at boot. Delete once the box has run it (2026-10). */
+export function migrateThreadKeys(): void {
+	db.run(sql`UPDATE chat_message SET chat_id = 'tg:' || chat_id WHERE chat_id NOT LIKE '%:%'`);
 }
 
 /** Last N messages for a chat, oldest-first, as agent `ModelMessage[]`. */

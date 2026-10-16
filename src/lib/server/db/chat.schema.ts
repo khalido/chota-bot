@@ -18,7 +18,7 @@ export const chatMessage = sqliteTable(
 	'chat_message',
 	{
 		id: text('id').primaryKey(),
-		/** Telegram chat id (stringified); later also 'kiosk' / 'admin'. */
+		/** Thread id: `tg:<chatId>` or `wa:<jid>` (see channels/types.ts). */
 		chatId: text('chat_id').notNull(),
 		/** Groups one user message with its assistant reply. */
 		turnId: text('turn_id').notNull(),
