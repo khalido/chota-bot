@@ -1,5 +1,5 @@
 import { desc } from 'drizzle-orm';
-import { JOBS } from '$lib/server/scheduler';
+import { JOBS, recentRuns } from '$lib/server/scheduler';
 import { clearAlert, raiseAlert } from '$lib/server/alerts';
 import { db } from '$lib/server/db';
 import { alert } from '$lib/server/db/schema';
@@ -12,11 +12,12 @@ export const load: PageServerLoad = async () => {
 			pattern: j.pattern,
 			nextRun: j.cron.nextRun()?.toISOString() ?? null,
 			previousRun: j.cron.previousRun()?.toISOString() ?? null,
-			isRunning: j.cron.isRunning(),
-			recent: j.recent.map((r) => ({
+			isRunning: j.cron.isBusy(),
+			recent: recentRuns(j.name).map((r) => ({
 				at: r.at.toISOString(),
 				status: r.status,
 				durationMs: r.durationMs,
+				summary: r.summary,
 				error: r.error
 			}))
 		})),

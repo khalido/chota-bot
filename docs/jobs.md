@@ -25,7 +25,8 @@ A thin wrapper around croner's `new Cron(...)`:
 - Sets `timezone: 'Australia/Sydney'` so patterns are interpreted in local time
 - `protect: callback` — overlapping ticks are dropped + logged (no pile-up)
 - `catch: callback` — uncaught errors logged, process stays alive
-- Wraps `fn` to record start/end into a 20-row ring buffer per job (visible at `/admin/jobs`)
+- Records every fire (ok, error, skipped stale) in the `job_run` table — kept 30 days, visible at `/admin/jobs` and in `/api/health`, and it survives restarts
+- Caps each run at 10 min (`{ timeoutMs }` to change): a hung print or browser call fails and alerts instead of blocking every later tick. The work isn't cancelled, it just stops holding the job
 - HMR-safe: re-defining a job by the same name stops the old Cron and replaces
 - A throw fails the run and raises the `job:<name>` alert; the next ok run clears it (see §Alerts). Options: `{ logOk: false }` for frequent checks (failures still log), `{ alertAfter: 3 }` so a refresh needs 3 failures in a row before it alerts.
 
@@ -40,6 +41,8 @@ A job that does several things (a print per person, a refresh per kid) tries the
 - A deploy or restart doesn't resend open alerts (the table persists).
 - Delivered on the channel in `chota.config.ts > alerts.channel` (default Telegram, to `telegram.notifyChatIds`); the transport registers itself at boot. During `alerts.quietHours` they arrive silent. Alerting never throws.
 - `/admin/jobs` lists recent alerts and has a "Send test alert" button (sends ⚠️ then ✅).
+
+**Missed runs.** A print that never ran raises nothing by itself — the box was off or restarting at 06:45, a deploy cut the run off, or the fire was skipped as stale. `job-check` (every 30 min, kiosk only) looks at the last slot of `morning-print` and `weekend-print`: past 30 min with no ok or error row in `job_run` → `Job morning-print missed its 06:45 run` on the job's own `job:<name>` key, so the next ok run sends "working again". Slots older than 12h aren't checked, so a weekend off sends one message, not a stream of repeats. No catch-up print.
 
 Planned on top: per-person targets (an alert to a kid, via their channel); `/mute <key>` once the commands registry exists.
 
@@ -56,7 +59,6 @@ Learned from hermes-agent (`refs/hermes-agent/cron/incidents.py`, `gateway/cron_
 | Central dispatcher / "tick" function      | Croner schedules each job itself; we don't need a 5-min tick that figures out who's due                                                    |
 | `alreadyRanThisHour` dedup                | Croner won't double-fire and `protect` handles overlaps                                                                                    |
 | `withinActiveHours` wrapper               | If a job shouldn't fire overnight, do an early-return in `fn`. Less abstraction, more obvious                                              |
-| DB for job history                        | In-memory ring buffer + last-run is enough. Add a `job_runs` table only when we want history across restarts                               |
 
 ## File layout
 
@@ -76,6 +78,8 @@ src/lib/server/
     calendar-refresh.ts   # warm Google Calendar cache
     bus-refresh.ts        # warm bus departures cache
     ticktick-refresh.ts   # warm TickTick lists cache
+    job-check.ts          # every 30 min: alert when a print's slot passed with no run
+    job-runs-prune.ts     # daily 03:30: drop job_run rows older than 30 days
     dreaming.ts           # daily 03:00: stub, will consolidate memory
 src/hooks.server.ts       # init hook: configureLogging + bootJobs + shutdown
 src/routes/admin/jobs/    # /admin/jobs page (reads JOBS)
@@ -107,6 +111,7 @@ startup, after env vars are available:
 ```ts
 export const init: ServerInit = async () => {
 	await configureLogging();
+	await bootChannels(); // first, so alert channels exist before any job fails
 	await bootJobs();
 	// Stop the crons on SIGTERM/SIGINT so the process exits cleanly.
 	for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, stopJobs);
@@ -131,20 +136,22 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 
 (one file per job in `src/lib/server/jobs/`)
 
-| Name                  | Pattern               | Kind     | Purpose                                                            |
-| --------------------- | --------------------- | -------- | ------------------------------------------------------------------ |
-| `heartbeat`           | `*/5 * * * *`         | scripted | Debug log                                                          |
-| `morning-print`       | `45 6 * * 1-5`        | scripted | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                 |
-| `weekend-print`       | `0 18 * * 5`          | scripted | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`) |
-| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches (serialized)                   |
-| `schoolterms-refresh` | `0 4 * * 1`           | scripted | Refresh the NSW school-calendar cache                              |
-| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted | Warm the volleyball fixture cache before the Friday prints         |
-| `sentral-login`       | `0 4 * * 1`           | scripted | Mondays — pre-emptive Sentral cookie refresh                       |
-| `weather-refresh`     | `*/30 * * * *`        | scripted | Warm weather cache + the local beach lifeguard report              |
-| `calendar-refresh`    | refresh cadence       | scripted | Warm Google Calendar cache                                         |
-| `bus-refresh`         | refresh cadence       | scripted | Warm bus departures cache                                          |
-| `ticktick-refresh`    | refresh cadence       | scripted | Warm TickTick lists cache                                          |
-| `dreaming`            | `0 3 * * *`           | stub     | No-op placeholder — will consolidate memory once agent-jobs land   |
+| Name                  | Pattern               | Kind     | Purpose                                                              |
+| --------------------- | --------------------- | -------- | -------------------------------------------------------------------- |
+| `heartbeat`           | `*/5 * * * *`         | scripted | Debug log                                                            |
+| `morning-print`       | `45 6 * * 1-5`        | scripted | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                   |
+| `weekend-print`       | `0 18 * * 5`          | scripted | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`)   |
+| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches (serialized)                     |
+| `schoolterms-refresh` | `0 4 * * 1`           | scripted | Refresh the NSW school-calendar cache                                |
+| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted | Warm the volleyball fixture cache before the Friday prints           |
+| `sentral-login`       | `0 4 * * 1`           | scripted | Mondays — pre-emptive Sentral cookie refresh                         |
+| `weather-refresh`     | `*/30 * * * *`        | scripted | Warm weather cache + the local beach lifeguard report                |
+| `calendar-refresh`    | refresh cadence       | scripted | Warm Google Calendar cache                                           |
+| `bus-refresh`         | refresh cadence       | scripted | Warm bus departures cache                                            |
+| `ticktick-refresh`    | refresh cadence       | scripted | Warm TickTick lists cache                                            |
+| `job-check`           | `*/30 * * * *`        | scripted | Alert when a print's slot passed with no run (gated by `KIOSK=true`) |
+| `job-runs-prune`      | `30 3 * * *`          | scripted | Drop `job_run` rows older than 30 days                               |
+| `dreaming`            | `0 3 * * *`           | stub     | No-op placeholder — will consolidate memory once agent-jobs land     |
 
 Planned:
 

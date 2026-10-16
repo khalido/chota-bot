@@ -9,7 +9,7 @@
 // THIS WEEKEND whenever those are present. (Masthead + chores show Friday —
 // acceptable; a dedicated 'weekend' gather mode isn't worth it yet.)
 //
-// No retry/catch-up — a missed run is just missed (see docs/jobs.md).
+// No catch-up — a missed run is just missed; `job-check.ts` alerts on it.
 import { defineJob } from '$lib/server/scheduler';
 import { composeImage } from '$lib/server/print/composers';
 import { printPng } from '$lib/server/print/printer';

@@ -14,15 +14,16 @@ import { runPreflight } from '$lib/server/preflight';
 export const init: ServerInit = async () => {
 	await configureLogging();
 	// Preflight runs after logging is configured (so findings land in the
-	// journald + file sinks) but before bootJobs (so a missing DB is named in
-	// the logs before better-auth or a job throws against it). Findings are
+	// journald + file sinks) but before the boots (so a missing DB is named in
+	// the logs before better-auth, a channel or a job throws against it). Findings are
 	// logged as WARN; chota keeps running degraded.
 	runPreflight();
-	await bootJobs();
-	// Chat channels (Telegram long polling, later WhatsApp) boot after jobs —
-	// each no-ops cleanly when unconfigured. One poller per token: see
-	// channels/telegram.ts.
+	// Chat channels (Telegram long polling, WhatsApp) boot before jobs so the
+	// alert channels are registered before any job can fail — neither start()
+	// waits on the network. Each no-ops cleanly when unconfigured. One poller
+	// per token: see channels/telegram.ts.
 	await bootChannels();
+	await bootJobs();
 
 	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
 	// cron timers (croner's intervals outlive adapter-node's server.close()

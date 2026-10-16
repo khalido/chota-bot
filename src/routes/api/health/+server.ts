@@ -20,7 +20,7 @@ import { sql } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { buildCommit } from '$lib/server/version';
-import { JOBS, type JobRecord } from '$lib/server/scheduler';
+import { JOBS, recentRuns, type JobRecord } from '$lib/server/scheduler';
 import { sydneyHHMM } from '$lib/time';
 import type { RequestHandler } from './$types';
 
@@ -63,7 +63,7 @@ function snapshot() {
 	const jobs: JobHealth[] = [...JOBS]
 		.sort((a, b) => a.name.localeCompare(b.name))
 		.map((j) => {
-			const last = j.recent[0];
+			const [last] = recentRuns(j.name, 1);
 			return {
 				name: j.name,
 				pattern: j.pattern,

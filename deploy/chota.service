@@ -31,6 +31,11 @@ WorkingDirectory=/home/ko/code/chota-bot
 # docs/deploy.md.
 EnvironmentFile=/home/ko/code/chota-bot/.env
 
+# Cron patterns are pinned to Sydney in scheduler.ts, but any code reading the
+# local clock (getHours(), toLocaleDateString()) follows the process TZ — and a
+# fresh Pi OS box may be on UTC. Pin it here too.
+Environment=TZ=Australia/Sydney
+
 # Prepend fnm's default-alias bin dir to PATH so subprocesses chota spawns
 # (`agent-browser` for screenshots + Sentral login) resolve to the fnm-managed
 # binaries — no `/usr/local/bin/agent-browser` symlink needed. The rest is the

@@ -7,8 +7,8 @@
 // if the screenshot path is unavailable. One recipient failing doesn't stop
 // the rest, but the run then fails (and alerts) naming who didn't print.
 //
-// No retry/catch-up here yet — if the box was asleep at 06:45 or the printer was
-// off, the run is just missed. See docs/jobs.md if/when we add a catch-up tick.
+// No catch-up: a run the box missed (off or restarting at 06:45) isn't printed
+// late — `job-check.ts` alerts instead.
 import { defineJob } from '$lib/server/scheduler';
 import { composeImage } from '$lib/server/print/composers';
 import { printPng } from '$lib/server/print/printer';

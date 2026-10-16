@@ -9,12 +9,19 @@
  * See `src/lib/server/jobs/CLAUDE.md` for how to write a job.
  */
 import { Cron } from 'croner';
+import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm';
 import { building } from '$app/environment';
 import { clearAlert, raiseAlert } from '$lib/server/alerts';
-import { event, logger } from '$lib/server/log';
+import { db } from '$lib/server/db';
+import { jobRun } from '$lib/server/db/schema';
+import { errorMessage, event, logger } from '$lib/server/log';
 
 const TIMEZONE = 'Australia/Sydney';
-const RING_SIZE = 20;
+/** Default wall-clock cap per run. Clears the slowest jobs (morning-print
+ *  screenshots each person; sentral-refresh may do a browser login). */
+const TIMEOUT_MS = 10 * 60_000;
+/** Run history kept in `job_run`. */
+const KEEP_DAYS = 30;
 /** A fire this late is stale: croner fires any overdue slot (it checks
  *  `now >= due` with no upper bound) — on wake from sleep, so a laptop shut
  *  for weeks printed a morning brief on open, and when a blocked slot is
@@ -26,6 +33,7 @@ export interface JobRecord {
 	at: Date;
 	status: 'ok' | 'error' | 'skipped';
 	durationMs: number;
+	summary?: string;
 	error?: string;
 }
 
@@ -33,7 +41,6 @@ export interface RegisteredJob {
 	name: string;
 	pattern: string;
 	cron: Cron;
-	recent: JobRecord[];
 }
 
 // HMR-safe registry: shared via globalThis so a hot-reload of this module
@@ -55,6 +62,10 @@ export interface JobOptions {
 	/** Failed runs in a row before alerting (default 1). Frequent refreshes set
 	 *  3 so one blip in a feed doesn't send "failed" then "working again". */
 	alertAfter?: number;
+	/** Wall-clock cap (default 10 min). A run past it fails and alerts, so a
+	 *  hung print or browser call can't block every later tick. The work itself
+	 *  isn't cancelled — it just stops holding the job. */
+	timeoutMs?: number;
 }
 
 /**
@@ -69,7 +80,7 @@ export function defineJob(
 	name: string,
 	pattern: string,
 	fn: JobFn,
-	{ logOk = true, alertAfter = 1 }: JobOptions = {}
+	{ logOk = true, alertAfter = 1, timeoutMs = TIMEOUT_MS }: JobOptions = {}
 ): Cron | undefined {
 	if (building) return; // skip during `vite build`
 
@@ -79,7 +90,6 @@ export function defineJob(
 		JOBS.splice(existingIdx, 1);
 	}
 
-	const recent: JobRecord[] = [];
 	let due: Date | null = null;
 	let failStreak = 0;
 	const cron = new Cron(
@@ -105,25 +115,24 @@ export function defineJob(
 			due = cron.nextRun();
 			if (lateMs > STALE_MS) {
 				const error = `skipped stale fire, ${Math.round(lateMs / 60_000)} min late`;
-				push(recent, { at, status: 'skipped', durationMs: 0, error });
+				recordRun(name, { at, status: 'skipped', durationMs: 0, error });
 				jobLog.warning('job {job} {error}', { job: name, error });
 				return;
 			}
-			// One wide `job.run` event per fire — see docs/logging.md. `runId`
-			// joins here once the job_runs table lands (docs/jobs.md).
+			// One wide `job.run` event per fire — see docs/logging.md. `runId` is
+			// the `job_run` row.
 			const ev = event('jobs', 'job {job} ran', { job: name });
 			let error: string | undefined;
 			try {
-				const summary = await fn();
-				push(recent, { at, status: 'ok', durationMs: Date.now() - start });
-				if (logOk) {
-					ev.done({
-						summary: typeof summary === 'string' && summary.length > 0 ? summary : undefined
-					});
-				}
+				const out = await withTimeout(fn, timeoutMs);
+				const summary = typeof out === 'string' && out.length > 0 ? out : undefined;
+				const durationMs = Date.now() - start;
+				ev.set('runId', recordRun(name, { at, status: 'ok', durationMs, summary }));
+				if (logOk) ev.done({ summary });
 			} catch (err) {
 				error = err instanceof Error ? err.message : String(err);
-				push(recent, { at, status: 'error', durationMs: Date.now() - start, error });
+				const durationMs = Date.now() - start;
+				ev.set('runId', recordRun(name, { at, status: 'error', durationMs, error }));
 				ev.fail(err);
 			}
 			// Outside the try: alerting never throws, and must not flip the run's status.
@@ -138,7 +147,7 @@ export function defineJob(
 	);
 
 	due = cron.nextRun();
-	JOBS.push({ name, pattern, cron, recent });
+	JOBS.push({ name, pattern, cron });
 	jobLog.info('registered {job}: {pattern}, next at {next}', {
 		job: name,
 		pattern,
@@ -187,7 +196,92 @@ export function stopJobs(): void {
 	jobLog.info('jobs stopped — {count} job(s)', { count: JOBS.length });
 }
 
-function push(buf: JobRecord[], r: JobRecord) {
-	buf.unshift(r);
-	if (buf.length > RING_SIZE) buf.length = RING_SIZE;
+/** Run `fn`, failing if it takes longer than `ms`. */
+async function withTimeout<T>(fn: () => T | Promise<T>, ms: number): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = setTimeout(
+			() => reject(new Error(`timed out after ${Math.round(ms / 60_000)} min`)),
+			ms
+		);
+	});
+	try {
+		return await Promise.race([Promise.resolve().then(fn), timeout]);
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+/** Store one fire. Never throws — recording a run must not fail it. */
+function recordRun(job: string, r: JobRecord): number | undefined {
+	try {
+		return db
+			.insert(jobRun)
+			.values({ job, ...r })
+			.returning({ id: jobRun.id })
+			.get().id;
+	} catch (err) {
+		jobLog.error('recording {job} run failed: {error}', { job, error: errorMessage(err) });
+	}
+}
+
+/** A job's latest runs, newest first (/admin/jobs, /api/health). */
+export function recentRuns(job: string, limit = 20): JobRecord[] {
+	try {
+		return db
+			.select()
+			.from(jobRun)
+			.where(eq(jobRun.job, job))
+			.orderBy(desc(jobRun.at))
+			.limit(limit)
+			.all()
+			.map(({ at, status, durationMs, summary, error }) => ({
+				at,
+				status,
+				durationMs,
+				summary: summary ?? undefined,
+				error: error ?? undefined
+			}));
+	} catch (err) {
+		jobLog.error('reading {job} runs failed: {error}', { job, error: errorMessage(err) });
+		return [];
+	}
+}
+
+/** How far back the missed-run check looks: a slot older than this is old
+ *  news, and its alert (if any) stays open quietly until the next ok run. */
+const MISSED_WINDOW_MS = 12 * 60 * 60_000;
+/** A slot gets this long to show a run before it counts as missed. */
+const MISSED_GRACE_MS = 30 * 60_000;
+
+/**
+ * Jobs whose last scheduled slot passed with no ok or error run recorded —
+ * the box was off or restarting at that time, the run was cut off, or the fire
+ * was skipped as stale. (A failed run has its own alert already.) Used by
+ * `jobs/job-check.ts` for the prints.
+ */
+export function missedRuns(names: string[], now = new Date()): { name: string; slot: Date }[] {
+	const missed: { name: string; slot: Date }[] = [];
+	for (const name of names) {
+		const job = JOBS.find((j) => j.name === name);
+		if (!job || job.cron.isBusy()) continue;
+		const slot = job.cron.previousRuns(1, now)[0];
+		const age = slot ? now.getTime() - slot.getTime() : Infinity;
+		if (age < MISSED_GRACE_MS || age > MISSED_WINDOW_MS) continue;
+		const ran = db
+			.select({ id: jobRun.id })
+			.from(jobRun)
+			.where(
+				and(eq(jobRun.job, name), gte(jobRun.at, slot), inArray(jobRun.status, ['ok', 'error']))
+			)
+			.get();
+		if (!ran) missed.push({ name, slot });
+	}
+	return missed;
+}
+
+/** Drop runs older than KEEP_DAYS. Returns how many went. */
+export function pruneRuns(now = new Date()): number {
+	const cutoff = new Date(now.getTime() - KEEP_DAYS * 24 * 60 * 60_000);
+	return db.delete(jobRun).where(lt(jobRun.at, cutoff)).run().changes;
 }

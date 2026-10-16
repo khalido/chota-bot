@@ -127,7 +127,9 @@
 								<td class="py-1 text-slate-700 dark:text-neutral-300">{fmtTime(r.at)}</td>
 								<td class="py-1 {statusColor(r.status)}">{r.status}</td>
 								<td class="py-1 text-slate-500 dark:text-neutral-500">{r.durationMs}ms</td>
-								<td class="py-1 text-slate-500 dark:text-neutral-500">{r.error ?? ''}</td>
+								<td class="py-1 text-slate-500 dark:text-neutral-500"
+									>{r.error ?? r.summary ?? ''}</td
+								>
 							</tr>
 						{/each}
 					</tbody>

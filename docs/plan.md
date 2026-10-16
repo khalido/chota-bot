@@ -129,9 +129,9 @@ Tokens are managed by better-auth (sign in once at `/admin`, refresh handled). N
 
 In-process scheduler — one TS file per job in `src/lib/server/jobs/`, self-registered via `defineJob()` at module top. Auto-discovered by `bootJobs()` from `hooks.server.ts`. No central dispatcher, no DB-polling tick, no `handlers.ts`. See `docs/jobs.md` for the full contract + cron pattern reference + hardening discipline.
 
-**Why this shape (not a `jobs` table + DB-polling tick):** crontab-style files are the simplest thing that works for a single-process kiosk. Recurring jobs schedule themselves; in-memory ring buffer + `/admin/jobs` cover observability for dev. Survives SvelteKit restarts via croner re-arming on boot.
+**Why this shape (not a `jobs` table + DB-polling tick):** crontab-style files are the simplest thing that works for a single-process kiosk. Recurring jobs schedule themselves; a `job_run` table + `/admin/jobs` cover observability. Survives SvelteKit restarts via croner re-arming on boot.
 
-**When to add a `job_runs` table:** when we want history across restarts (e.g. "did the morning print run yesterday?" after a power cycle). Designed in `docs/jobs.md`; not built yet.
+**Run history:** a `job_run` table (30 days) survives restarts, so "did the morning print run?" holds after a power cycle; `job-check` alerts on a missed print. See `docs/jobs.md`.
 
 **When to upgrade to DurableAgent / Vercel Workflows:** if we ever host on Vercel and need true sleep-for-hours/days resumability with provider failover. Not needed for the local kiosk.
 

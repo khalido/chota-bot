@@ -44,7 +44,8 @@ A thin wrapper around croner's `new Cron(...)`:
 - Sets `timezone: 'Australia/Sydney'` so patterns are local
 - `protect` — overlapping ticks are dropped + logged (no pile-up if a job runs slow)
 - `catch` — uncaught errors logged, process stays alive
-- 20-row in-memory ring buffer per job, visible at `/admin/jobs`
+- Every fire recorded in the `job_run` table (30 days), visible at `/admin/jobs`
+- 10-min wall-clock cap per run (`{ timeoutMs }` to change) — a timeout fails and alerts, but doesn't cancel the work: a timed-out print may still finish, and anything holding `browser-lock` keeps holding it
 - HMR-safe: same name → stop old Cron and replace
 
 ## Wake-gate before LLM calls
