@@ -106,7 +106,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/agent.md`](docs/agent.md) — how the ToolLoopAgent is wired (shipped; live at `/admin/agent` + Telegram).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot: chat + streaming + on-demand prints shipped (June 2026); voice still ahead.
 - [`docs/artifacts.md`](docs/artifacts.md) — idea: quick phone-friendly pages built from a chat ask, at `<word>.<domain>`. Not built.
-- [`docs/whatsapp.md`](docs/whatsapp.md) — WhatsApp plan: Baileys as a linked device on a dedicated number, in the family group + 1-to-1. Not built yet.
+- [`docs/whatsapp.md`](docs/whatsapp.md) — WhatsApp: baileyrs as a linked device on a dedicated number, in the family group + 1-to-1. Channel built (`channels/whatsapp.ts`), tested from the Mac; on the box next.
 - [`CHANGELOG.md`](CHANGELOG.md) — keepachangelog-style log of shipped changes; add an entry when you ship something notable.
 - [`docs/logging.md`](docs/logging.md) — LogTape structured logging: design + what shipped.
 

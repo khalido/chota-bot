@@ -48,19 +48,25 @@ export interface Task {
 	startDate?: string;
 	isAllDay?: boolean;
 	tags?: string[];
+	/** The section (TickTick "column") the task sits in, if the list has sections. */
+	columnId?: string | null;
+	/** The assigned list member's TickTick username (their email). */
+	assigneeUsername?: string | null;
 	items?: { id: string; title: string; status: number }[];
 }
 
 export interface ProjectWithTasks {
 	project: Project;
 	tasks: Task[];
+	/** The list's sections (TickTick "columns"), e.g. reminders and things to
+	 *  buy at some point; empty when it has none. */
+	columns: { id: string; name: string }[];
 	/**
 	 * Recently ticked-off tasks (completed within the last `DONE_LOOKBACK_DAYS`
 	 * days), newest first. Populated by `getFamilyLists`; `getProjectWithTasks`
 	 * and `getList` leave it undefined.
 	 */
 	done?: CompletedTask[];
-	columns: unknown[];
 }
 
 /** A ticked-off task — the `done` items that ride alongside a list. */
@@ -275,12 +281,25 @@ function matchKey(name: string): string {
 export async function addToList(
 	internalName: string,
 	title: string,
-	extras: { content?: string; due?: string } = {}
+	extras: { content?: string; due?: string; assignee?: string; section?: string } = {}
 ): Promise<Task> {
 	const list = await getList(internalName);
 	if (!list) throw new Error(`Cannot add to "${internalName}" — no such configured list`);
 	const task: Record<string, unknown> = { projectId: list.project.id, title };
 	if (extras.content) task.content = extras.content;
+	if (extras.assignee) task.assigneeUsername = extras.assignee;
+	if (extras.section) {
+		const col = list.columns.find((c) => c.name.toLowerCase() === extras.section!.toLowerCase());
+		if (!col) {
+			const names = list.columns.map((c) => c.name);
+			throw new Error(
+				names.length
+					? `no section "${extras.section}" — sections: ${names.join(', ')}`
+					: `the list has no sections`
+			);
+		}
+		task.columnId = col.id;
+	}
 	if (extras.due) {
 		task.dueDate = dueDateString(extras.due);
 		task.isAllDay = true;

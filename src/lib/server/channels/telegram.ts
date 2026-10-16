@@ -117,10 +117,12 @@ export function telegramChannel(): Channel | null {
 
 			bot.command('start', async (ctx) => {
 				const id = ctx.chat.id;
+				// The user id goes on their family entry (`family[].telegram`).
+				const you = ctx.from ? `\nYour Telegram user ID is ${ctx.from.id}.` : '';
 				await ctx.reply(
 					isAllowed(id)
-						? "Hey, I'm Chota. Ask me anything, or /print a brief."
-						: `Hey, I'm Chota. You're not on the family list yet.\nYour chat ID is ${id} — add it to chota.config.ts > telegram.allowedChatIds.`
+						? `Hey, I'm Chota. Ask me anything, or /print a brief.${you}`
+						: `Hey, I'm Chota. You're not on the family list yet.\nYour chat ID is ${id} — add it to chota.config.ts > telegram.allowedChatIds.${you}`
 				);
 			});
 
@@ -145,7 +147,10 @@ export function telegramChannel(): Channel | null {
 					threadId: `tg:${ctx.chat.id}`,
 					channel: 'telegram',
 					messageId: String(ctx.message.message_id),
-					person: null,
+					// The same family member as on WhatsApp, if their Telegram id is on file.
+					person: ctx.from
+						? ((getConfig().family ?? []).find((p) => p.telegram === ctx.from!.id) ?? null)
+						: null,
 					senderName: ctx.from?.first_name ?? 'Someone',
 					text: ctx.message.text,
 					isDM: ctx.chat.type === 'private',

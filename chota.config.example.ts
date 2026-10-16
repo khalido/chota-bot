@@ -22,7 +22,8 @@ export default defineChota({
 			name: 'Parent1',
 			aliases: ['Parent1', 'P1'],
 			whatsapp: '+61400000001',
-			email: 'parent1@example.com'
+			email: 'parent1@example.com', // their TickTick account, for assigning tasks
+			telegram: 100000001 // Telegram user id — /start shows it
 		},
 		{ name: 'Parent2', aliases: ['Parent2', 'P2'] },
 		{ name: 'Kid1', aliases: ['Kid1', 'K1'] },
@@ -91,7 +92,6 @@ export default defineChota({
 		// it's the most-churned list (items added + ticked off daily).
 		lists: {
 			shopping: 'Shopping', // everyday items / groceries — shown in full on every brief
-			buying: 'Buying', // longer-term wishlist (shoes, gear, "someday" stuff)
 			family: 'Family', // shared family to-dos / reminders — surfaced on the briefs per assignee
 			watch: 'Watch', // TV, movies, YouTube — things to watch together
 			notes: 'Notes' // general family notes

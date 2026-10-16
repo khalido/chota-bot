@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Incoming } from './types';
 
 vi.mock('./telegram', () => ({ telegramChannel: () => null }));
+vi.mock('./whatsapp', () => ({ whatsappChannel: () => null }));
 vi.mock('$lib/server/agent', () => ({ runAgentStream: vi.fn() }));
 vi.mock('$lib/server/agent/history', () => ({}));
 vi.mock('$lib/server/log', () => ({ event: vi.fn(), logErr: vi.fn() }));

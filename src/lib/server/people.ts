@@ -33,19 +33,23 @@ export function parseEventPeople(title: string, family: FamilyMember[] = []): st
 /**
  * Resolve the family members a TickTick task is assigned to.
  *
- * TickTick's API exposes no assignee field, so we read assignment from the
- * task's tags — a tag matching a family member's alias (case-insensitive)
- * assigns the task. When no tag matches, we fall back to a name in the title
- * (the same word-boundary match as calendar events). Empty array = unassigned.
+ * In order: TickTick's assignee (`assigneeUsername`, the member's TickTick
+ * email) matched against `family[].email`; else tags — a tag matching a
+ * family member's alias (case-insensitive); else a name in the title (the
+ * same word-boundary match as calendar events). Empty array = unassigned.
  *
  * Names come back in family-config order (stable), like `parseEventPeople`.
  */
 export function parseTaskPeople(
 	title: string,
 	tags: string[] = [],
-	family: FamilyMember[] = []
+	family: FamilyMember[] = [],
+	assigneeEmail?: string | null
 ): string[] {
 	if (family.length === 0) return [];
+	const email = assigneeEmail?.toLowerCase();
+	const assignee = email && family.find((m) => m.email?.toLowerCase() === email);
+	if (assignee) return [assignee.name];
 	const tagSet = new Set(tags.map((t) => t.toLowerCase()));
 	const byTag = family
 		.filter((m) => m.aliases.some((a) => tagSet.has(a.toLowerCase())))

@@ -15,6 +15,7 @@ import {
 import { event, logErr } from '$lib/server/log';
 import { ThreadQueue } from './queue';
 import { telegramChannel } from './telegram';
+import { whatsappChannel } from './whatsapp';
 import type { Channel, Incoming } from './types';
 
 const SCOPE = 'channels';
@@ -44,9 +45,9 @@ function accept(channel: Channel, m: Incoming): Promise<void> {
 	return Promise.resolve();
 }
 
-/** In a group several people share one history, so each line names its sender. */
-const asHistoryLine = (m: Incoming) =>
-	m.isDM ? m.text : `${m.person?.name ?? m.senderName}: ${m.text}`;
+/** Each line names its sender — several people share a group's history, and
+ *  in a DM it's how the agent knows who "me" is. */
+const asHistoryLine = (m: Incoming) => `${m.person?.name ?? m.senderName}: ${m.text}`;
 
 async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 	const { channel, m } = latest;
@@ -89,7 +90,7 @@ export async function bootChannels(): Promise<void> {
 	} catch (err) {
 		logErr(SCOPE, 'history key migration failed', err); // a turn will fail, not boot
 	}
-	for (const channel of [telegramChannel()]) {
+	for (const channel of [telegramChannel(), whatsappChannel()]) {
 		if (!channel) continue;
 		channels.push(channel);
 		await channel.start((m) => accept(channel, m));

@@ -240,7 +240,7 @@ export async function gatherBrief({
 	const todos: Todo[] = (familyLists.find(listIs('family'))?.tasks ?? []).flatMap((t) => {
 		const when = taskWhen(t.dueDate, ref);
 		if (!when) return [];
-		const people = parseTaskPeople(t.title, t.tags, config.family ?? []);
+		const people = parseTaskPeople(t.title, t.tags, config.family ?? [], t.assigneeUsername);
 		const daysLate = when === 'overdue' ? daysSince(t.dueDate, ref) : undefined;
 		return [{ title: t.title.trim(), people, when, daysLate }];
 	});

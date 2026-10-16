@@ -11,6 +11,10 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **WhatsApp channel** (`channels/whatsapp.ts`, baileyrs): the same agent answers DMs and @mentions in the family group, for family members with a number in config. Replies quote the message in groups, links become footnotes, and a reaction tracks the work (🤔, then each tool's emoji). Pairing by code sent as an alert; reconnects with backoff. On where `WHATSAPP_ENABLED=true`.
+- **TickTick assignees and sections:** `ticktick_add` assigns to a family member (by their TickTick email, default the sender) and files into a list section; reads show both. Every history line now names its sender.
+- **Person config:** `family[]` holds `email`, `whatsapp`, `telegram` per person; `/start` shows your Telegram user id.
+
 - **WhatsApp spike** (`scripts/whatsapp-spike.mjs`, baileyrs): links the bot number by pairing code, sends, echoes, detects group @mentions, reads contact cards. Findings in `docs/whatsapp.md` §Spike findings. Config: `family[].whatsapp` / `email`, `whatsapp.botNumber`.
 
 - **Alerts:** `$lib/server/alerts.ts` (`raiseAlert` / `clearAlert`) with an `alert` table. A failed job messages the notify chats on Telegram once, repeats only after 12h, and sends "working again" when it recovers; silent during `alerts.quietHours`; deploys don't resend. `/admin/jobs` lists alerts and can send a test one. Frequent refreshes alert after 3 failures in a row.
@@ -77,6 +81,7 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 - **Telegram streaming:** draft updates every 300ms (was 1.2s) and no longer block reading the model's stream, so fast replies visibly stream.
 - **Calendar locations have a Google Maps link** the agent gives when asked (the Calendar API doesn't return the app's place link; WhatsApp can't render short links, so it isn't shown by default).
 - **`ticktick_done`:** tick items off a family list by title ("got the milk"). Matching is in code: an exact title, else a single partial match; several matches or none are reported back, never guessed.
+- **Buying list retired:** bigger purchases are a section of the Family list.
 - **Watch list from a link:** send a link about a show and the agent reads it and adds the show to Watch with a 1–2 line note and the link. `ticktick_add` takes a `note`; reads return notes (except the notes list's bodies).
 - **Deps:** in-range catch-up (`ai` 7.0.142, `better-auth` + `auth` 1.7.10, `vitest` 5.0.5).
 - **iCal parsing via node-ical.** One shared `ics.ts` wraps node-ical for

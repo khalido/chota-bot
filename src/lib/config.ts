@@ -76,9 +76,12 @@ export interface FamilyMember {
 	 *  WhatsApp allowlist — the bot answers only family members with a number,
 	 *  in a DM or a group. Config only, never the repo. */
 	whatsapp?: string;
-	/** Email — for their own calendar later, and who they are when they sign
-	 *  in. Config only, never the repo. */
+	/** Email — their TickTick account (task assignment), later their own
+	 *  calendar and who they are when they sign in. Config only. */
 	email?: string;
+	/** Telegram user id (from /start). Lets the bot know who's writing in a
+	 *  Telegram group, the same person as on WhatsApp. Config only. */
+	telegram?: number;
 }
 
 export interface WeatherThresholds {
@@ -174,6 +177,8 @@ export interface ChotaConfig {
 	whatsapp?: {
 		/** The bot's own number, E.164 — WhatsApp Business on its own SIM. */
 		botNumber?: string;
+		/** Numbers (E.164) that get alerts when WhatsApp carries them. */
+		notify?: string[];
 	};
 	/** Telegram bot wiring. Token + username live in `.env` (the token's a
 	 *  secret); chat IDs live here because they're per-family and typed. */
