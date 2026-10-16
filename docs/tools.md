@@ -1,6 +1,6 @@
 # Tools roadmap
 
-Tools = typed TS functions in `src/lib/server/tools/<domain>.ts`. One file per data source. Each tool is a small async function returning a flat JSON-friendly object. Routes and jobs call tools directly; the agent registers a subset (weather, calendar, ticktick, tmdb + google_search) via thin wrappers in `src/lib/server/agent/tools/`.
+Tools = typed TS functions in `src/lib/server/tools/<domain>.ts`. One file per data source. Each tool is a small async function returning a flat JSON-friendly object. Routes and jobs call tools directly; the agent registers a subset (weather, calendar, ticktick, tmdb, volleyball, plus the AI Gateway web tools `web_search` and `web_fetch`) via thin wrappers in `src/lib/server/agent/tools/`.
 
 ## Status
 

@@ -96,9 +96,12 @@ export async function getCalendarBetween(
 }
 
 export interface SearchEventsOptions {
-	/** Phrase to match (case-insensitive substring on event summary). */
+	/** Words to find — Google's free-text search over title, description,
+	 *  location and attendees ("opera" finds an event at the Opera House). */
 	query: string;
-	/** Forward search window in days from `now`. Default 60. */
+	/** Search ahead from `now` (default) or back from it. */
+	direction?: 'upcoming' | 'past';
+	/** Window in days. Default 365. */
 	days?: number;
 	/** Override config.calendar.id (e.g. for testing). */
 	calendarId?: string;
@@ -107,23 +110,22 @@ export interface SearchEventsOptions {
 }
 
 /**
- * Find events whose summary contains `query` (case-insensitive substring),
- * within a forward window from `now`. Used by the agent tool for "when is
- * the next X" questions.
- *
- * Substring match keeps the implementation simple — the agent expands
- * abbreviations ("vb" → "volleyball") at the prompt layer before calling,
- * so we don't need fuzzy matching here.
+ * Find events matching `query` with the Calendar API's own `q` search, so a
+ * word in the location or description counts, not just the title. Used by
+ * the agent tool for "when's our next X" / "when did we last X". Results are
+ * in start order; for `past` the caller usually wants the last few.
  */
 export async function searchEvents(opts: SearchEventsOptions): Promise<CalendarEvent[]> {
-	const { query, days = 60, calendarId, now = new Date() } = opts;
-	const q = query.trim().toLowerCase();
+	const { query, direction = 'upcoming', days = 365, calendarId, now = new Date() } = opts;
+	const q = query.trim();
 	if (!q) return [];
-	const start = now;
-	const end = new Date(now.getTime() + days * 86_400_000);
-	const events = await fetchEventsList(start, end, calendarId);
-	const matches = events.filter((e) => e.summary.toLowerCase().includes(q));
-	log('calendar', `search "${query}" over ${days}d → ${matches.length}/${events.length} matches`);
+	const span = days * 86_400_000;
+	const [start, end] =
+		direction === 'past'
+			? [new Date(now.getTime() - span), now]
+			: [now, new Date(now.getTime() + span)];
+	const matches = await fetchEventsList(start, end, calendarId, q);
+	log('calendar', `search "${q}" ${direction} ${days}d → ${matches.length} matches`);
 	return matches;
 }
 
@@ -131,7 +133,8 @@ export async function searchEvents(opts: SearchEventsOptions): Promise<CalendarE
 async function fetchEventsList(
 	timeMin: Date,
 	timeMax: Date,
-	customCalendarId?: string
+	customCalendarId?: string,
+	q?: string
 ): Promise<CalendarEvent[]> {
 	const calendarId = customCalendarId ?? getConfig().calendar?.id;
 	if (!calendarId) {
@@ -155,7 +158,8 @@ async function fetchEventsList(
 		timeMax: timeMax.toISOString(),
 		singleEvents: true,
 		orderBy: 'startTime',
-		maxResults: 250
+		maxResults: 250,
+		...(q ? { q } : {})
 	});
 
 	return (res.data.items ?? []).map(toEvent);

@@ -171,7 +171,7 @@ export async function gatherBrief({
 	// rejects before we await it.
 	const beachP = tomorrow
 		? Promise.resolve(undefined)
-		: getBeachReport(ref).catch((err) => {
+		: getBeachReport().catch((err) => {
 				logErr('brief', 'beach report lookup failed:', err);
 				return null;
 			});

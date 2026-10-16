@@ -11,6 +11,12 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Agent tools: `bus`, `chores`, `ticktick_add`.** Next live departures for the kids' trips; whose chore it is on a day; add an item to a family list, with a due date for the buying list ("Kid1 shoes, mid-November"). `addToList` was sending TickTick the wrong shape and had never worked — fixed. The list read now shows due dates.
+- **Calendar search finds more.** Uses Google Calendar's own search (title, place and notes, so "Opera House" matches the venue), up to a year ahead or back (`past`), with several wordings at once ("dinner", "restaurant"). Events now carry an ISO date, weekday and location; results cap at 15.
+- **Agent tools: `school_day`, `school_dates`.** A kid's timetable for a day (with why there's none: weekend, holidays, pupil-free), and the school calendar spelled out: term and week now, last day of term and days to go, the next holidays' first and last day, when school is back (next year's Term 1 late in the year), pupil-free days.
+- **House TTL cache** (`$lib/server/cache.ts`, `withTtl` on lru-cache): school terms and the beach report use it — de-duplicated fetches, the last good value on a failed refetch, and an `asOf` on every value.
+- **Longer conversation memory:** the agent now sees the last 50 messages of a chat (was 12).
+- **Replies can use short bullet lists** for sets of things (lists, events, buses).
 - **Dashboard: auto-refresh + idle→clock screensaver moved into the layout**, so
   every kiosk page (`/`, `/weather`, `/lists`, `/morning`) stays fresh and falls
   back to the ambient clock when idle — previously only the home page did, so a
@@ -60,6 +66,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Changed
 
+- **Agent model → `deepseek/deepseek-v4.1-flash-fast`** (from Gemini 3.5 Flash), with web search and page reading moved to AI Gateway's own tools: `web_search` (Exa) and `web_fetch` (Browserbase Fetch, new). Replies with a tool call went from ~6–7s to ~1.3s. `@ai-sdk/google` removed.
+- **Deps:** in-range catch-up (`ai` 7.0.142, `better-auth` + `auth` 1.7.10, `vitest` 5.0.5).
 - **iCal parsing via node-ical.** One shared `ics.ts` wraps node-ical for
   both feeds (NSW school terms, Sentral timetables), replacing two
   hand-written parsers. Output checked identical on the real feeds; Sentral

@@ -16,7 +16,7 @@ import type { SchedulePeriod } from '$lib/server/tools/sentral';
 import { getConfig } from '$lib/server/config';
 import { parseEventPeople } from '$lib/server/people';
 import { beachSummary } from '$lib/server/tools/beach';
-import { sydneyDayOfWeek, sydneyTimeRange } from '$lib/time';
+import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange } from '$lib/time';
 import { scheduleSection, schoolBreakSection } from './school-section';
 
 type BodyByKind =
@@ -199,7 +199,7 @@ function volleyballRows(d: BriefData, who?: string) {
 	return (d.volleyball ?? [])
 		.filter((v) => !who || v.kid.toLowerCase() === who.toLowerCase())
 		.flatMap((v) => {
-			const day = (date: string) => sydneyDayOfWeek(new Date(`${date}T12:00:00+10:00`));
+			const day = (date: string) => sydneyDayOfWeek(sydneyNoon(date));
 			const rows = [];
 			if (v.playing) {
 				// Opponent's ladder spot rides along when known: "(#3 of 14, 18pts)".

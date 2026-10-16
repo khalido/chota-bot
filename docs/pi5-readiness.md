@@ -16,7 +16,7 @@ Hardware-readiness analysis for migrating chota from the X230 to a **Raspberry P
 
 ## Memory / CPU budget
 
-Inference is **remote** (`MODEL = 'google/gemini-3.5-flash'` via AI Gateway), so no model weights live on the box. SQLite is `better-sqlite3` (in-process, tiny). The only multi-hundred-MB resident is Chromium.
+Inference is **remote** (`MODEL = 'deepseek/deepseek-v4.1-flash-fast'` via AI Gateway), so no model weights live on the box. SQLite is `better-sqlite3` (in-process, tiny). The only multi-hundred-MB resident is Chromium.
 
 | Component                                                  | Idle RAM                                                    | Peak RAM                                 | CPU notes                                                                  |
 | ---------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------- |

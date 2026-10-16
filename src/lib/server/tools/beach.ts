@@ -16,6 +16,7 @@
  * (sibling to `weatherSummary()` in weather.ts); `BeachReport` is the pure data.
  */
 import * as cheerio from 'cheerio';
+import { withTtl } from '$lib/server/cache';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
 
@@ -46,9 +47,6 @@ export interface BeachReport {
 	/** Free-text detail from the lifeguard. */
 	description: string;
 }
-
-// One report per beach name, cached with its fetch time.
-const cache = new Map<string, { at: number; report: BeachReport | null }>();
 
 async function fetchFeed(): Promise<string> {
 	const res = await fetch(FEED_URL, {
@@ -107,26 +105,30 @@ export function parseBeachReport(xml: string, name: string): BeachReport | null 
 	};
 }
 
+/** Fetch and parse one beach's report; throws when the feed is down. */
+async function fetchBeachReport(name: string): Promise<BeachReport | null> {
+	const report = parseBeachReport(await fetchFeed(), name);
+	if (report) log('beach', `${report.beach}: ${report.summary}, ${report.status}`);
+	else log('beach', `"${name}" not found in lifeguard feed`);
+	return report;
+}
+
+/** Cached 30 min; a feed outage serves the last report for up to 2 more hours. */
+const beachReport = withTtl('beach', fetchBeachReport, {
+	ttl: CACHE_TTL_MS,
+	maxStale: 2 * 60 * 60_000
+});
+
 /**
  * The configured beach's latest lifeguard report, or null when no beach is
- * configured, the feed is down, or that beach isn't in it. Cached 30 min.
+ * configured, the feed is down (and nothing recent is cached), or that beach
+ * isn't in it.
  */
-export async function getBeachReport(now: Date = new Date()): Promise<BeachReport | null> {
+export async function getBeachReport(): Promise<BeachReport | null> {
 	const name = getConfig().home?.beach?.name;
 	if (!name) return null;
-
-	const hit = cache.get(name);
-	if (hit && now.getTime() - hit.at < CACHE_TTL_MS) return hit.report;
-
 	try {
-		const report = parseBeachReport(await fetchFeed(), name);
-		cache.set(name, { at: now.getTime(), report });
-		if (report) {
-			log('beach', `${report.beach}: ${report.summary}, ${report.status}`);
-		} else {
-			log('beach', `"${name}" not found in lifeguard feed`);
-		}
-		return report;
+		return (await beachReport(name)).value;
 	} catch (err) {
 		logErr('beach', 'lifeguard feed fetch failed:', err);
 		return null;

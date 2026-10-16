@@ -132,6 +132,15 @@ export function sydneyTimeOnDay(hhmm: string, anchor: Date = new Date()): Date {
 	return new Date(`${ymd}T${pad(h)}:${pad(m)}:00${sydneyOffset(anchor)}`);
 }
 
+/**
+ * An instant on a Sydney calendar date (`YYYY-MM-DD`): noon AEST, which is
+ * 12:00 or 13:00 local — always the same Sydney date, either side of a DST
+ * change. Use it to ask "which weekday / which term is this date".
+ */
+export function sydneyNoon(ymd: string): Date {
+	return new Date(`${ymd}T12:00:00+10:00`);
+}
+
 /** Returns the Sydney UTC offset for the given moment, e.g. "+10:00" or "+11:00". */
 export function sydneyOffset(d: Date = new Date()): string {
 	const parts = new Intl.DateTimeFormat('en-GB', {

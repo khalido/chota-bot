@@ -8,14 +8,14 @@
 
 ## Stack decision
 
-| Concern          | Choice                                                                     | Why                                                                                                                                        |
-| ---------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Runtime          | `ai` v7 — the **`ToolLoopAgent`** class                                    | One reusable agent definition for kiosk UI streaming, Telegram, and job loops. Handles the tool loop, context, and stop conditions for us. |
-| Provider routing | AI Gateway (plain model-slug string, e.g. `'google/gemini-3.5-flash'`)     | One `AI_GATEWAY_API_KEY`, per-task model swap, spend caps, provider fallback. No per-provider SDK except Groq Whisper (voice, Phase 3).    |
-| Default model    | a fast/cheap Gemini Flash slug (**fetch the current ID from the gateway**) | Good enough for tool-calling family jobs; cheap enough to run often. Shipped value lives in `MODEL` in `agent/index.ts`.                   |
-| Heavy job model  | a stronger slug, dreaming/consolidation only                               | Reasoning-heavy nightly pass; worth the cost once a day.                                                                                   |
-| Memory           | not built yet — custom JSONL tool when it lands                            | See §Memory below for the three options + our lean.                                                                                        |
-| Sandbox          | None                                                                       | Tools are typed wrappers, not arbitrary code execution. See §Sandboxing in `plan.md`.                                                      |
+| Concern          | Choice                                                                           | Why                                                                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime          | `ai` v7 — the **`ToolLoopAgent`** class                                          | One reusable agent definition for kiosk UI streaming, Telegram, and job loops. Handles the tool loop, context, and stop conditions for us.    |
+| Provider routing | AI Gateway (plain model-slug string, e.g. `'deepseek/deepseek-v4.1-flash-fast'`) | One `AI_GATEWAY_API_KEY`, per-task model swap, spend caps, provider fallback. No per-provider SDK except Groq Whisper (voice, Phase 3).       |
+| Default model    | a fast model (**fetch the current ID from the gateway**)                         | Speed over raw capability for a family chat bot; skills and tools carry the common tasks. Shipped value lives in `MODEL` in `agent/index.ts`. |
+| Heavy job model  | a stronger slug, dreaming/consolidation only                                     | Reasoning-heavy nightly pass; worth the cost once a day.                                                                                      |
+| Memory           | not built yet — custom JSONL tool when it lands                                  | See §Memory below for the three options + our lean.                                                                                           |
+| Sandbox          | None                                                                             | Tools are typed wrappers, not arbitrary code execution. See §Sandboxing in `plan.md`.                                                         |
 
 ## The one primitive: `ToolLoopAgent`
 
@@ -23,13 +23,12 @@ We define **one** agent instance (`chotaAgent`) and import it everywhere an LLM 
 
 ```ts
 // src/lib/server/agent/index.ts  (abridged — read the real file)
-import { google } from '@ai-sdk/google';
 import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
 import { buildSystemPrompt } from './prompts';
 import { weatherTool } from './tools/weather';
 // …calendar, ticktick, tmdb
 
-export const MODEL = 'google/gemini-3.5-flash'; // gateway slug — verify against the gateway
+export const MODEL = 'deepseek/deepseek-v4.1-flash-fast'; // gateway slug — verify against the gateway
 
 export const chotaAgent = new ToolLoopAgent({
 	id: 'chota',
@@ -45,9 +44,9 @@ export const chotaAgent = new ToolLoopAgent({
 		calendar: calendarTool,
 		ticktick: ticktickTool,
 		tmdb: tmdbTool,
-		// Gemini's native web grounding — same-provider tool, so search + answer
-		// come back in one step. `google_search` is the required key name.
-		google_search: google.tools.googleSearch({})
+		// AI Gateway's web tools (tools/web.ts) — run gateway-side, any model.
+		web_search: webSearchTool, // Exa, highlights
+		web_fetch: webFetchTool // Browserbase Fetch → Markdown
 	}
 });
 
@@ -103,7 +102,9 @@ Two homes: the `agent.run` **wide event** (LogTape → OTel/PostHog) is the anal
 
 ## Conversation history — light table, not a session transcript
 
-Shipped: a `chat_message` table (`db/chat.schema.ts`). Per turn the Telegram handler records the user message + the final reply **text only** — tool calls and thinking are scrubbed (their cost rides the wide event). It loads the last ~12 messages as context so replies feel continuous, and persists across deploys. Helpers live in `agent/history.ts` (`loadHistory`, `appendMessage`, `newTurnId`). Columns (`id`, `chatId`, `turnId`, `role`, `content`, `createdAt`, `metadata`) — `turnId` groups a user+assistant exchange; `metadata` is a JSON escape hatch. Compression (summarise + prune old turns) is deferred until volume warrants.
+Shipped: a `chat_message` table (`db/chat.schema.ts`). Per turn the Telegram handler records the user message + the final reply **text only** — tool calls and thinking are scrubbed (their cost rides the wide event). Every message is kept; the last 50 (~25 exchanges, a few thousand tokens) go back to the model as context each turn (was 12 until 2026-10-16). Helpers live in `agent/history.ts` (`loadHistory`, `appendMessage`, `newTurnId`). Columns (`id`, `chatId`, `turnId`, `role`, `content`, `createdAt`, `metadata`) — `turnId` groups a user+assistant exchange; `metadata` is a JSON escape hatch. Compression (summarise + prune old turns) is deferred until volume warrants.
+
+**Compaction (2026-10-16):** the context window is the text of the last 50 messages — tool calls and their results are never stored, which is the bulk of what the [compaction guide](https://ai-sdk.dev/cookbook/guides/agent-context-compaction) trims. Replies are short, and family facts live in memory, not history. So: nothing to build yet. When a long chat needs it — mostly the family group — summarise turns older than the window into one short message, per chat, and let durable facts go to memory via the inbox. Group history is per chat ID, so the group never shares context with a 1-to-1 chat.
 
 > **Design principle (locked June 2026):** what defines the agent is `soul.md` (identity) + a well-maintained **memory store**. Messages are just light recent context. Full "sessions" — rich transcripts with every tool call + thought — are low-value and get messy fast, so we deliberately don't store them. Optimise soul + memory; keep history thin.
 
@@ -253,6 +254,79 @@ Dreaming prompt: DEDUPE / PRUNE / SHARPEN / ADD / KEEP-if-unsure, biased toward 
 
 Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), silent corruption (unread tool errors).
 
+## Channels, commands and actions (planned, 2026-10-16)
+
+chota is reached from more than one chat app: Telegram now, WhatsApp next ([`whatsapp.md`](whatsapp.md)), a business's staff bot later. Everything that isn't transport lives once, in shared code; each channel is a thin adapter.
+
+**Channel adapter** (`telegram/`, `whatsapp/`): receives a message, checks the allowlist, resolves the sender to a person, queues the turn per chat, calls the agent, renders the reply in its own format. Owns only transport, identity and formatting.
+
+**Slash commands — one registry, every channel.** `src/lib/server/commands/`: one file per command, `{ name, description, args, run(ctx) → reply }`, where a reply is text, an image, a document, or a list of choices. Adapters map it: Telegram registers each with `setMyCommands` and renders choices as inline buttons; WhatsApp parses a leading `/` and renders choices as a numbered list ("reply 1–3"). `/print` and `/start` move here out of `telegram/bot.ts`. A new command is one file and every channel has it.
+
+**Print as an agent tool, not only a command.** The common case is a kid sending a photo and "print this", or "give me a math puzzle" — the agent should work out what to print. `print` tool:
+
+- input: what (a brief, text, an image from the message, a puzzle) and where — `thermal` (the MUNBYN, default) or `laser` (the Brother HL-L2350DW on Wi-Fi, often off: the tool checks it's reachable and says so if not). The laser goes through CUPS driverless IPP/AirPrint on the box.
+- **Approval** with the SDK's `toolApproval` on `ToolLoopAgent` (in `ai` 7.0.140; `needsApproval` is the `WorkflowAgent` name). A policy function per call: thermal from an allowlisted person → `'approved'`; laser, or more than a page or two → `'user-approval'`. The adapter shows "Print 3 pages on the Brother? yes / no", appends the `tool-approval-response`, and calls the agent again. Tell the model not to retry a denied print.
+- `/print` stays as the fast path that skips the model.
+
+**A message that arrives mid-turn.** The per-chat queue holds it. If the agent is between steps, `prepareStep` appends it to `messages` so the next step sees it (it can't enter mid-token); if the turn already finished, it runs as the next turn. No aborting a turn halfway.
+
+**Short replies, per channel.** `STYLE` already says one short sentence. The adapter passes `channel` into the per-call layer of the prompt, which adds that channel's formatting: Telegram rich text; WhatsApp `*bold*`/`_italic_`, no tables or headings, bare URLs; print output sized for the 80mm thermal roll (576px). No streaming on WhatsApp — typing indicator, then the reply.
+
+## Models (2026-10-16)
+
+A personal bot with light use: **speed matters more than raw capability**, and per-message cost is cents either way. Common tasks get guided by skills and good tools rather than a smarter model.
+
+- **Agent (switched 2026-10-16): `deepseek/deepseek-v4.1-flash-fast`** with `web_search` (Exa, `highlights` excerpts — usually enough on their own) and `web_fetch` (Browserbase Fetch, Markdown) in `agent/tools/web.ts`. Live check: a headline search in 4.1s ($0.018), reading the NSW 2026 calendar page in 2.4s ($0.010) with the right answer. Was `google/gemini-3.8-flash` + `google_search`, whose grounding bills $14 per 1,000 searches after 5,000 free a month ([Google](https://ai.google.dev/gemini-api/docs/google-search#pricing)).
+- **Why DeepSeek Flash Fast** ($0.60 / $2.40, served by Baseten in the US). On a raincoat question (weather tool, 2 steps) and a kids' maths puzzle, 2 runs each:
+
+  | Model                        | Raincoat (tool) | Puzzle       | $ per reply   |
+  | ---------------------------- | --------------- | ------------ | ------------- |
+  | gemini-3.8-flash             | 6.4–7.2s        | 4.8–9.2s     | 0.0008–0.0019 |
+  | glm-5.3-flashx (Z.ai, CN)    | 8.2–9.0s        | 4.4–4.9s     | 0.0002–0.0003 |
+  | **deepseek-v4.1-flash-fast** | **1.3s**        | **0.7–1.0s** | 0.0002–0.0007 |
+  | deepseek-v4.1-flash          | 2.5s            | 1.8–1.9s     | ~0.0000       |
+
+  Answers were equally good (its puzzles checked out). Five to seven times faster is the difference between a chat and a wait. It has no built-in search, so it pairs with the Gateway tools below.
+
+- **Web search for non-Gemini models** — the Gateway's own tools, from `ai`: `gateway.tools.perplexitySearch()` ($5 per 1,000) or `gateway.tools.exaSearch()` ($7 per 1,000, up to 10 results). Weather + headline prompt: GLM + Perplexity 9.6s / $0.023 all-in, GLM + Exa 12.1s / $0.030, Gemini + `google_search` 8.1s / $0.031 + grounding; Gemini + Exa was worst (3 searches, 16.5s, and a thought-signature warning) — keep Gemini on its own search if it stays.
+- **Exa content:** `exaSearch({ contents: { highlights: true } })` returns agent-friendly excerpts per result; `text` returns the page body (`maxCharacters`, `includeSections: ['body']`), plus `maxAgeHours`, `livecrawlTimeout`, subpages, links. Exa's get-contents-by-URL endpoint and its deep/summary modes aren't exposed.
+- **Reading a known URL:** `gateway.tools.browserbaseFetch()` (in `@ai-sdk/gateway` 4.0.115, via `ai` 7.0.142) — $1 per 1,000 raw, more for proxies and markdown/JSON extraction. Gemini also has `google.tools.urlContext()`. Test (NSW Term 4 2026 end date, which our ICS feed says is Thu 17 Dec, holidays from Fri 18): GLM + Browserbase Fetch followed the link to the 2026 page and got **17 Dec right** (17s, ~21K tokens); Gemini + URL context answered "Friday 18 December, classes end Wednesday 16" — **wrong**, invented detail. No need for our own fetch tool: Browserbase Fetch is cheap and works with any model; write one only if a site needs cookies or a login (Sentral already has its own).
+- **GLM flashx** stays a candidate for cheap background work (summaries, the dreaming pass); it's served from China (Z.ai), so not for family chat content.
+- **Speech:** `google/gemini-3.8-flash-tts` (and `-lite-tts`) for audio replies — a news roundup or a short story as a voice note. See [`whatsapp.md`](whatsapp.md) §Voice. `google/gemini-3.8-live` (realtime) is the candidate for live voice later.
+
+**Own fetch later:** `web_fetch` is our name over Browserbase, so it can move to our own lib or Exa's contents API (when the Gateway exposes it) without touching the prompt. Browserbase Fetch doesn't run JavaScript or log in.
+
+## Decisions — cheap judgments with `experimental_decide` (planned)
+
+Many small calls in chota are judgments, not conversations: a typed answer to a fixed question. `experimental_decide` (in `ai` 7.0.140, experimental) asks named `boolean` / `choice` / `score` questions about a state and returns typed answers. Jev is a native decision model: about 100 ms and $0.042 per million input tokens on the Gateway. Use `gateway.decisionModel('typesafe-ai/jev')`; pin a version (`typesafe-ai/jev-1.14.0`) once thresholds are tuned against it, because `jev` floats (1.14 becomes latest around 2026-10-21). Through the Gateway, state is text and JSON only. Jev 1.14's images and `box` type need the direct TypeSafe provider and its opt-in headers — so "is this photo printable?" waits, or goes to a Gemini decision adapter.
+
+House rules (KO's `decision-models` skill): one module owns every decide call (`agent/decide.ts`); questions, criteria and thresholds are data in a file; a judgment suggests and code thresholds it ("maybe" is a probability band, not an option); store every probability with the model id; every caller treats a throw as "no suggestion"; and none on a latency-critical path.
+
+Candidates, roughly in order of value:
+
+- **Approval policy:** inside the `print` tool's approval function — "is this appropriate to print for a kid without a parent?" as a boolean.
+- **Group gate:** in the family group, "is this addressed to chota?" for messages that say its name without an @mention. On the reply path, so it must fail open to the plain mention rule.
+- **Morning brief:** weather/surf warning worth a line? print or skip on a holiday?
+- **Memory inbox:** "is this a durable family fact?" before appending to `bot/inbox.md` ([`memory.md`](memory.md)).
+- **Repeats:** "is this the same ask as one from the last few days?" — feeds the crystallize-into-jobs idea.
+
+Prior art: `~/code/everx/web/src/lib/server/chat/jev.ts` (`jevEvaluate` — fails when answers are missing, logs tokens and time) and `~/code/jaldi/docs/judgments.md`. Label a handful of real examples per question before trusting one.
+
+## Photos (planned) — lessons from everx (2026-10-16)
+
+From the everx session (`~/code/everx/docs/photos.md`, `web/src/lib/server/chat/vision.ts`), which reads equipment photos in production:
+
+- **One model for chat and photos (KO, 2026-10-16):** the agent model handles images too — it's already in the conversation with the tools and context. `deepseek/deepseek-v4.1-flash-fast` is tagged `vision` on the Gateway, but test it on real photos first: everx used a separate `google/gemini-3.8-flash` (84/84 plate strings exact, ~$0.0024 a read), and a cheaper model once got routed to a provider that never saw the image and **invented a read** — check the image actually reached the model. Fall back to a vision-only call if DeepSeek reads badly.
+- **Captioning and transcription are different calls.** A quick caption ("what is this") is not a read. For text-heavy photos — a school notice — transcribe every printed line first (`- **Label:** value`), then extract (events, dates, "bring X") in a second, text-only step that keeps the source line next to each fact.
+- **Plain-text fixed layout beats JSON** for vision output (fewer retries and schema failures); parse tolerantly.
+- **Anti-hallucination rules:** copy values exactly; "(partly legible)" plus what's readable, never guess the rest; say what's there, not "appears to be".
+- **Facts from photos are suggestions:** shown with the photo they came from and confirmed before anything is written (calendar, lists).
+- **Send what the chat app gives you** — Telegram/WhatsApp already send a compressed JPEG; keep the original when there's small print.
+
+chota's cases: "print this" needs no model (print the image); a school notice → transcribe, extract, confirm, then calendar drafts and a line on that kid's sheet; a shopping photo → a typed decision ("a product to add? which?") and a confirm.
+
+**Prompt lessons from everx's flash-model agent**, now in `STYLE`: counts must match the rows shown; copy URLs from tool results rather than retyping; never claim "saved/added" unless this turn's result shows it; no narrating tool choice. Two still to do: everx returns `activeTools: []` from `prepareStep` on the last allowed step, so a turn never ends on a tool call with no text; and tool results carry true totals plus a short precomputed summary when rows are capped, so the model quotes figures instead of summing. **Approvals on chat:** an approval request with no buttons just ends the turn silently — render buttons (Telegram) or a numbered reply (WhatsApp), or keep write tools off that surface. everx's rule: approval when a write reaches another person or can't be undone.
+
 ## Consumers
 
 - **Telegram** (shipped) — the main interactive surface. `message:text` → `runAgentStream({ messages })` → streamed Rich-Message reply with a thinking block + the message-history context above; `/print [who]` sends a brief PNG. Whitelisted + hardened. See [`docs/telegram.md`](telegram.md).
@@ -263,9 +337,10 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 
 - **`inputSchema` not `parameters`** (silent mistype).
 - **`CoreMessage` → `ModelMessage`**, **`convertToCoreMessages` → `convertToModelMessages`** (matter only when bridging UI ↔ server).
-- **Plain model-slug strings auto-route through AI Gateway** when `AI_GATEWAY_API_KEY` is set — no `@ai-sdk/gateway` import needed. `@ai-sdk/google` is imported only for the native `google_search` grounding tool, not for model routing.
+- **Plain model-slug strings auto-route through AI Gateway** when `AI_GATEWAY_API_KEY` is set — no `@ai-sdk/gateway` import needed. Gateway tools (`gateway.tools.*`) also come from `ai`; no provider SDK is installed.
 - **Don't hardcode model IDs from memory** — fetch current ones from the gateway.
-- **Provider-defined tools require a fixed key name** — `google_search` for Gemini grounding; the model won't recognise the tool under any other key.
+- **Tool approvals are `toolApproval` on the agent**, not `needsApproval` on the tool — that's the `WorkflowAgent` API. Check the installed docs (`node_modules/ai/docs`) over the website.
+- **Provider-native tools need their fixed key** (e.g. Gemini's `google_search`); the Gateway's own tools don't, so ours are named `web_search` / `web_fetch`.
 
 ## Future / worklog
 
@@ -273,6 +348,8 @@ Without these: token-burning loops (no `stopWhen`), wedged ticks (no timeout), s
 - **Wire the model/usage metadata capture** (§What to capture) — enrich the `agent.run` wide event with the actual `response.modelId` + `finishReason`, and store a compact `{ model, in, out, finishReason, steps }` blob on `chat_message` assistant rows.
 - **PostHog AI observability** ([posthog.com/ai-observability](https://posthog.com/ai-observability)) — we already ship events to PostHog via the OTel sink; PostHog's LLM-analytics adds per-generation cost/latency/trace dashboards on top. Low effort later + a useful pattern for other projects. (Captured in `~/code/ops/inbox.md`.)
 - **Sandbox + bash-tool / skill `scripts/`** — [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox), [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool). For jobs where the agent writes + runs code, and for executing skill `scripts/`. Revisit in the **v7 era** — interesting sandbox products are emerging. Deferred; typed tool wrappers cover everything today.
+- **Code mode** (`@ai-sdk/code-mode`, experimental) — the model writes sandboxed JS that calls several tools at once. Not worth it at six tools and one-sentence replies; revisit when the agent drives jobs.
+- **Page watcher** — a "watch this page" tool + job that messages the family when a page changes (school notices, fixtures, a price). Idea from [changedetection.io](https://github.com/dgtlmoon/changedetection.io); build it small rather than running that service.
 - **Memory store + dreaming consolidation** (§Memory, §Dreaming) — the high-value durable layer; deferred behind the single-writer-lock + injection-boundary work.
 
 ## References

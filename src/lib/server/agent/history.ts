@@ -14,8 +14,10 @@ import { generateId, type ModelMessage } from 'ai';
 import { db } from '$lib/server/db';
 import { chatMessage } from '$lib/server/db/chat.schema';
 
-/** How many recent messages to feed back as context (~6 turns). */
-const HISTORY_LIMIT = 12;
+/** How many recent messages to feed back as context (~25 turns). Replies are
+ *  short and tool calls aren't stored, so 50 messages is a few thousand
+ *  tokens — cheap on a fast model, and enough to follow a real conversation. */
+const HISTORY_LIMIT = 50;
 
 /** A fresh id grouping one user message with its assistant reply. */
 export const newTurnId = (): string => generateId();

@@ -34,8 +34,14 @@ const TOOL_STATUS: Record<string, string> = {
 	weather: 'Checking the weather',
 	calendar: 'Checking the calendar',
 	ticktick: 'Looking at the lists',
+	ticktick_add: 'Adding to the list',
+	bus: 'Checking the buses',
+	chores: 'Checking the chores',
+	school_day: 'Checking the timetable',
+	school_dates: 'Checking the school calendar',
 	tmdb: 'Looking that up',
-	google_search: 'Searching the web'
+	web_search: 'Searching the web',
+	web_fetch: 'Reading the page'
 };
 
 /** Escape for the `<tg-thinking>` HTML body (model reasoning is untrusted text). */

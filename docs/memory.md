@@ -44,9 +44,10 @@ family-home/
 Composed per call in `prompts.ts`, in this order:
 
 1. **SOUL** — `bot/soul.md` from the home folder. Fallbacks unchanged: repo-root `soul.md`, then `soul.example.md`.
-2. **MEMORY** — `bot/memory.md`.
-3. **STYLE + RULES** — in code: audience, tool use, kid safety, no secrets, the write rules below. Last, and says it wins, so an evolving soul can never loosen safety.
-4. **TODAY + SNAPSHOT** — as now.
+2. **MEMORY** — `bot/memory.md`: family-wide facts. This is also the family group's memory.
+3. **PERSON** — `people/<name>.md` for whoever sent the message (DM or group sender): their interests, what they like the bot to do, how they like answers ("KO: short, links welcome, follows F1 and AI news"). The way chota takes over KO's personal yaad bot: same agent, a personal layer on top. ~4,000-char cap (yaad's number). KO edits his on the Mac; the bot proposes changes to `bot/inbox.md` and the 03:00 pass applies them — never a direct write, same rule as `memory.md`.
+4. **STYLE + RULES** — in code: audience, tool use, kid safety, no secrets, the write rules below. Last, and says it wins, so an evolving soul can never loosen safety.
+5. **TODAY + SNAPSHOT** — as now.
 
 The personality text moves out of code into `soul.md`; code keeps only the mechanical and safety rules.
 
@@ -100,7 +101,7 @@ No git-lfs: it's one more moving part, and a self-hosted LFS server adds even mo
 A second store, for documents the family edits together (a trip planner Sheet, a shopping or budget Sheet, a packing list Doc). The git folder is the bot's private memory; this is the shared workspace. Memory notes link to the Drive docs by URL.
 
 - **One folder, e.g. `Family/Chota`, inside the existing family Drive.**
-- **The bot signs in as its own Google account** (e.g. `chota.home@…`), and only that folder is shared with it. Sharing is the scope: it can't see the rest of the family Drive. A service account would also limit access by sharing, but (unverified, test first) can't create files in a non-Workspace Drive because it has no storage quota. A real account has its own quota.
+- **The bot signs in as its own Google account** (e.g. `chota.home@…`), and only that folder is shared with it. Sharing is the scope: it can't see the rest of the family Drive. Not a service account: it has no storage quota, so it can't create files in a personal My Drive (that needs a Shared Drive, i.e. Workspace). A real account has its own quota. Setup steps in [`box.md`](box.md).
 - **OAuth app set to "In production"**, not Testing, so the refresh token doesn't expire after 7 days. Personal use means a one-time "unverified app" warning, no review.
 - **Tools wrap `ko`** (`ko gsheets`, `ko gdocs`, `ko drive`) under the bot account's tag, as typed tools, not a shell. `ko gsheets` already refuses to overwrite non-empty cells. Writes are logged; the morning print or a Telegram reply says what changed.
 

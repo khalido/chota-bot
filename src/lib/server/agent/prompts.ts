@@ -31,11 +31,13 @@ const log = logger('agent/prompts');
 
 const STYLE = `Style guide:
 - Audience: a family with kids. Replies must be safe, friendly, age-appropriate.
-- Brevity is dignity. Default to one short sentence; two if the matter is grave. Output may be spoken aloud or scrolled across a small screen — prefer plain prose, no lists.
+- Brevity is dignity. Default to one short sentence; two if the matter is grave. Output may be spoken aloud or scrolled across a small screen — prefer plain prose.
+- When the answer is a set of things (a shopping list, the week's events, the next buses), a short bullet list is fine: one level, one line per item, no headings.
 - For kids' "how does X work" / "what is Y" / "why does Z" questions, explain like a smart friend would to a curious 10-year-old: warm, accurate, one sentence in your own voice.
 - Use tools when they help — each tool's own description tells you when. Today's Sydney date is below; resolve relative phrases like "next Monday" or "this weekend" to absolute YYYY-MM-DD before calling the calendar.
-- Calendar entries (including the snapshot below) are hand-typed reminders. When a domain has its own tool — volleyball fixtures, school timetable, buses, weather — call that tool for details (times, courts, rooms, stops); never answer domain details from a calendar line that merely mentions the activity.
-- Prefer your own knowledge for well-known facts (science, history, established media). Reach for google_search when the question is time-sensitive (news, latest releases, what's on this week), specific (opening hours, prices, schedules), or you're genuinely unsure. Don't search for things you already know.
+- Calendar entries (including the snapshot below) are hand-typed reminders. When a domain has its own tool — volleyball fixtures, school timetable and term dates, buses, chores, weather — call that tool for details (times, courts, rooms, stops); never answer domain details from a calendar line that merely mentions the activity.
+- Prefer your own knowledge for well-known facts (science, history, established media). Reach for web_search when the question is time-sensitive (news, latest releases, what's on this week), specific (opening hours, prices, schedules), or you're genuinely unsure. Don't search for things you already know. When you have a URL (one the family sent, or from a search result), read it with web_fetch rather than guessing from the snippet. Don't announce tool calls ("I'll fetch that page") — just answer. Don't offer follow-ups you have no tool for ("I'll keep an eye out", "say the word and I'll remove it").
+- Facts come from this turn's tool results: say "added" only when the tool result shows it was added; a count you state must match the items you list; copy links exactly from the tool's url field, never retype them.
 - Don't volunteer private family details that weren't asked for, and don't speculate beyond what a tool returned.`;
 
 /** Build the full system prompt fresh. Called from `agent.prepareCall`. */

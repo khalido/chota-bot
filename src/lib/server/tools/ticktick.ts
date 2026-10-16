@@ -15,9 +15,10 @@
 import { TICKTICK_API_KEY } from '$env/static/private';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
-import { sydneyTimeOnDay } from '$lib/time';
+import { sydneyNoon, sydneyOffset, sydneyTimeOnDay } from '$lib/time';
 
 const ENDPOINT = 'https://mcp.ticktick.com/';
+const SYDNEY_TZ = 'Australia/Sydney';
 const PROTOCOL_VERSION = '2025-06-18';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -260,15 +261,40 @@ function matchKey(name: string): string {
 	return cleanListName(name).toLowerCase();
 }
 
-/** Add a task to a configured list, addressed by internal name. */
+/**
+ * Add a task to a configured list, addressed by internal name. `due` is a
+ * Sydney-local `YYYY-MM-DD`, set as an all-day due date ("buy Kid1 shoes"
+ * in about a month). Drops that list's cache so the next read shows it.
+ */
 export async function addToList(
 	internalName: string,
 	title: string,
-	extras: { content?: string; priority?: 0 | 1 | 3 | 5; dueDate?: string } = {}
+	extras: { content?: string; due?: string } = {}
 ): Promise<Task> {
 	const list = await getList(internalName);
 	if (!list) throw new Error(`Cannot add to "${internalName}" — no such configured list`);
-	return callTool<Task>('create_task', { project_id: list.project.id, title, ...extras });
+	const task: Record<string, unknown> = { projectId: list.project.id, title };
+	if (extras.content) task.content = extras.content;
+	if (extras.due) {
+		task.dueDate = dueDateString(extras.due);
+		task.isAllDay = true;
+		task.timeZone = SYDNEY_TZ;
+	}
+	// create_task takes `{ task: OpenTask }` — not flat fields.
+	const created = await callTool<Task>('create_task', { task, client_timezone: SYDNEY_TZ });
+	projectDataCache.delete(list.project.id);
+	return created;
+}
+
+/**
+ * TickTick's all-day due date for a Sydney `YYYY-MM-DD`: local midnight with
+ * that midnight's own offset, e.g. "2026-11-15T00:00:00.000+1100". On a DST
+ * change day the offset at midnight differs from noon's, so it's read at
+ * midnight, not assumed.
+ */
+export function dueDateString(ymd: string): string {
+	const midnight = sydneyTimeOnDay('00:00', sydneyNoon(ymd));
+	return `${ymd}T00:00:00.000${sydneyOffset(midnight).replace(':', '')}`;
 }
 
 function listsConfig(): Record<string, string> {

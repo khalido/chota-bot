@@ -42,13 +42,17 @@ agent/
     calendar.ts
     ticktick.ts
     tmdb.ts
+    bus.ts             # next live departures for the kids' configured trips
+    chores.ts          # chore rotation by day / person
+    school.ts          # school_day (a kid's timetable) + school_dates (terms, holidays)
     volleyball.ts      # kids' next games + duty + opponent ladder rank
+    web.ts             # web_search (Exa) + web_fetch (Browserbase) — AI Gateway tools, no data lib
   memory.ts            # later — SQLite-backed memory store (Stevens-shape; flat table to start)
 ```
 
 Registered in `index.ts > tools: { … }`: `weather` (also returns the beach
-report), `calendar`, `ticktick`, `tmdb`, `volleyball`, plus `google_search`
-(Gemini's native grounding tool — no wrapper file, `google.tools.googleSearch({})`).
+report), `calendar` (range / date / search), `ticktick` + `ticktick_add`, `bus`, `chores`, `school_day`, `school_dates`, `tmdb`, `volleyball`, `web_search` and `web_fetch` (AI Gateway's Exa search
+and Browserbase Fetch, run gateway-side, so they work with any model).
 
 The system prompt has four layers (see `prompts.ts`):
 

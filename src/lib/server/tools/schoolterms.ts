@@ -21,6 +21,7 @@
  * header, the countdown) happens in the print pipeline, not here.
  */
 import * as cheerio from 'cheerio';
+import { withTtl } from '$lib/server/cache';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
 import { parseIcsDays, type IcsDay } from '$lib/server/ics';
@@ -34,8 +35,10 @@ const ICS_URLS: Record<number, string> = {
 };
 
 const FETCH_TIMEOUT_MS = 15_000;
-/** Term dates are static for the year — a long cache TTL is plenty. */
+/** Term dates are static for the year — a long cache TTL is plenty, and a
+ *  copy weeks old is still right if both sources are down. */
 const CACHE_TTL_MS = 12 * 60 * 60_000;
+const MAX_STALE_MS = 60 * 24 * 60 * 60_000;
 /** Default look-ahead for `getUpcomingSchoolEvents`, in days. */
 const DEFAULT_WINDOW_DAYS = 14;
 
@@ -87,8 +90,6 @@ export interface SchoolYear {
 	/** Vacation blocks. */
 	holidays: { label: string; start: string; end: string }[];
 }
-
-const cache = new Map<number, { data: SchoolYear; at: number }>();
 
 /** Current calendar year in Sydney. */
 function currentYear(): number {
@@ -170,8 +171,7 @@ export async function getSchoolBreak(date: Date = new Date()): Promise<SchoolBre
 
 /** Force a re-fetch of `year`, bypassing the cache. The weekly refresh job calls this. */
 export async function refreshSchoolCalendar(year: number = currentYear()): Promise<SchoolYear> {
-	cache.delete(year);
-	return loadSchoolYear(year);
+	return (await schoolYear.refresh(year)).value;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -179,16 +179,12 @@ export async function refreshSchoolCalendar(year: number = currentYear()): Promi
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * A year's calendar — the DoE page first, the iCal feed as a fallback. Cached
- * 12h; if both sources fail but a stale copy exists, that's served instead.
+ * A year's calendar — the DoE page first, the iCal feed as a fallback. Throws
+ * when both fail; the cache below then serves the last good copy.
  */
-async function loadSchoolYear(year: number): Promise<SchoolYear> {
-	const hit = cache.get(year);
-	if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
-
-	let data: SchoolYear;
+async function fetchSchoolYear(year: number): Promise<SchoolYear> {
 	try {
-		data = await fetchFromPage(year);
+		return await fetchFromPage(year);
 	} catch (pageErr) {
 		logErr(
 			'schoolterms',
@@ -196,18 +192,22 @@ async function loadSchoolYear(year: number): Promise<SchoolYear> {
 			pageErr
 		);
 		try {
-			data = await fetchFromIcs(year);
+			return await fetchFromIcs(year);
 		} catch (icsErr) {
-			if (hit) {
-				log('schoolterms', `both sources failed for ${year} — serving stale cache`);
-				return hit.data;
-			}
 			logErr('schoolterms', `iCal fallback for ${year} also failed:`, icsErr);
 			throw pageErr;
 		}
 	}
-	cache.set(year, { data, at: Date.now() });
-	return data;
+}
+
+/** Cached 12h; if both sources fail, the last good copy is served for up to 60 days. */
+const schoolYear = withTtl('schoolterms', fetchSchoolYear, {
+	ttl: CACHE_TTL_MS,
+	maxStale: MAX_STALE_MS
+});
+
+async function loadSchoolYear(year: number): Promise<SchoolYear> {
+	return (await schoolYear(year)).value;
 }
 
 /** Fetch + parse the DoE calendar page for `year`. */

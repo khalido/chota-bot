@@ -18,19 +18,22 @@
  * outcome per invocation; `runAgentStream` does the same for the
  * streaming path (Telegram + the admin chat).
  */
-import { google } from '@ai-sdk/google';
 import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
 import { event } from '$lib/server/log';
 import { buildSystemPrompt } from './prompts';
 import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
-import { ticktickTool } from './tools/ticktick';
+import { ticktickAddTool, ticktickTool } from './tools/ticktick';
+import { busTool } from './tools/bus';
+import { choresTool } from './tools/chores';
+import { schoolDatesTool, schoolDayTool } from './tools/school';
 import { tmdbTool } from './tools/tmdb';
 import { volleyballTool } from './tools/volleyball';
+import { webFetchTool, webSearchTool } from './tools/web';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
-export const MODEL = 'google/gemini-3.5-flash';
+export const MODEL = 'deepseek/deepseek-v4.1-flash-fast';
 
 export const chotaAgent = new ToolLoopAgent({
 	id: 'chota',
@@ -51,16 +54,16 @@ export const chotaAgent = new ToolLoopAgent({
 		weather: weatherTool,
 		calendar: calendarTool,
 		ticktick: ticktickTool,
+		ticktick_add: ticktickAddTool,
+		bus: busTool,
+		chores: choresTool,
+		school_day: schoolDayTool,
+		school_dates: schoolDatesTool,
 		tmdb: tmdbTool,
 		volleyball: volleyballTool,
-		// Google Search grounding — Gemini's native web tool. Same-provider
-		// tool (Gemini is trained on it), so search results + synthesised
-		// answer come back in one response — no extra loop step needed.
-		// Free under the Gemini API quota; routed via the existing
-		// AI_GATEWAY_API_KEY without a separate Google key.
-		// `google_search` is the required tool name — Gemini won't recognise
-		// the grounding tool under any other key.
-		google_search: google.tools.googleSearch({})
+		// AI Gateway's own web tools — work with any model (see tools/web.ts).
+		web_search: webSearchTool,
+		web_fetch: webFetchTool
 	}
 });
 
