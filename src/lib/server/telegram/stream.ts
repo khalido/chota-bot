@@ -25,8 +25,9 @@ import type { ChotaStreamResult } from '$lib/server/agent';
 import { logErr } from '$lib/server/log';
 
 const SCOPE = 'telegram';
-/** Min gap between draft edits — keep clear of Telegram's edit rate limits. */
-const THROTTLE_MS = 1200;
+/** Min gap between draft updates. Tokens arrive every few ms; sending each
+ *  would be dozens of API calls a second and hit Telegram's rate limits. */
+const DRAFT_GAP_MS = 300;
 const EMPTY_REPLY = "I didn't have anything to say to that.";
 
 /** Friendly "thinking" status per tool name. Falls back to a generic line. */
@@ -64,15 +65,17 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 	let reasoning = '';
 	let thinking = 'Thinking…'; // current <tg-thinking> body
 	let answering = false;
-	let lastFlush = 0;
 	let richOk = true;
 
-	/** Push the current state as a draft (thinking block, or the answer so far). */
-	const flush = async (force = false) => {
-		if (!richOk) return;
-		const now = Date.now();
-		if (!force && now - lastFlush < THROTTLE_MS) return;
-		lastFlush = now;
+	// Draft sends run alongside the stream instead of blocking it. At most one
+	// is in flight; changes made meanwhile go out in the next send, at most one
+	// per DRAFT_GAP_MS.
+	let pending = false;
+	let lastSend = 0;
+	let inFlight: Promise<void> | undefined;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+
+	const sendDraft = async () => {
 		try {
 			if (answering) {
 				await ctx.api.sendRichMessageDraft(chatId, draftId, { markdown: acc });
@@ -89,36 +92,71 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 		}
 	};
 
-	for await (const part of result.fullStream) {
-		switch (part.type) {
-			// The model's thought summary, if it emits one (opportunistic — no
-			// provider flag forces it) — show it streaming in the thinking block
-			// as a live, compacted thought.
-			case 'reasoning-delta':
-				if (!answering) {
-					reasoning += part.text;
-					thinking = compactThought(reasoning);
-					await flush();
-				}
-				break;
-			// A tool is being called — a clearer status than raw reasoning, so
-			// override the block with the friendly tool phrase.
-			case 'tool-input-start':
-				if (!answering) {
-					thinking = `${TOOL_STATUS[part.toolName] ?? 'Working on it'}…`;
-					await flush(true);
-				}
-				break;
-			case 'text-delta':
-				acc += part.text;
-				if (!answering && acc.trim()) {
-					answering = true;
-					await flush(true); // first answer text replaces the thinking block
-				} else {
-					await flush();
-				}
-				break;
+	const pump = (now = false) => {
+		if (!pending || inFlight || !richOk) return;
+		const wait = now ? 0 : lastSend + DRAFT_GAP_MS - Date.now();
+		if (wait > 0) {
+			timer ??= setTimeout(() => {
+				timer = undefined;
+				pump();
+			}, wait);
+			return;
 		}
+		clearTimeout(timer);
+		timer = undefined;
+		pending = false;
+		lastSend = Date.now();
+		inFlight = sendDraft().finally(() => {
+			inFlight = undefined;
+			pump();
+		});
+	};
+
+	/** Mark the draft changed; `now` skips the gap (status changes, first text)
+	 *  unless a send is already running — then it follows that one. */
+	const flush = (now = false) => {
+		pending = true;
+		pump(now);
+	};
+
+	try {
+		for await (const part of result.fullStream) {
+			switch (part.type) {
+				// The model's thought summary, if it emits one (opportunistic — no
+				// provider flag forces it) — show it streaming in the thinking block
+				// as a live, compacted thought.
+				case 'reasoning-delta':
+					if (!answering) {
+						reasoning += part.text;
+						thinking = compactThought(reasoning);
+						flush();
+					}
+					break;
+				// A tool is being called — a clearer status than raw reasoning, so
+				// override the block with the friendly tool phrase.
+				case 'tool-input-start':
+					if (!answering) {
+						thinking = `${TOOL_STATUS[part.toolName] ?? 'Working on it'}…`;
+						flush(true);
+					}
+					break;
+				case 'text-delta':
+					acc += part.text;
+					if (!answering && acc.trim()) {
+						answering = true;
+						flush(true); // first answer text replaces the thinking block
+					} else {
+						flush();
+					}
+					break;
+			}
+		}
+	} finally {
+		// Drop any queued draft and let a running one land first, so a late
+		// draft can't arrive after the final message (or after an error).
+		clearTimeout(timer);
+		pending = false;
+		await inFlight;
 	}
 
 	const text = acc.trim() || EMPTY_REPLY;

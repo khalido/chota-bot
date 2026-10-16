@@ -10,8 +10,8 @@
  * The agent's system prompt carries today's Sydney date (see `agent/index.ts`),
  * so the model can resolve "next Monday" / "this Friday" itself and pass the
  * absolute date. Returns a slim per-event shape: title, ISO date + weekday,
- * time, location, and the family members the event mentions (via
- * `parseEventPeople`), capped at 15 with a `truncated` flag.
+ * time, location with a Google Maps link, and the family members the event
+ * mentions (via `parseEventPeople`), capped at 15 with a `truncated` flag.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
@@ -35,13 +35,22 @@ import { ymd as ymdSchema } from './schemas';
 
 const MAX_EVENTS = 15;
 
+/** A Google Maps link for a location's text, or null when it isn't a place (a
+ *  meeting URL, "Online", "TBC"). The Calendar API returns only the text, not
+ *  the place link the Calendar app shows, so this searches for it. */
+export const mapsUrl = (location: string) =>
+	/^(https?:\/\/|www\.)|^(online|tbc|tba|zoom|teams|google meet|home)$/i.test(location.trim())
+		? null
+		: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+
 export const calendarTool = tool({
 	description:
 		'Family Google Calendar. Use exactly one mode:\n' +
 		'  - `range` for a named span (today / tomorrow / week / next_week / weekend) — prefer this for spans, never call `date` seven times in a row.\n' +
 		'  - `date` for one specific Sydney YYYY-MM-DD.\n' +
 		'  - `search` to find events by words in the title, place or notes, up to a year ahead — "when are we going to the Opera House", "when\'s our next dinner out". Give 1–4 alternative wordings (["opera", "Opera House"], ["dinner", "restaurant"]); set `past: true` for "when did we last…".\n' +
-		"Today's Sydney date is in the system prompt — resolve relative phrases yourself.",
+		"Today's Sydney date is in the system prompt — resolve relative phrases yourself.\n" +
+		'Show a location that has a `mapsUrl` as a Markdown link with a short place name, e.g. [Coogee Beach](mapsUrl), copying `mapsUrl` exactly.',
 	inputSchema: z
 		.object({
 			range: z
@@ -92,6 +101,7 @@ export const calendarTool = tool({
 				day: sydneyDayOfWeek(e.start),
 				time: e.isAllDay ? 'all-day' : sydneyTimeRange(e.start, e.end),
 				location: e.location ?? null,
+				mapsUrl: e.location ? mapsUrl(e.location) : null,
 				people: parseEventPeople(e.summary, family)
 			})),
 			truncated: events.length > MAX_EVENTS
