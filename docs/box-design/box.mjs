@@ -23,7 +23,7 @@ const lidD = S.screen[1] + 2 * S.lip + S.band; // 220
 const zoneL = lidW; // divider centre line = lid's right edge
 const bayIn = S.printer.pw + 22; // printer + finger room
 export const W = Math.round(zoneL + t / 2 + bayIn + t); // 424
-export const D = S.strip + lidD; // 250
+export const D = S.strip + lidD; // 262
 const RIM = t + S.printer.ph + 3 + S.bass; // wall tops: printer + 3 mm clearance + bass room = 160
 export const H = RIM + S.lidT; // 180
 const DECK = RIM - S.deckGap; // deck top, 122
@@ -33,6 +33,7 @@ const PR = { u: bayU + (bayIn - S.printer.pw) / 2, w: t + S.cableGap, z: t, ...S
 const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's front
 const SPK = [t + 50, divU - 50]; // speaker centres: each chamber is 100 wide
 const SPK_Z = t + 51; // centred on the face under the deck
+const CH_D = 90; // speaker chamber depth: the deck behind it keeps 118 mm clear for deep controls
 const MIC_U = 62,
 	MIC_Z = RIM - 19; // ReSpeaker Lite flat behind the front rim, above the deck, away from the drivers
 const TALK_U = 115,
@@ -86,21 +87,21 @@ export function cutList() {
 		{
 			part: 'Speaker chambers',
 			qty: 2,
-			size: [100, DECK - S.deck - t - 2, 120],
+			size: [100, DECK - S.deck - t - 2, CH_D],
 			mat: '6 mm ply, 5 sides',
-			note: 'the front wall is the baffle; ~0.9 L inside each; damping wool on the walls; glue + silicone every seam'
+			note: 'the front wall is the baffle; ~0.7 L inside each; the front of the deck rests on their tops; damping wool; glue + silicone every seam'
 		},
 		{
 			part: 'Deck',
 			qty: 1,
-			size: [divU - t - gap, inner - gap, S.deck],
+			size: [divU - t - gap, D - t - S.strip - gap, S.deck],
 			mat: '9 mm birch ply',
-			note: 'lifts out with its wiring; add a mid-rail if it flexes'
+			note: 'lifts out with its wiring; nothing deep over the speaker chambers (front 90 mm)'
 		},
 		{
 			part: 'Deck cleats',
 			qty: 2,
-			size: [inner, 12, 12],
+			size: [inner - CH_D, 12, 12],
 			mat: 'pine',
 			note: `on the left end and divider, top ${DECK - S.deck - t} mm above the base`
 		},
@@ -540,10 +541,10 @@ export function renderBox(state = {}) {
 		mark(12, Pt(120, 90, t + 18), 'Pi 5', '4GB, Active Cooler');
 		// sealed speaker boxes behind the front wall
 		for (const u of SPK)
-			s += bbox(u - 50, D - t - 120, t + 2, 100, 120, DECK - S.deck - t - 2, 'dark', 3);
+			s += bbox(u - 50, D - t - CH_D, t + 2, 100, CH_D, DECK - S.deck - t - 2, 'dark', 3);
 		// amp and mic board
 		s += bbox(24, 70, t, 60, 45, 3, 'pcb', 2) + bbox(34, 80, t + 3, 22, 22, 14, 'dark');
-		mark(13, Pt(54, 92, t + 3), 'Amp', 'TPA3116, 12 V, + USB DAC');
+		mark(13, Pt(54, 92, t + 3), 'Amp', 'TPA3116, 24 V, + USB DAC');
 		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 17, 86, 2, 35, 'pcb'); // ReSpeaker Lite
 		// Pico under the deck
 		s += bbox(130, 100, DECK - S.deck - 3, 51, 21, 1.2, 'pcb');
@@ -615,30 +616,30 @@ export function renderBox(state = {}) {
 			);
 	}
 	// LEDs
-	[85, 105, 125, 145, 165].forEach((u, i) => {
+	[90, 110, 130, 150, 170].forEach((u, i) => {
 		dk +=
-			bcyl(u, 146, DECK, 5, 3, 'dark') +
-			circTop(u, 146, DECK + 3, 4, i === 1 || i === 3 ? 'led on' : 'led');
+			bcyl(u, 122, DECK, 5, 3, 'dark') +
+			circTop(u, 122, DECK + 3, 4, i === 1 || i === 3 ? 'led on' : 'led');
 	});
 	// toggles and the covered toggle
-	for (const u of [32, 52, 72]) {
-		dk += bcyl(u, 192, DECK, 6, 2, 'brass') + rod(Pt(u, 192, DECK + 2), Pt(u, 186, DECK + 18), 3.2);
+	for (const u of [28, 46, 64]) {
+		dk += bcyl(u, 148, DECK, 6, 2, 'brass') + rod(Pt(u, 148, DECK + 2), Pt(u, 142, DECK + 18), 3.2);
 	}
 	dk +=
-		bcyl(108, 192, DECK, 7, 2, 'brass') +
-		rod(Pt(108, 192, DECK + 2), Pt(108, 186, DECK + 16), 4) +
-		bbox(100, 172, DECK, 16, 34, 9, 'brass', 2);
+		bcyl(90, 148, DECK, 7, 2, 'brass') +
+		rod(Pt(90, 148, DECK + 2), Pt(90, 142, DECK + 16), 4) +
+		bbox(82, 130, DECK, 16, 34, 9, 'brass', 2);
 	// PRINT
 	dk +=
-		bcyl(200, 190, DECK, 20, 3, 'brass') +
-		bcyl(200, 190, DECK + 3, 15, 8, 'accent') +
-		circTop(200, 190, DECK + 11, 9, 'accent-hi');
+		bcyl(205, 135, DECK, 20, 3, 'brass') +
+		bcyl(205, 135, DECK + 3, 15, 8, 'accent') +
+		circTop(205, 135, DECK + 11, 9, 'accent-hi');
 	s += `<g${see}>${dk}</g>`;
 	if (lidA > 60) {
-		mark(7, Pt(200, 190, DECK + 11), 'PRINT', '30 mm red arcade');
+		mark(7, Pt(205, 135, DECK + 11), 'PRINT', '30 mm red arcade');
 		mark(8, Pt(124, 86, DECK + 4), 'Needle meter', 'minutes to the bus');
 		mark(9, Pt(212, 92, DECK + 20), 'WHO + WHAT', 'two dials, wooden knobs');
-		mark(10, Pt(72, 186, DECK + 16), 'Toggles', '3 mini + 1 covered');
+		mark(10, Pt(64, 142, DECK + 16), 'Toggles', '3 mini + 1 covered');
 	}
 
 	// ---- walls in front ----
@@ -660,7 +661,7 @@ export function renderBox(state = {}) {
 			}
 		).join('')}`;
 	for (const u of SPK) s += g(PLANE_AT_W(u, D, SPK_Z), grille(S.driver / 2 - 3));
-	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '3.5" Dayton ND91, ~0.9 L');
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '3.5" Dayton ND91, ~0.7 L');
 	s += g(
 		PLANE_AT_W(MIC_U, D, MIC_Z),
 		`<rect class="face brass f" x="-30" y="-9" width="60" height="18" rx="9"/>${[-20, 20].map((x) => `<circle class="mesh" cx="${x}" r="6"/><circle class="face dark s" cx="${x}" r="1.4"/>`).join('')}<circle class="led on" cx="0" cy="0" r="2"/>`

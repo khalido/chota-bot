@@ -111,8 +111,8 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 .src { color: var(--ink); font-size: 13px; }
 </style>
 <main>
-<h1>Chota box · v6</h1>
-<p class="lead">The box is <b>${W} × ${D} × ${H} mm</b>. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Two 3.5" speakers fill the front wall, each in its own ~0.9 L sealed chamber, with bass EQ on the Pi: close to a Nest Audio. The mic, TALK and camera ride on the rim above. Hold TALK and the box goes quiet and listens. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
+<h1>Chota box · v7</h1>
+<p class="lead">The box is <b>${W} × ${D} × ${H} mm</b>. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Two 3.5" speakers fill the front wall, each in its own ~0.7 L sealed chamber under the front of the deck, with bass EQ on the Pi: close to a Nest Audio. The mic, TALK and camera ride on the rim above. Hold TALK and the box goes quiet and listens. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
 
 <div class="tabs" role="tablist">
 <button role="tab" id="tab-design" aria-controls="design" aria-selected="true">Design</button>
@@ -149,7 +149,8 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 <li><b>Mic and a TALK button on the front rim</b>, so voice works with the lid shut.</li>
 <li><b>One screen (v4).</b> The deck screen is gone: the dials are only reachable with the lid open, and then the lid screen faces you, so turning WHO or WHAT shows there. That frees the Pi's second camera/display port for a Pi Camera Module 3 and means one kiosk window instead of two. A needle meter takes its place on the deck.</li>
 <li><b>ReSpeaker Lite, not the XVF3800 (v5).</b> Two mics, the same XMOS echo cancelling, A$43 instead of A$113. In v1 it only listens: all sound (speech and music) plays through a small USB sound card into the amp, because the Lite tops out at 16 kHz. TALK pauses everything while held, so there's no echo to cancel. The mic sits behind the front rim, above the deck: higher, and away from the speakers.</li>
-<li><b>Speakers: two 3.5" Dayton ND91-8 (v6).</b> Bass is where small speakers lose to a Nest, and bass needs cone travel and air, not tweeters. The ND91 moves 5 mm each way; in ~0.9 L sealed it rolls off near 110 Hz, and a gentle bass EQ on the Pi (PipeWire filter-chain or CamillaDSP, a few % of one core) brings usable bass to about 75 Hz. A TPA3116 amp on its own 12 V plug-pack drives them. 2.5" drivers, racetracks and exciters were all checked: too little cone travel.</li>
+<li><b>Deck controls moved back (v7, from Gemini's review).</b> The speaker chambers fill the front 90 mm under the deck, so the button, dials, meter, toggles and LEDs sit in the back 118 mm; the front of the deck is a clear tear-off zone. The deck is cut 207 mm deep so it lifts out past the hinge strip.</li>
+<li><b>Speakers: two 3.5" Dayton ND91-8 (v6).</b> Bass is where small speakers lose to a Nest, and bass needs cone travel and air, not tweeters. The ND91 moves 5 mm each way; in ~0.7 L sealed it rolls off near 115 Hz, and a gentle bass EQ on the Pi (PipeWire filter-chain or CamillaDSP, a few % of one core) brings usable bass to about 75 Hz. A TPA3116 amp on its own 24 V plug-pack drives them. 2.5" drivers, racetracks and exciters were all checked: too little cone travel.</li>
 </ul>
 </div>
 </div>

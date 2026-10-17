@@ -128,12 +128,12 @@ export const equipment = [
 	},
 	{
 		group: 'Voice + sound',
-		item: '12 V 3 A plug-pack',
+		item: '24 V 3 A plug-pack',
 		qty: 1,
 		status: 'buy',
-		aud: 25,
-		source: 'Jaycar',
-		why: "the amp's own supply; sharing the printer's 24 V brick would sag the music while it prints"
+		aud: 35,
+		source: 'Jaycar / Altronics',
+		why: "the amp's own supply (24 V: 3–4× the headroom of 12 V); sharing the printer's 24 V brick would sag the music while it prints"
 	},
 	{
 		group: 'Voice + sound',
@@ -198,7 +198,7 @@ export const equipment = [
 	// build
 	{
 		group: 'Wiring',
-		item: 'JST-XH connector kit + crimper',
+		item: 'JST-XH pre-crimped leads + housings',
 		qty: 1,
 		status: 'buy',
 		aud: 40,
@@ -207,11 +207,11 @@ export const equipment = [
 	},
 	{
 		group: 'Wiring',
-		item: 'Soldering iron',
+		item: 'Soldering iron (Pinecil-class USB-C)',
 		qty: 1,
 		status: 'buy',
-		aud: 60,
-		source: 'Jaycar',
+		aud: 45,
+		source: 'Core Electronics',
 		why: 'pots, LEDs, meter, amp'
 	},
 	{
