@@ -111,8 +111,8 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 .src { color: var(--ink); font-size: 13px; }
 </style>
 <main>
-<h1>Chota box · v4</h1>
-<p class="lead">The box shrinks to <b>${W} × ${D} × ${H} mm</b>, down from about 490 × 300 × 205. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Both speakers sit in the front wall in sealed boxes, where they get real air. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
+<h1>Chota box · v5</h1>
+<p class="lead">The box shrinks to <b>${W} × ${D} × ${H} mm</b>, down from about 490 × 300 × 205. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Two 2.5" speakers sit in sealed boxes in the front wall; the mic rides high on the rim, away from them. Hold TALK and the box goes quiet and listens. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
 
 <div class="tabs" role="tablist">
 <button role="tab" id="tab-design" aria-controls="design" aria-selected="true">Design</button>
@@ -138,7 +138,7 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 <li><b>The printer</b> (MUNBYN ITPP098P, kept: it works, and smaller 80 mm printers save only 10–15 mm). Drawn at Newegg's 140 × 180 × 125; Amazon's 164 × 286 × 160 is the carton. Measure width, depth, height, where the paper leaves (distance back from the front edge) and how far its cover swings; one measurement redraws the box and cut list. Your 80 × 80 mm rolls are near its roll-bay limit.</li>
 <li><b>The 10.1" screen's thickness</b>, and its 235 × 161 outline against Waveshare's drawing. It sets the lid depth.</li>
 <li><b>The lid screen's outline.</b> Waveshare's sibling 10.1" panel is 228.6 × 143.0 × 2.6 mm, so it should fit the 244 × 170 face; confirm on the (C) drawing before cutting the rebate.</li>
-<li><b>The drivers.</b> Drawn as 2" full-range (57 mm frame, 30 mm deep). Pick a model and I'll size the holes and boxes to it.</li>
+<li><b>The drivers' cut-out and depth.</b> Drawn as Dayton PC68-4 (2.5", ~70 mm frame) in 75 × 78 × 90 mm boxes; check the datasheet before drilling the front wall.</li>
 </ul>
 </div>
 <div class="box-note">
@@ -148,8 +148,8 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 <li><b>One rim height.</b> Every wall stops at 140 mm and both lids are 20 mm deep, so the box closes flat. The deck sits 38 mm under the lid.</li>
 <li><b>Mic and a TALK button on the front</b>, so voice works with the lid shut. Sound goes out through the mic board, which then hears and cancels its own echo.</li>
 <li><b>One screen (v4).</b> The deck screen is gone: the dials are only reachable with the lid open, and then the lid screen faces you, so turning WHO or WHAT shows there. That frees the Pi's second camera/display port for a Pi Camera Module 3 and means one kiosk window instead of two. A needle meter takes its place on the deck.</li>
-<li><b>Audio runs through the mic board (v4).</b> Pi → USB → XVF3800 → its 3.5 mm out → amp → speakers. The board hears exactly what it plays, so it can cancel its own voice; a separate sound card on the Pi would break that.</li>
-<li><b>Speakers moved from the lid to the front wall</b> (v3). In the lid they had 15 mm of depth and half a litre between them; in the box each 2" driver gets its own sealed 0.2 L box below the deck. Better voice, listenable music, and only the screen ribbon crosses the hinge.</li>
+<li><b>ReSpeaker Lite, not the XVF3800 (v5).</b> Two mics, the same XMOS echo cancelling, A$43 instead of A$113. Speech plays through it (Pi → USB → Lite → 3.5 mm → amp → speakers) so it knows what the box is saying. TALK pauses all sound while held, so echo barely matters. The Lite tops out at 16 kHz, so music can later get its own USB audio adapter. The mic sits behind the front rim, above the deck: higher, and away from the speakers.</li>
+<li><b>Speakers moved from the lid to the front wall</b> (v3). In the lid they had 15 mm of depth. The 81 mm face below the deck caps the size at 2.5"; each Dayton PC68 gets a sealed ~0.35 L box (F3 ~120–150 Hz: clear radio and podcasts, no bass). 3" won't fit the face; exciters and passive radiators aren't worth it at this size.</li>
 </ul>
 </div>
 </div>

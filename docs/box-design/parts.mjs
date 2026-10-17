@@ -92,30 +92,47 @@ export const equipment = [
 	// audio
 	{
 		group: 'Voice + sound',
-		item: 'Seeed ReSpeaker XVF3800 (4-mic array, USB)',
+		item: 'Seeed ReSpeaker Lite (2-mic, XU316, USB)',
 		qty: 1,
 		status: 'buy',
-		aud: 113,
-		source: 'Pakronics',
-		why: 'hears across the kitchen; cancels its own voice in hardware. Cheaper: ReSpeaker Lite (2-mic, ~A$60), if its echo cancelling works over USB on a Pi'
+		aud: 43,
+		source: 'Core Electronics (bare board, not the A$85 kit)',
+		why: 'hears you; cancels its own voice; a USB sound card for speech. 16 kHz max, so music goes the other way'
 	},
 	{
 		group: 'Voice + sound',
-		item: '2" full-range driver (Visaton FRS 5 or Tang Band W2)',
+		item: 'Dayton Audio PC68-4, 2.5" full-range',
 		qty: 2,
 		status: 'buy',
-		aud: 20,
-		source: 'import (Parts Express / Madisound) ~A$30 shipping',
-		why: 'voice and light music; sealed boxes in the front wall'
+		aud: 29,
+		source: 'NB Audio (step up: ND65-4, ~A$60 each)',
+		why: 'radio and podcasts while cooking; sealed boxes in the front wall, F3 ~120–150 Hz'
 	},
 	{
 		group: 'Voice + sound',
-		item: '2 × 3 W class-D amp board',
+		item: 'Stereo class-D amp, 5 V (TPA2012 or PAM8403)',
 		qty: 1,
 		status: 'buy',
 		aud: 15,
 		source: 'Core Electronics (Adafruit)',
-		why: 'fed from the XVF3800’s 3.5 mm out'
+		why: "fed from the Lite's 3.5 mm out; a ferrite on its power keeps hiss off the mics"
+	},
+	{
+		group: 'Voice + sound',
+		item: 'Momentary push button, ~22 mm brass (TALK)',
+		qty: 1,
+		status: 'buy',
+		aud: 8,
+		source: 'Jaycar',
+		why: 'hold: the box goes quiet and listens; wired to the Pico'
+	},
+	{
+		group: 'Voice + sound',
+		item: 'USB audio adapter for music',
+		qty: 1,
+		status: 'later',
+		aud: 15,
+		why: 'full-quality music if the Lite’s 16 kHz sounds thin; mixed into the amp with two resistors, paused while TALK is held'
 	},
 
 	// controls
@@ -166,15 +183,6 @@ export const equipment = [
 		aud: 15,
 		source: 'Jaycar / Altronics',
 		why: 'needle meter: minutes to the bus'
-	},
-	{
-		group: 'Controls',
-		item: 'Momentary push button (TALK)',
-		qty: 1,
-		status: 'buy',
-		aud: 5,
-		source: 'Jaycar',
-		why: 'push-to-talk on the front'
 	},
 
 	// build

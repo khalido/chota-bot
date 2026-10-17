@@ -745,7 +745,7 @@ const ITEMS = [
 	{
 		n: 10,
 		name: 'Mic board',
-		fact: 'XVF3800, echo-cancelling',
+		fact: 'ReSpeaker Lite, echo-cancelling',
 		dot: Pt(255, MICF, 64),
 		lab: [270, 680],
 		side: 'l'

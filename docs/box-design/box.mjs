@@ -9,7 +9,7 @@ export const S = {
 	screen: [235, 161], // Waveshare 10.1" DSI (C) module, from box.md, unverified
 	lip: 4.5, // wood lip left round the screen glass
 	band: 50, // plain band under the screen: keeps the lid long enough to open over the deck
-	driver: 57, // 2" full-range driver frame, in the front wall
+	driver: 70, // 2.5" full-range driver frame (Dayton PC68-4), in the front wall
 	strip: 42, // fixed hinge strip along the back
 	printer: { pw: 140, pd: 180, ph: 125 }, // MUNBYN ITPP098P, Newegg listing (7.09 x 5.51 x 4.92 in), unmeasured
 	cableGap: 40, // behind the printer for its USB and power plugs
@@ -31,9 +31,12 @@ const bayU = divU + t; // bay interior from 250
 const PR = { u: bayU + (bayIn - S.printer.pw) / 2, w: t + S.cableGap, z: t, ...S.printer };
 const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's front
 const SPK = [46, divU - 46]; // speaker centres along the front wall
-const SPK_Z = t + 48; // below the deck
-const MIC_U = 104;
-const CAM_U = 121,
+const SPK_Z = t + 40; // below the deck
+const MIC_U = 62,
+	MIC_Z = 121; // ReSpeaker Lite flat behind the front rim, above the deck, away from the drivers
+const TALK_U = 119,
+	TALK_Z = 52;
+const CAM_U = 168,
 	CAM_Z = 120; // front rim, above the deck
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
@@ -49,7 +52,7 @@ export function cutList() {
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'front: two 50 mm speaker holes, mic holes, TALK, camera window; vents and power inlet; cut before glue-up'
+			note: 'front: two 58 mm speaker holes (check the driver cut-out), TALK; rim: two mic holes, camera window; vents and power inlet; cut before glue-up'
 		},
 		{
 			part: 'Ends',
@@ -82,9 +85,9 @@ export function cutList() {
 		{
 			part: 'Speaker boxes',
 			qty: 2,
-			size: [70, 75, 45],
-			mat: '9 mm ply, glued and sealed',
-			note: 'about 0.2 L each behind the front wall, below the deck; loose polyfill inside'
+			size: [75, 78, 90],
+			mat: '6 mm ply, 5 sides',
+			note: 'the front wall is the baffle; ~0.35 L inside, loosely filled with polyfill it acts like ~0.4 L; glue + silicone every seam'
 		},
 		{
 			part: 'Deck',
@@ -189,7 +192,11 @@ export const hardware = [
 		qty: 2,
 		note: 'on screw eyes in hardwood; stops the lid 20° past upright'
 	},
-	{ item: 'Brass mesh', qty: '1 sheet', note: 'two speaker grilles and the mic grille' },
+	{
+		item: 'Brass mesh',
+		qty: '1 sheet',
+		note: 'two speaker grilles and the mic grille; 3–4 mm clear of the cones, held so it can’t rattle'
+	},
 	{
 		item: 'Brass slide for the camera shutter',
 		qty: 1,
@@ -215,7 +222,7 @@ export const hardware = [
 	{
 		item: 'Closed-cell foam, 1–2 mm',
 		qty: '1 sheet',
-		note: 'gaskets: mic holes, screen clips, speaker boxes'
+		note: 'gaskets: mic board, screen clips, driver frames'
 	},
 	{ item: 'Polyfill (pillow stuffing)', qty: 'a handful', note: 'loosely in each speaker box' },
 	{ item: 'PVA wood glue, finish oil', qty: 1, note: 'glue-up and finish' }
@@ -511,7 +518,7 @@ export function renderBox(state = {}) {
 		for (const u of [40, 110])
 			s += g(BTOP(u, t + 14, t + 30), `<rect class="face dark t" width="16" height="14" rx="2"/>`);
 		s += bbox(30, t + 6, t + 30, 50, 34, 36, 'plain', 4);
-		s += bbox(120, 150, t, 105, 50, 30, 'dark', 4); // printer brick
+		s += bbox(90, 128, t, 105, 30, 50, 'dark', 4); // printer brick, on its side
 		// Pi 5 on standoffs, cooler, fan
 		for (const [u, w] of [
 			[100, 74],
@@ -531,11 +538,11 @@ export function renderBox(state = {}) {
 			bbox(170, 110, t + 9.6, 11, 14, 14, 'plain');
 		mark(12, Pt(120, 90, t + 18), 'Pi 5', '4GB, Active Cooler');
 		// sealed speaker boxes behind the front wall
-		for (const u of SPK) s += bbox(u - 35, D - t - 45, t + 4, 70, 45, 75, 'dark', 3);
+		for (const u of SPK) s += bbox(u - 37.5, D - t - 90, t + 2, 75, 90, 78, 'dark', 3);
 		// amp and mic board
-		s += bbox(24, 160, t, 40, 30, 3, 'pcb', 2) + bbox(30, 166, t + 3, 10, 8, 6, 'dark');
-		mark(13, Pt(44, 175, t + 3), 'Amp', '2×3 W, fed by the XVF3800');
-		s += bbox(18, D - t - 4, 34, 66, 2, 58, 'pcb');
+		s += bbox(98, 200, t, 40, 30, 3, 'pcb', 2) + bbox(104, 206, t + 3, 10, 8, 6, 'dark');
+		mark(13, Pt(118, 215, t + 3), 'Amp', "2×3 W, from the Lite's 3.5 mm");
+		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 17, 86, 2, 35, 'pcb'); // ReSpeaker Lite
 		// Pico under the deck
 		s += bbox(130, 100, DECK - S.deck - 3, 51, 21, 1.2, 'pcb');
 		mark(14, Pt(150, 110, DECK - S.deck - 2), 'Pico 2 WH', 'under the deck');
@@ -651,13 +658,17 @@ export function renderBox(state = {}) {
 			}
 		).join('')}`;
 	for (const u of SPK) s += g(PLANE_AT_W(u, D, SPK_Z), grille(S.driver / 2 - 3));
-	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '2" drivers, sealed boxes');
-	s += g(PLANE_AT_W(MIC_U, D, 64), grille(14));
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '2.5" Dayton PC68, sealed');
 	s += g(
-		PLANE_AT_W(MIC_U + 34, D, 64),
-		`<circle class="face brass f" r="10"/><circle class="face brass t" r="7"/><text class="face-text" y="22" text-anchor="middle" font-size="7">TALK</text>`
+		PLANE_AT_W(MIC_U, D, MIC_Z),
+		`<rect class="face brass f" x="-30" y="-9" width="60" height="18" rx="9"/>${[-20, 20].map((x) => `<circle class="mesh" cx="${x}" r="6"/><circle class="face dark s" cx="${x}" r="1.4"/>`).join('')}<circle class="led on" cx="0" cy="0" r="2"/>`
 	);
-	mark(11, Pt(MIC_U, D, 64), 'Mic + TALK', 'XVF3800 behind the grille');
+	s += g(
+		PLANE_AT_W(TALK_U, D, TALK_Z),
+		`<circle class="face brass f" r="13"/><circle class="face brass t" r="9"/><text class="face-text" y="26" text-anchor="middle" font-size="7">TALK</text>`
+	);
+	mark(11, Pt(MIC_U, D, MIC_Z), 'Mic', 'ReSpeaker Lite, 2 mics');
+	mark(16, Pt(TALK_U, D, TALK_Z), 'TALK', 'hold: hushes, then listens');
 	s += g(
 		PLANE_AT_W(CAM_U, D, CAM_Z),
 		`<rect class="face brass f" x="-16" y="-9" width="32" height="18" rx="9"/><circle class="glass" r="5"/><circle class="face dark s" r="2"/><rect class="face brass t" x="5" y="-7" width="9" height="14" rx="2"/><circle class="led on" cx="-11" cy="0" r="1.6"/>`
@@ -744,6 +755,7 @@ export function renderBox(state = {}) {
 		13: [[L, 610], 'l'],
 		2: [[L, 700], 'l'],
 		11: [[L, 790], 'l'],
+		16: [[L, 870], 'l'],
 		4: [[R, 120], 'r'],
 		5: [[R, 230], 'r'],
 		6: [[R, 320], 'r'],
