@@ -9,7 +9,8 @@ export const S = {
 	screen: [235, 161], // Waveshare 10.1" DSI (C) module, from box.md, unverified
 	lip: 4.5, // wood lip left round the screen glass
 	band: 50, // plain band under the screen: keeps the lid long enough to open over the deck
-	driver: 70, // 2.5" full-range driver frame (Dayton PC68-4), in the front wall
+	driver: 85, // 3.5" Dayton ND91-8 frame (76.5 mm cut-out; one listing says 103.5, check the PDF)
+	bass: 20, // extra wall height so a 3.5" driver fits the face under the deck
 	strip: 42, // fixed hinge strip along the back
 	printer: { pw: 140, pd: 180, ph: 125 }, // MUNBYN ITPP098P, Newegg listing (7.09 x 5.51 x 4.92 in), unmeasured
 	cableGap: 40, // behind the printer for its USB and power plugs
@@ -23,21 +24,21 @@ const zoneL = lidW; // divider centre line = lid's right edge
 const bayIn = S.printer.pw + 22; // printer + finger room
 export const W = Math.round(zoneL + t / 2 + bayIn + t); // 424
 export const D = S.strip + lidD; // 250
-const RIM = t + S.printer.ph + 3; // wall tops: printer + 3 mm clearance = 140
-export const H = RIM + S.lidT; // 160
-const DECK = RIM - S.deckGap; // deck top, 102
+const RIM = t + S.printer.ph + 3 + S.bass; // wall tops: printer + 3 mm clearance + bass room = 160
+export const H = RIM + S.lidT; // 180
+const DECK = RIM - S.deckGap; // deck top, 122
 const divU = zoneL - t / 2; // divider u 238..250
 const bayU = divU + t; // bay interior from 250
 const PR = { u: bayU + (bayIn - S.printer.pw) / 2, w: t + S.cableGap, z: t, ...S.printer };
 const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's front
-const SPK = [46, divU - 46]; // speaker centres along the front wall
-const SPK_Z = t + 40; // below the deck
+const SPK = [t + 50, divU - 50]; // speaker centres: each chamber is 100 wide
+const SPK_Z = t + 51; // centred on the face under the deck
 const MIC_U = 62,
-	MIC_Z = 121; // ReSpeaker Lite flat behind the front rim, above the deck, away from the drivers
-const TALK_U = 119,
-	TALK_Z = 52;
+	MIC_Z = RIM - 19; // ReSpeaker Lite flat behind the front rim, above the deck, away from the drivers
+const TALK_U = 115,
+	TALK_Z = RIM - 19; // on the rim between mic and camera
 const CAM_U = 168,
-	CAM_Z = 120; // front rim, above the deck
+	CAM_Z = RIM - 19; // front rim, above the deck
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
 // ---- cut list, from the same numbers ----
@@ -52,7 +53,7 @@ export function cutList() {
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'front: two 58 mm speaker holes (check the driver cut-out), TALK; rim: two mic holes, camera window; vents and power inlet; cut before glue-up'
+			note: 'front: two 77 mm speaker cut-outs (check the ND91 PDF); rim: two mic holes, TALK, camera window; vents and power inlet; cut before glue-up'
 		},
 		{
 			part: 'Ends',
@@ -83,11 +84,11 @@ export function cutList() {
 			note: "inside the back wall's top; screw the strip down through it"
 		},
 		{
-			part: 'Speaker boxes',
+			part: 'Speaker chambers',
 			qty: 2,
-			size: [75, 78, 90],
+			size: [100, DECK - S.deck - t - 2, 120],
 			mat: '6 mm ply, 5 sides',
-			note: 'the front wall is the baffle; ~0.35 L inside, loosely filled with polyfill it acts like ~0.4 L; glue + silicone every seam'
+			note: 'the front wall is the baffle; ~0.9 L inside each; damping wool on the walls; glue + silicone every seam'
 		},
 		{
 			part: 'Deck',
@@ -518,7 +519,7 @@ export function renderBox(state = {}) {
 		for (const u of [40, 110])
 			s += g(BTOP(u, t + 14, t + 30), `<rect class="face dark t" width="16" height="14" rx="2"/>`);
 		s += bbox(30, t + 6, t + 30, 50, 34, 36, 'plain', 4);
-		s += bbox(90, 128, t, 105, 30, 50, 'dark', 4); // printer brick, on its side
+		s += bbox(divU - 52, t + 4, t, 50, 105, 30, 'dark', 4); // printer brick, along the divider
 		// Pi 5 on standoffs, cooler, fan
 		for (const [u, w] of [
 			[100, 74],
@@ -538,10 +539,11 @@ export function renderBox(state = {}) {
 			bbox(170, 110, t + 9.6, 11, 14, 14, 'plain');
 		mark(12, Pt(120, 90, t + 18), 'Pi 5', '4GB, Active Cooler');
 		// sealed speaker boxes behind the front wall
-		for (const u of SPK) s += bbox(u - 37.5, D - t - 90, t + 2, 75, 90, 78, 'dark', 3);
+		for (const u of SPK)
+			s += bbox(u - 50, D - t - 120, t + 2, 100, 120, DECK - S.deck - t - 2, 'dark', 3);
 		// amp and mic board
-		s += bbox(98, 200, t, 40, 30, 3, 'pcb', 2) + bbox(104, 206, t + 3, 10, 8, 6, 'dark');
-		mark(13, Pt(118, 215, t + 3), 'Amp', "2×3 W, from the Lite's 3.5 mm");
+		s += bbox(24, 70, t, 60, 45, 3, 'pcb', 2) + bbox(34, 80, t + 3, 22, 22, 14, 'dark');
+		mark(13, Pt(54, 92, t + 3), 'Amp', 'TPA3116, 12 V, + USB DAC');
 		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 17, 86, 2, 35, 'pcb'); // ReSpeaker Lite
 		// Pico under the deck
 		s += bbox(130, 100, DECK - S.deck - 3, 51, 21, 1.2, 'pcb');
@@ -658,7 +660,7 @@ export function renderBox(state = {}) {
 			}
 		).join('')}`;
 	for (const u of SPK) s += g(PLANE_AT_W(u, D, SPK_Z), grille(S.driver / 2 - 3));
-	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '2.5" Dayton PC68, sealed');
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '3.5" Dayton ND91, ~0.9 L');
 	s += g(
 		PLANE_AT_W(MIC_U, D, MIC_Z),
 		`<rect class="face brass f" x="-30" y="-9" width="60" height="18" rx="9"/>${[-20, 20].map((x) => `<circle class="mesh" cx="${x}" r="6"/><circle class="face dark s" cx="${x}" r="1.4"/>`).join('')}<circle class="led on" cx="0" cy="0" r="2"/>`

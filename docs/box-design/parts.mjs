@@ -43,12 +43,12 @@ export const equipment = [
 	},
 	{
 		group: 'Core',
-		item: 'Powerboard, 2 outlets, + IEC inlet or grommet',
+		item: 'Powerboard, 3 outlets, + a grommet for the cord',
 		qty: 1,
 		status: 'buy',
 		aud: 25,
 		source: 'Bunnings / Jaycar',
-		why: 'one cord in; Pi and printer bricks plug in inside'
+		why: 'one cord out of the box; the Pi supply, printer brick and amp plug-pack plug in inside'
 	},
 
 	// screen and camera
@@ -97,25 +97,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 43,
 		source: 'Core Electronics (bare board, not the A$85 kit)',
-		why: 'hears you; cancels its own voice; a USB sound card for speech. 16 kHz max, so music goes the other way'
-	},
-	{
-		group: 'Voice + sound',
-		item: 'Dayton Audio PC68-4, 2.5" full-range',
-		qty: 2,
-		status: 'buy',
-		aud: 29,
-		source: 'NB Audio (step up: ND65-4, ~A$60 each)',
-		why: 'radio and podcasts while cooking; sealed boxes in the front wall, F3 ~120–150 Hz'
-	},
-	{
-		group: 'Voice + sound',
-		item: 'Stereo class-D amp, 5 V (TPA2012 or PAM8403)',
-		qty: 1,
-		status: 'buy',
-		aud: 15,
-		source: 'Core Electronics (Adafruit)',
-		why: "fed from the Lite's 3.5 mm out; a ferrite on its power keeps hiss off the mics"
+		why: 'hears you, behind the front rim. In v1 it only listens; TALK pauses all sound, so echo is no problem'
 	},
 	{
 		group: 'Voice + sound',
@@ -128,11 +110,39 @@ export const equipment = [
 	},
 	{
 		group: 'Voice + sound',
-		item: 'USB audio adapter for music',
+		item: 'Dayton Audio ND91-8, 3.5" full-range',
+		qty: 2,
+		status: 'buy',
+		aud: 70,
+		source: 'NB Audio / Soundlabs: price not confirmed, ask',
+		why: 'near-Nest sound: 5 mm cone travel, ~0.9 L sealed each, bass EQ on the Pi'
+	},
+	{
+		group: 'Voice + sound',
+		item: 'TPA3116 2 × 50 W amp board',
 		qty: 1,
-		status: 'later',
+		status: 'buy',
+		aud: 30,
+		source: 'Altronics / Jaycar / Amazon AU',
+		why: 'the ND91s are 82 dB/2.83 V and the bass EQ eats headroom; runs on 12–24 V'
+	},
+	{
+		group: 'Voice + sound',
+		item: '12 V 3 A plug-pack',
+		qty: 1,
+		status: 'buy',
+		aud: 25,
+		source: 'Jaycar',
+		why: "the amp's own supply; sharing the printer's 24 V brick would sag the music while it prints"
+	},
+	{
+		group: 'Voice + sound',
+		item: 'USB sound card (stereo out)',
+		qty: 1,
+		status: 'buy',
 		aud: 15,
-		why: 'full-quality music if the Lite’s 16 kHz sounds thin; mixed into the amp with two resistors, paused while TALK is held'
+		source: 'Core Electronics / Jaycar',
+		why: 'all playback, full quality; the Lite tops out at 16 kHz'
 	},
 
 	// controls
