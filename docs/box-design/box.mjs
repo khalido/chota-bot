@@ -177,18 +177,48 @@ export function cutList() {
 		}
 	];
 }
+// The box's own fittings; electronics are in parts.mjs.
 export const hardware = [
-	'2 pairs brass butt hinges, 40 mm, mortised into hardwood',
-	'2 brass chains, about 150 mm, on screw eyes in hardwood',
-	'brass mesh: two speaker grilles and the mic grille',
-	'2 full-range drivers, 2" (about 57 mm frame, 30 mm deep), 4 Ω, 3–5 W',
-	'ReSpeaker XVF3800 (mic array; plays the audio too, so it can cancel its own echo) → 2×3 W class-D amp',
-	'Pi Camera Module 3 + Pi 5 camera cable; a brass slide as its shutter',
-	'analog panel meter, 0–1 mA or similar, driven by the Pico (PWM + smoothing cap)',
-	'M2.5 brass standoffs, M3 brass screws for the deck',
-	'IEC inlet or a grommet for one power cord; a 2-outlet powerboard inside',
-	'2 magnet pairs as lid catches; 2 dowels to seat the service lid',
-	'4 rubber feet, 8–10 mm (airflow under the box; 168–170 mm tall overall)'
+	{
+		item: 'Brass butt hinges, 40 mm',
+		qty: '2 pairs',
+		note: 'mortised into the hardwood back rails and hinge strip'
+	},
+	{
+		item: 'Brass chain, about 150 mm',
+		qty: 2,
+		note: 'on screw eyes in hardwood; stops the lid 20° past upright'
+	},
+	{ item: 'Brass mesh', qty: '1 sheet', note: 'two speaker grilles and the mic grille' },
+	{
+		item: 'Brass slide for the camera shutter',
+		qty: 1,
+		note: 'in a routed groove over the camera window'
+	},
+	{
+		item: 'Brass tear bar, 90 mm',
+		qty: 1,
+		note: 'along the slot’s front edge (from Paper Console)'
+	},
+	{ item: 'Magnet pairs', qty: 2, note: 'lid catches' },
+	{ item: 'Dowels, 6 mm', qty: 2, note: 'seat the service lid so the slot lines up' },
+	{
+		item: 'M3 brass screws',
+		qty: 8,
+		note: 'deck down onto its cleats; it lifts out as one harness'
+	},
+	{
+		item: 'Rubber feet, 8–10 mm',
+		qty: 4,
+		note: `airflow under the box; ${H + 8}–${H + 10} mm tall overall`
+	},
+	{
+		item: 'Closed-cell foam, 1–2 mm',
+		qty: '1 sheet',
+		note: 'gaskets: mic holes, screen clips, speaker boxes'
+	},
+	{ item: 'Polyfill (pillow stuffing)', qty: 'a handful', note: 'loosely in each speaker box' },
+	{ item: 'PVA wood glue, finish oil', qty: 1, note: 'glue-up and finish' }
 ];
 
 const rad = (d) => (d * Math.PI) / 180;

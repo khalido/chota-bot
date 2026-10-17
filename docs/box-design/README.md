@@ -13,6 +13,7 @@ docs/box-design/pageshot.sh           # screenshot the whole page at 1500 and 40
 - `wall.mjs`: Fig 2. `renderWall({ cover, printerLid })`; printer sizes in `PRINTER` at the top.
 - `common.mjs`: the iso projection, `frame()`, `callout()`, `dim()`. `figure.css`: every colour, light and dark.
 - `build-page.mjs` inlines the three modules into `index.html` and wires the lid buttons; `review-notes.html` is the "what the reviews changed" section it injects.
+- `parts.mjs`: the equipment list (have / buy / later, AUD) for the Equipment tab; `hardware` in `box.mjs` is the box fittings.
 - `build-box.mjs`, `build-wall.mjs` write the SVGs that `shot.sh` renders.
 - `RULES.md`: drawing rules for an agent working here. `BRIEF-wall.md`: the brief Fig 2 was drawn from.
 

@@ -1,6 +1,7 @@
 // Builds index.html: both figures render at runtime (lids open), prerendered for first paint.
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { renderBox, cutList, hardware, W, D, H } from './box.mjs';
+import { equipment, toBuy } from './parts.mjs';
 const DIR = new URL('.', import.meta.url).pathname;
 const rd = (f) => readFileSync(DIR + f, 'utf8');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -35,6 +36,23 @@ const cutRows = cutList()
 	)
 	.join('');
 const pieces = cutList().reduce((n, c) => n + c.qty, 0);
+const STATUS = { have: 'have', buy: 'buy', later: 'later' };
+const eqRows = [...new Set(equipment.map((e) => e.group))]
+	.map(
+		(g) =>
+			`<tr class="grp"><th colspan="5">${esc(g)}</th></tr>` +
+			equipment
+				.filter((e) => e.group === g)
+				.map(
+					(e) =>
+						`<tr><th>${esc(e.item)}</th><td class="n">${e.qty}</td><td><span class="st ${e.status}">${STATUS[e.status]}</span></td><td class="n">${e.aud ? `$${e.aud * e.qty}` : ''}</td><td>${esc(e.why)}${e.source ? ` <span class="src">· ${esc(e.source)}</span>` : ''}</td></tr>`
+				)
+				.join('')
+	)
+	.join('');
+const hwRows = hardware
+	.map((h) => `<tr><th>${esc(h.item)}</th><td class="n">${h.qty}</td><td>${esc(h.note)}</td></tr>`)
+	.join('');
 
 const page = `<title>Chota Box Designs</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -82,11 +100,27 @@ tr:last-child th, tr:last-child td { border-bottom: 0; }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
 .box-note { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 12px 16px; }
 .box-note h3 { margin: 0 0 4px; font-size: 15px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--edge); margin: 8px 0 16px; overflow-x: auto; }
+.tabs button { font: 600 14px "IBM Plex Sans", system-ui, sans-serif; color: var(--ink); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink-hi); border-bottom-color: var(--ink-hi); }
+.tabs button:focus-visible { outline: 2px solid var(--live); outline-offset: -2px; }
+tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--bg); }
+.st { font: 600 11px "IBM Plex Mono", ui-monospace, monospace; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--edge); }
+.st.buy { background: var(--ink-hi); color: var(--panel); border-color: var(--ink-hi); }
+.st.later { color: var(--ink); border-style: dashed; }
+.src { color: var(--ink); font-size: 13px; }
 </style>
 <main>
 <h1>Chota box · v4</h1>
 <p class="lead">The box shrinks to <b>${W} × ${D} × ${H} mm</b>, down from about 490 × 300 × 205. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Both speakers sit in the front wall in sealed boxes, where they get real air. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
 
+<div class="tabs" role="tablist">
+<button role="tab" id="tab-design" aria-controls="design" aria-selected="true">Design</button>
+<button role="tab" id="tab-equipment" aria-controls="equipment" aria-selected="false">Equipment</button>
+<button role="tab" id="tab-build" aria-controls="build" aria-selected="false">Box build</button>
+</div>
+
+<section id="design" role="tabpanel" aria-labelledby="tab-design">
 <figure class="card" id="fig-box">
   <div class="bar"><span class="plate">Fig 1 · The box</span>
     <button class="t" data-fig="box" data-act="lid" aria-pressed="true">Lid open</button>
@@ -137,14 +171,31 @@ ${
 <p><b>Plate on a wall, boards under clear acrylic.</b> Exposed boards are the look you want and the easiest to change. On a kitchen counter they get splashes, crumbs and small hands, and the Pi's fan pulls dust across them. On a wall at adult height most of that goes away, and a 3 mm acrylic cover on standoffs keeps the look while stopping fingers and dust. The box wins only if it has to be portable, or the kids reach the wall.</p>
 <p>I'd build the plate first. It's an afternoon's work, it proves the screen, the sound and the printer, and every part moves into the box later if you still want one.</p>
 
-<h2>Box cut list</h2>
+</section>
+
+<section id="equipment" role="tabpanel" aria-labelledby="tab-equipment" hidden>
+<p>Everything electronic that goes in the box. <b>About $${toBuy()} still to buy</b> (prices approximate, AUD); the Pi, printer and control parts are on hand.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>A$</th><th>Why</th></tr></thead>
+<tbody>${eqRows}</tbody>
+</table></div>
+</section>
+
+<section id="build" role="tabpanel" aria-labelledby="tab-build" hidden>
+<h2 style="margin-top:0">Cut list</h2>
 <p>${pieces} pieces from about half a sheet of 12 mm birch ply, a 9 mm offcut, 6 mm ply for the lid skins, and one length of hardwood for the hinge strip and lid frames. Sizes are length × width × thickness in mm, worked out from the same numbers as the drawing.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>Part</th><th>Qty</th><th>Size</th><th>Material</th><th>Note</th></tr></thead>
 <tbody>${cutRows}</tbody>
 </table></div>
-<p class="note"><b>Hardware:</b> ${hardware.map(esc).join('; ')}.</p>
+<h2>Box hardware</h2>
+<p>Fittings for the box itself; the electronics are on the Equipment tab.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Item</th><th>Qty</th><th>Note</th></tr></thead>
+<tbody>${hwRows}</tbody>
+</table></div>
 ${notes}
+</section>
 </main>
 <script>
 ${common}
@@ -175,6 +226,21 @@ ${wall}
     };
     requestAnimationFrame(step);
   });
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  const show = (id) => {
+    tabs.forEach((t) => {
+      const on = t.getAttribute("aria-controls") === id;
+      t.setAttribute("aria-selected", String(on));
+      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+    });
+  };
+  tabs.forEach((t) => t.addEventListener("click", () => {
+    const id = t.getAttribute("aria-controls");
+    show(id);
+    try { history.replaceState(null, "", "#" + id); } catch {}
+  }));
+  const start = location.hash.slice(1);
+  if (tabs.some((t) => t.getAttribute("aria-controls") === start)) show(start);
   let busy = false;
   const acts = {
     box: {

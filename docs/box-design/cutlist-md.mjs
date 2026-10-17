@@ -12,6 +12,6 @@ Layout: left zone ${244} mm wide holds a recessed control deck (dials, a 30 mm a
 |---|---|---|---|---|
 ${rows}
 
-Hardware: ${hardware.join('; ')}.
+Hardware: ${hardware.map((h) => `${h.qty} × ${h.item} (${h.note})`).join('; ')}.
 
 Questions for the reviewer: Is the piece count and sizing right for these joints (do any pieces overlap or come up short)? Is 12 mm ply strong and stiff enough; would 9 mm do anywhere? Will a 28 mm lid frame with a 6 mm skin hold a 10.1" glass panel and two drivers without racking, and do the drivers get enough air? Do the hinges and chain make sense at this weight? Heat: the Pi 5 with Active Cooler, a printer and two power supplies in a closed box with vent slots in the front and left end: enough? Anything a first-time builder would get wrong (order of assembly, what to cut last, what to measure first)? What is missing from the list? Keep the answer to a short list of concrete changes.`);
