@@ -33,6 +33,8 @@ const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's fro
 const SPK = [46, divU - 46]; // speaker centres along the front wall
 const SPK_Z = t + 48; // below the deck
 const MIC_U = 104;
+const CAM_U = 121,
+	CAM_Z = 120; // front rim, above the deck
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
 // ---- cut list, from the same numbers ----
@@ -47,7 +49,7 @@ export function cutList() {
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'front: two 50 mm speaker holes, mic grille, TALK; vents and power inlet; cut before glue-up'
+			note: 'front: two 50 mm speaker holes, mic holes, TALK, camera window; vents and power inlet; cut before glue-up'
 		},
 		{
 			part: 'Ends',
@@ -180,6 +182,9 @@ export const hardware = [
 	'2 brass chains, about 150 mm, on screw eyes in hardwood',
 	'brass mesh: two speaker grilles and the mic grille',
 	'2 full-range drivers, 2" (about 57 mm frame, 30 mm deep), 4 Ω, 3–5 W',
+	'ReSpeaker XVF3800 (mic array; plays the audio too, so it can cancel its own echo) → 2×3 W class-D amp',
+	'Pi Camera Module 3 + Pi 5 camera cable; a brass slide as its shutter',
+	'analog panel meter, 0–1 mA or similar, driven by the Pico (PWM + smoothing cap)',
 	'M2.5 brass standoffs, M3 brass screws for the deck',
 	'IEC inlet or a grommet for one power cord; a 2-outlet powerboard inside',
 	'2 magnet pairs as lid catches; 2 dowels to seat the service lid',
@@ -499,7 +504,7 @@ export function renderBox(state = {}) {
 		for (const u of SPK) s += bbox(u - 35, D - t - 45, t + 4, 70, 45, 75, 'dark', 3);
 		// amp and mic board
 		s += bbox(24, 160, t, 40, 30, 3, 'pcb', 2) + bbox(30, 166, t + 3, 10, 8, 6, 'dark');
-		mark(13, Pt(44, 175, t + 3), 'Amp', '2×5 W, from the mic board');
+		mark(13, Pt(44, 175, t + 3), 'Amp', '2×3 W, fed by the XVF3800');
 		s += bbox(18, D - t - 4, 34, 66, 2, 58, 'pcb');
 		// Pico under the deck
 		s += bbox(130, 100, DECK - S.deck - 3, 51, 21, 1.2, 'pcb');
@@ -517,11 +522,11 @@ export function renderBox(state = {}) {
 		s += path3(
 			[
 				[160, 72, t + 10],
-				[160, 58, 60],
-				[160, 56, DECK]
+				[150, 150, 60],
+				[CAM_U, D - t - 6, CAM_Z]
 			],
 			'ffc'
-		);
+		); // camera ribbon
 		s += path3(
 			[
 				[181, 100, t + 14],
@@ -537,23 +542,19 @@ export function renderBox(state = {}) {
 		`</g>`;
 	// deck controls
 	let dk = '';
-	// 5" deck screen on standoffs
-	for (const [u, w] of [
-		[66, 54],
-		[183, 54],
-		[66, 126],
-		[183, 126]
-	])
-		dk += bcyl(u, w, DECK, 2.2, 6, 'brass');
-	dk +=
-		bbox(64, 52, DECK + 6, 121, 76, 1.6, 'pcb', 2) +
-		bbox(66, 54, DECK + 7.6, 117, 70, 3, 'dark', 2);
-	const deckLit = lidA > 60;
+	// analog needle meter where the deck screen was: minutes to the bus, today's max
+	dk += bbox(84, 60, DECK, 80, 52, 4, 'brass', 6);
 	dk += g(
-		BTOP(70, 59, DECK + 10.6),
-		deckLit
-			? `<rect class="screen-on" width="109" height="60"/><text class="screen-text" x="8" y="22" font-size="12">WHO  everyone</text><text class="screen-text" x="8" y="44" font-size="12">WHAT today</text>`
-			: `<rect class="glass" width="109" height="60"/>`
+		BTOP(88, 64, DECK + 4),
+		`<rect class="face paper t" width="72" height="44" rx="4"/>${Array.from(
+			{ length: 11 },
+			(_, i) => {
+				const th = rad(200 + i * 14);
+				return `<line class="paper-ink" x1="${f1(36 + 26 * Math.cos(th))}" y1="${f1(40 + 26 * Math.sin(th))}" x2="${f1(36 + (i % 5 ? 30 : 33) * Math.cos(th))}" y2="${f1(40 + (i % 5 ? 30 : 33) * Math.sin(th))}"/>`;
+			}
+		).join(
+			''
+		)}<line class="detail" x1="36" y1="40" x2="${f1(36 + 31 * Math.cos(rad(lidA > 60 ? 250 : 215)))}" y2="${f1(40 + 31 * Math.sin(rad(lidA > 60 ? 250 : 215)))}" stroke-width="1.6"/><circle class="face dark t" cx="36" cy="40" r="2.5"/><text class="face-text" x="36" y="30" text-anchor="middle" font-size="5">MIN TO BUS</text>`
 	);
 	// WHO and WHAT knobs with tick marks
 	for (const [u, w] of [
@@ -596,7 +597,7 @@ export function renderBox(state = {}) {
 	s += `<g${see}>${dk}</g>`;
 	if (lidA > 60) {
 		mark(7, Pt(200, 190, DECK + 11), 'PRINT', '30 mm red arcade');
-		mark(8, Pt(124, 90, DECK + 10.6), 'Deck screen', '5" DSI, dark until used');
+		mark(8, Pt(124, 86, DECK + 4), 'Needle meter', 'minutes to the bus');
 		mark(9, Pt(212, 92, DECK + 20), 'WHO + WHAT', 'two dials, wooden knobs');
 		mark(10, Pt(72, 186, DECK + 16), 'Toggles', '3 mini + 1 covered');
 	}
@@ -627,6 +628,11 @@ export function renderBox(state = {}) {
 		`<circle class="face brass f" r="10"/><circle class="face brass t" r="7"/><text class="face-text" y="22" text-anchor="middle" font-size="7">TALK</text>`
 	);
 	mark(11, Pt(MIC_U, D, 64), 'Mic + TALK', 'XVF3800 behind the grille');
+	s += g(
+		PLANE_AT_W(CAM_U, D, CAM_Z),
+		`<rect class="face brass f" x="-16" y="-9" width="32" height="18" rx="9"/><circle class="glass" r="5"/><circle class="face dark s" r="2"/><rect class="face brass t" x="5" y="-7" width="9" height="14" rx="2"/><circle class="led on" cx="-11" cy="0" r="1.6"/>`
+	);
+	mark(15, Pt(CAM_U, D, CAM_Z), 'Camera', 'Pi Camera 3, brass shutter');
 	s += g(
 		PLANE_AT_W(bayU + 30, D, 40),
 		Array.from(
@@ -702,6 +708,7 @@ export function renderBox(state = {}) {
 	const SLOTS = {
 		3: [[L, 90], 'l'],
 		1: [[L, 180], 'l'],
+		15: [[L, 270], 'l'],
 		9: [[L, 430], 'l'],
 		10: [[L, 520], 'l'],
 		13: [[L, 610], 'l'],

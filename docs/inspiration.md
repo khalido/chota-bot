@@ -210,3 +210,16 @@ When ideas here become real:
 - Schema changes → `chota.config.ts` types in `src/lib/config.ts`
 
 This file stays as the unfiltered idea pile.
+
+## Field notes — Oct 2026 sweep (screens + similar builds)
+
+No build found that pairs a thermal printer with a screen in a wooden box. Worth stealing:
+
+- **Paper Console** ([source](https://github.com/travmiller/paper-console)): a magnetic faceplate pops off for roll changes; a solid brass tear bar at the slot; holding the button 5 s opens quick actions and 15 s factory-resets, with a printed cue.
+- **Little Printer revival** ([Nord Projects](https://nordprojects.co/projects/littleprinters/), [tinyprinter.club](https://tinyprinter.club/)): each print is a named "publication" with a schedule.
+- **morningprint** ([repo](https://github.com/matt-w-horn/morningprint), [HN](https://news.ycombinator.com/item?id=49187583)) and **Message Maddie** ([post](https://aschmelyun.com/blog/i-invited-strangers-to-message-me-through-a-receipt-printer/), [HN](https://news.ycombinator.com/item?id=45633877)): use phenol-free paper; thermal prints fade in about a year, so print only the ephemeral.
+- **Receipt printer for GitHub issues** ([post](https://aschmelyun.com/blog/i-built-a-receipt-printer-for-github-issues/)): event-triggered tickets; for chota, a new task or calendar change could print its own.
+- **Wooden-box voice assistant** ([HN](https://news.ycombinator.com/item?id=37439242)): ReSpeaker 4-mic array under round grilles, speakers firing from the sides, boards on spacers.
+- **thermal-mcp** ([glama](https://glama.ai/mcp/servers/EthanPany/thermal-mcp)), **shortorder** ([site](https://shortorder.dev/)): a printer exposed as MCP; same Chromium → 1-bit path chota already uses.
+
+Screens: the official Touch Display 2 now comes in 10.1" (portrait-native 1200×1920, plastic bezel), still not our look. Colour e-ink (Spectra 6) refreshes in 15–30 s, still no good for a per-minute clock.
