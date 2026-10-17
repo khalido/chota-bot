@@ -97,7 +97,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 113,
 		source: 'Pakronics',
-		why: 'hears across the kitchen; cancels its own voice'
+		why: 'hears across the kitchen; cancels its own voice in hardware. Cheaper: ReSpeaker Lite (2-mic, ~A$60), if its echo cancelling works over USB on a Pi'
 	},
 	{
 		group: 'Voice + sound',
