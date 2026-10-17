@@ -11,6 +11,7 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 - **Config:** `family[]` has `role`, `email`, `whatsapp`, `telegram`. Missing: partner's TickTick email, everyone's Telegram user ids (`/start` shows them). `channels: { default: 'telegram', fallback: 'whatsapp' }`.
 - **Shipped tonight, not deployed yet:** jobs — `job_run` history table, `job-check` missed-print alerts, 10-min run timeout, channels boot first, `TZ` in `chota.service`; WhatsApp — reload-safe channels, `440` stops reconnecting, group `follow_up` triage (Jev sees the bot's lines; code also requires the bot in the last 2 lines). Watch early `follow_up` verdicts in `decision`: after a restart the seeded context leans to bot lines.
 - **Movies and books (17 Oct, not deployed):** agent tools `title_info`, `watch_ideas`, `book` (replaced `tmdb`). Keys in the Mac `.env`: `GOOGLE_BOOKS_API_KEY`, `EXA_API_KEY`, `LIBRARY_BARCODE`; the Pi needs them too. `library` config: `system`, `pickup` ("Darling Square Library", the catalogue's name), `branches`.
+- **Box drawings** moved into the repo at `docs/box-design/` (17 Oct, from the `home` session), same page link. Next step there is measuring the MUNBYN: `S.printer` in `box.mjs` redraws the box and cut list.
 - **Reviews applied:** Gemini (design; triage table in the Claude Doc "chota — Gemini feedback"), GPT-6 Astra via OpenCode, `/ko-review` on every commit.
 
 ## Next, in order

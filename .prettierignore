@@ -8,3 +8,9 @@ bun.lockb
 # Miscellaneous
 /static/
 /drizzle/
+
+# Generated box drawings
+/docs/box-design/index.html
+/docs/box-design/*.svg
+/docs/box-design/shots/
+/docs/box-design/.chrome*/

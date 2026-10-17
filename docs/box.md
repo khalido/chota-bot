@@ -30,6 +30,7 @@ Decided 2026-10-15. The Pi takes over from `pop-os`; the X230 is then wiped for 
 - **Chromium on arm64:** Chrome for Testing (what `agent-browser install` fetches) ships no linux-arm64 build. Use the OS `chromium` package via `AGENT_BROWSER_EXECUTABLE_PATH`. Lightpanda was considered and ruled out: it has no graphical renderer, so it can't make the print screenshots.
 - **Runtime:** stay on Node. chota runs unchanged under Bun (tested 2026-10-15: same page speed, ~60MB less RSS), so it's an option later, most naturally with SvelteKit 3's `adapter-bun`. Match the Pi's Node major to the X230's (24) at migration, or bump both together.
 - **Sleep/wake safety:** the scheduler now skips any cron fire more than 10 minutes late, so a box that's been off or asleep never prints a stale brief on boot.
+- **Drawings:** [`box-design/`](box-design/) builds the "Chota Box Designs" page (https://claude.ai/artifact/GhhArcB5XuyjeBEBTQW8dC): the box with working lids, dimensions and a cut list, and a wall-plate alternative. It's v2 (17 Oct): 424 × 262 × 168 mm, the lid all screen with both speakers in it. Where it differs from this doc, the page is newer. Every size hangs off the printer, which still needs measuring.
 - **Two earlier drafts are archived:** [`archive/dock.md`](archive/dock.md) (official Touch Display 2 screens — later rejected for their bezels) and [`archive/dial.md`](archive/dial.md) (a wall-mounted dial + e-ink; became the box's deck). The dial draft's software design is folded into §Panel software below.
 
 ## Pi 5 migration

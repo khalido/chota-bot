@@ -1,0 +1,367 @@
+/* Shared figure styles. Every colour is a token; dark values below. */
+:root {
+	--bg: #efece6;
+	--panel: #f8f6f2;
+	--edge: #ddd8cf;
+	--ink: #6c665d;
+	--ink-hi: #1d1b18;
+	--line: #5d564c;
+	--detail: #a79f92;
+	--hair: #c9c1b4;
+	--wood-t: #e7d3b4;
+	--wood-f: #d6bb93;
+	--wood-s: #c3a47a;
+	--brass-t: #e6cf86;
+	--brass-f: #cfb15e;
+	--brass-s: #b8963f;
+	--pcb-t: #9fbca4;
+	--pcb-f: #84a58a;
+	--pcb-s: #6e8f74;
+	--dark-t: #57534d;
+	--dark-f: #45423d;
+	--dark-s: #383530;
+	--body-t: #f1efeb;
+	--body-f: #e2ded7;
+	--body-s: #d3cec5;
+	--paper: #fffdf8;
+	--paper-ink: #8b857b;
+	--glass: #2b2a28;
+	--glass-edge: #1a1918;
+	--acrylic: rgba(190, 215, 225, 0.35);
+	--ffc: #c98b3a;
+	--cable: #4b4740;
+	--cut: #8a6a44;
+	--accent: #d4402c;
+	--accent-hi: #ff8a6a;
+	--live: #ffb347;
+	--live-dim: rgba(255, 179, 71, 0.18);
+	--screen-on: #2a1d12;
+	--screen-ink: #ffcf8a;
+	--lbl: #2a2724;
+	--lbl-fact: #6f695f;
+	--leader: #8d8577;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--bg: #0e0f10;
+		--panel: #151617;
+		--edge: #25272a;
+		--ink: #8a8f93;
+		--ink-hi: #eceae6;
+		--line: #8b8478;
+		--detail: #59544c;
+		--hair: #3a3732;
+		--wood-t: #4a3a28;
+		--wood-f: #3c2f20;
+		--wood-s: #30251a;
+		--brass-t: #9b8240;
+		--brass-f: #806a32;
+		--brass-s: #675427;
+		--pcb-t: #2f4a36;
+		--pcb-f: #263d2c;
+		--pcb-s: #1e3123;
+		--dark-t: #2a2927;
+		--dark-f: #222120;
+		--dark-s: #1b1a19;
+		--body-t: #2a2b2c;
+		--body-f: #222324;
+		--body-s: #1b1c1d;
+		--paper: #e9e4d8;
+		--paper-ink: #6e685d;
+		--glass: #0b0b0b;
+		--glass-edge: #000;
+		--acrylic: rgba(120, 160, 175, 0.18);
+		--ffc: #b07a31;
+		--cable: #6b665d;
+		--cut: #b48a58;
+		--accent: #e0442e;
+		--accent-hi: #ff8c6b;
+		--live: #ffb347;
+		--live-dim: rgba(255, 179, 71, 0.22);
+		--screen-on: #24180e;
+		--screen-ink: #ffcf8a;
+		--lbl: #e6e2da;
+		--lbl-fact: #9a948a;
+		--leader: #7a7468;
+	}
+}
+:root[data-theme='dark'] {
+	--bg: #0e0f10;
+	--panel: #151617;
+	--edge: #25272a;
+	--ink: #8a8f93;
+	--ink-hi: #eceae6;
+	--line: #8b8478;
+	--detail: #59544c;
+	--hair: #3a3732;
+	--wood-t: #4a3a28;
+	--wood-f: #3c2f20;
+	--wood-s: #30251a;
+	--brass-t: #9b8240;
+	--brass-f: #806a32;
+	--brass-s: #675427;
+	--pcb-t: #2f4a36;
+	--pcb-f: #263d2c;
+	--pcb-s: #1e3123;
+	--dark-t: #2a2927;
+	--dark-f: #222120;
+	--dark-s: #1b1a19;
+	--body-t: #2a2b2c;
+	--body-f: #222324;
+	--body-s: #1b1c1d;
+	--paper: #e9e4d8;
+	--paper-ink: #6e685d;
+	--glass: #0b0b0b;
+	--glass-edge: #000;
+	--acrylic: rgba(120, 160, 175, 0.18);
+	--ffc: #b07a31;
+	--cable: #6b665d;
+	--cut: #b48a58;
+	--accent: #e0442e;
+	--accent-hi: #ff8c6b;
+	--live: #ffb347;
+	--live-dim: rgba(255, 179, 71, 0.22);
+	--screen-on: #24180e;
+	--screen-ink: #ffcf8a;
+	--lbl: #e6e2da;
+	--lbl-fact: #9a948a;
+	--leader: #7a7468;
+}
+
+svg.iso {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+svg.iso * {
+	vector-effect: non-scaling-stroke;
+}
+.face {
+	stroke: var(--line);
+	stroke-width: 1;
+	stroke-linejoin: round;
+}
+.wood.t {
+	fill: var(--wood-t);
+}
+.wood.f {
+	fill: var(--wood-f);
+}
+.wood.s {
+	fill: var(--wood-s);
+}
+.brass.t {
+	fill: var(--brass-t);
+}
+.brass.f {
+	fill: var(--brass-f);
+}
+.brass.s {
+	fill: var(--brass-s);
+}
+.pcb.t {
+	fill: var(--pcb-t);
+}
+.pcb.f {
+	fill: var(--pcb-f);
+}
+.pcb.s {
+	fill: var(--pcb-s);
+}
+.dark.t {
+	fill: var(--dark-t);
+}
+.dark.f {
+	fill: var(--dark-f);
+}
+.dark.s {
+	fill: var(--dark-s);
+}
+.plain.t {
+	fill: var(--body-t);
+}
+.plain.f {
+	fill: var(--body-f);
+}
+.plain.s {
+	fill: var(--body-s);
+}
+.paper.t,
+.paper.f,
+.paper.s,
+.paper {
+	fill: var(--paper);
+}
+.acrylic {
+	fill: var(--acrylic);
+}
+.glass {
+	fill: var(--glass);
+	stroke: var(--glass-edge);
+}
+.screen-on {
+	fill: var(--screen-on);
+	stroke: var(--live);
+	stroke-width: 1.2;
+}
+.screen-ink {
+	fill: var(--screen-ink);
+}
+.screen-text {
+	fill: var(--screen-ink);
+	font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+.halo {
+	fill: var(--live-dim);
+	stroke: none;
+}
+.accent {
+	fill: var(--accent);
+	stroke: var(--line);
+}
+.accent-hi {
+	fill: var(--accent-hi);
+	stroke: none;
+}
+.led {
+	fill: var(--dark-f);
+	stroke: var(--line);
+}
+.led.on {
+	fill: var(--live);
+	stroke: none;
+}
+.detail {
+	fill: none;
+	stroke: var(--detail);
+	stroke-width: 1;
+}
+.hair {
+	fill: none;
+	stroke: var(--hair);
+	stroke-width: 1;
+}
+.cable {
+	fill: none;
+	stroke: var(--cable);
+	stroke-width: 2.2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.ffc {
+	fill: none;
+	stroke: var(--ffc);
+	stroke-width: 6;
+	stroke-linejoin: round;
+	opacity: 0.9;
+}
+.cut {
+	fill: none;
+	stroke: var(--cut);
+	stroke-width: 1.6;
+}
+.cut-fill {
+	fill: var(--cut);
+	opacity: 0.35;
+	stroke: var(--cut);
+}
+.paper-ink {
+	fill: none;
+	stroke: var(--paper-ink);
+	stroke-width: 1;
+}
+.face-text {
+	fill: var(--ink);
+	font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* callouts */
+.leader {
+	fill: none;
+	stroke: var(--leader);
+	stroke-width: 1;
+}
+.tip {
+	fill: var(--leader);
+}
+.num-bg {
+	fill: var(--panel);
+	stroke: var(--leader);
+	stroke-width: 1;
+}
+.num {
+	fill: var(--lbl);
+	font:
+		600 15px 'IBM Plex Mono',
+		ui-monospace,
+		monospace;
+}
+.lbl {
+	fill: var(--lbl);
+	font:
+		600 20px 'IBM Plex Sans',
+		system-ui,
+		sans-serif;
+}
+.lbl-fact {
+	fill: var(--lbl-fact);
+	font:
+		400 16px 'IBM Plex Mono',
+		ui-monospace,
+		monospace;
+}
+.ghost {
+	fill: none;
+	stroke: var(--detail);
+	stroke-width: 1;
+	stroke-dasharray: 4 3;
+}
+.vent {
+	fill: var(--dark-s);
+	stroke: var(--line);
+	stroke-width: 0.8;
+}
+.chain {
+	fill: none;
+	stroke: var(--brass-s);
+	stroke-width: 2.4;
+	stroke-dasharray: 5 2;
+	stroke-linecap: round;
+}
+/* light theme: no ambient glow */
+.halo {
+	display: none;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) .halo {
+		display: inline;
+	}
+}
+:root[data-theme='dark'] .halo {
+	display: inline;
+}
+.dim {
+	stroke: var(--leader);
+	stroke-width: 1;
+}
+.dim-text {
+	fill: var(--lbl-fact);
+	font:
+		600 16px 'IBM Plex Mono',
+		ui-monospace,
+		monospace;
+}
+.mesh {
+	fill: var(--brass-s);
+	opacity: 0.55;
+}
+.cavity {
+	fill: var(--dark-s);
+	stroke: var(--line);
+}
+.see-through {
+	opacity: 0.28;
+}
+.anim-hide {
+	display: none;
+}
