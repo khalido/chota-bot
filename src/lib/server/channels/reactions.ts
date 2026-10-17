@@ -19,7 +19,9 @@ const TOOL_EMOJI: Record<string, string> = {
 	chores: '🧹',
 	school_day: '🏫',
 	school_dates: '🏫',
-	tmdb: '🎬',
+	title_info: '🎬',
+	watch_ideas: '🍿',
+	book: '📚',
 	volleyball: '🏐',
 	web_search: '🔍',
 	web_fetch: '🌐'

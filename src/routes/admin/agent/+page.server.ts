@@ -37,7 +37,8 @@ export const load: PageServerLoad = async () => {
 		weather: !!env.GOOGLE_WEATHER_API_KEY,
 		calendar: googleAccount.length > 0 && !!cfg.calendar?.id,
 		ticktick: !!env.TICKTICK_API_KEY && Object.keys(cfg.ticktick?.lists ?? {}).length > 0,
-		tmdb: !!env.TMDB_READ_ACCESS_TOKEN
+		tmdb: !!env.TMDB_READ_ACCESS_TOKEN,
+		books: !!env.GOOGLE_BOOKS_API_KEY && !!env.EXA_API_KEY
 	};
 
 	return { model: MODEL, tools, health };

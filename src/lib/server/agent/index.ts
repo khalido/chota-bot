@@ -27,7 +27,8 @@ import { ticktickAddTool, ticktickDoneTool, ticktickTool } from './tools/ticktic
 import { busTool } from './tools/bus';
 import { choresTool } from './tools/chores';
 import { schoolDatesTool, schoolDayTool } from './tools/school';
-import { tmdbTool } from './tools/tmdb';
+import { bookTool } from './tools/books';
+import { titleInfoTool, watchIdeasTool } from './tools/tmdb';
 import { volleyballTool } from './tools/volleyball';
 import { webFetchTool, webSearchTool } from './tools/web';
 
@@ -60,7 +61,9 @@ export const chotaAgent = new ToolLoopAgent({
 		chores: choresTool,
 		school_day: schoolDayTool,
 		school_dates: schoolDatesTool,
-		tmdb: tmdbTool,
+		title_info: titleInfoTool,
+		watch_ideas: watchIdeasTool,
+		book: bookTool,
 		volleyball: volleyballTool,
 		// AI Gateway's own web tools — work with any model (see tools/web.ts).
 		web_search: webSearchTool,

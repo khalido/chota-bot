@@ -41,7 +41,9 @@ const TOOL_STATUS: Record<string, string> = {
 	chores: 'Checking the chores',
 	school_day: 'Checking the timetable',
 	school_dates: 'Checking the school calendar',
-	tmdb: 'Looking that up',
+	title_info: 'Looking that up',
+	watch_ideas: 'Finding ideas',
+	book: 'Looking up the book',
 	web_search: 'Searching the web',
 	web_fetch: 'Reading the page'
 };

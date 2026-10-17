@@ -122,6 +122,17 @@ export interface ChotaConfig {
 		 *  Randwick-council beaches only (that's the one feed we parse). */
 		beach?: { name: string };
 	};
+	/** The family's library. Book lookups check its catalogue when this is
+	 *  set; `branches` are the local ones, nearest first ("Ultimo" matches
+	 *  "Ultimo Library"). The member barcode and PIN live in .env
+	 *  (LIBRARY_BARCODE, LIBRARY_PIN). */
+	library?: {
+		/** The library system's catalogue. Only City of Sydney is built. */
+		system: 'city-of-sydney';
+		/** Branch to collect reserves at, as the reserve form names it. */
+		pickup?: string;
+		branches?: string[];
+	};
 	/** School region + NSW division. `division` picks which School Development
 	 *  Days apply — `'E'` (Eastern: Sydney, coast, Hunter, Illawarra) or `'W'`
 	 *  (Western). Defaults to `'E'` when omitted. */

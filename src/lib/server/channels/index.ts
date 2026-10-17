@@ -131,6 +131,10 @@ async function route(channel: Channel, incoming: Incoming): Promise<void> {
 	void queue.push(quietKey, { channel, m: { ...m, triage: { hint: triageHint(hit) } } });
 }
 
+/** Kids read the family group: answers there stay short and plain. */
+const GROUP_HINT =
+	'[Family group chat, kids included: answer in 1–3 short lines a 10-year-old follows.]';
+
 /** Each line names its sender — several people share a group's history, and
  *  in a DM it's how the agent knows who "me" is. A photo is marked, not kept. */
 const asHistoryLine = (m: Incoming) => {
@@ -158,8 +162,9 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		// This turn's own extras ride on the last message only — a triage note
 		// and the photo itself. History keeps the text line.
 		const last = messages.at(-1);
-		if (last?.role === 'user' && (m.triage || m.media?.kind === 'image')) {
-			const text = m.triage ? `${last.content}\n\n${m.triage.hint}` : String(last.content);
+		const hint = m.triage?.hint ?? (m.isDM ? undefined : GROUP_HINT);
+		if (last?.role === 'user' && (hint || m.media?.kind === 'image')) {
+			const text = hint ? `${last.content}\n\n${hint}` : String(last.content);
 			if (m.media?.kind === 'image') {
 				const image = await m.media.download();
 				await saveFile(m.threadId, m.messageId, m.media.mimetype, image);

@@ -81,6 +81,14 @@ export default defineChota({
 		// "Clovelly"). Omit to disable. Randwick-council beaches only for now.
 		beach: { name: 'Maroubra' } // placeholder — set your own in chota.config.ts
 	},
+	// Your library: the system (only City of Sydney so far), the branch to
+	// collect reserves at (as the reserve form names it), and nearby branches,
+	// nearest first. The member barcode + PIN go in .env.
+	library: {
+		system: 'city-of-sydney',
+		pickup: 'Darling Square Library',
+		branches: ['Darling Square', 'Ultimo']
+	},
 	school: { region: 'NSW', division: 'E' }, // division: 'E' (Eastern) or 'W' (Western) NSW
 	// Google Calendar to read for the family schedule. List your calendar IDs
 	// from /admin (after signing in with Google), paste the right one here.

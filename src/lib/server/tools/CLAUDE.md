@@ -1,7 +1,10 @@
 # tools/
 
 One file per external data source — `weather`, `bus`, `calendar`, `sentral`,
-`ticktick`, `tmdb`, `apod`, `bootprint`, `schoolterms`, `volleyball`, `beach`. Each owns its fetch, its typed return
+`ticktick`, `tmdb`, `apod`, `bootprint`, `schoolterms`, `volleyball`, `beach`,
+and `books/` — a folder, since a book lookup combines several sources (Google
+Books, Open Library, the City of Sydney Library catalogue, Exa) behind one
+`lookupBook()` in `books/index.ts`. Each owns its fetch, its typed return
 shape, and (where useful) a cache. New caches use `withTtl` from
 `$lib/server/cache.ts` (lru-cache: de-duplicated fetches, last good value on
 failure, `asOf`) — `schoolterms` and `beach` do. Older ones are a module-level cache warmed by a matching

@@ -10,6 +10,7 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 - **TickTick:** Shopping, Family (sections _Reminders_, _To buy at some point_), Watch, Notes. The bot assigns (`family[].email` = TickTick account, default the sender) and files into sections.
 - **Config:** `family[]` has `role`, `email`, `whatsapp`, `telegram`. Missing: partner's TickTick email, everyone's Telegram user ids (`/start` shows them). `channels: { default: 'telegram', fallback: 'whatsapp' }`.
 - **Shipped tonight, not deployed yet:** jobs — `job_run` history table, `job-check` missed-print alerts, 10-min run timeout, channels boot first, `TZ` in `chota.service`; WhatsApp — reload-safe channels, `440` stops reconnecting, group `follow_up` triage (Jev sees the bot's lines; code also requires the bot in the last 2 lines). Watch early `follow_up` verdicts in `decision`: after a restart the seeded context leans to bot lines.
+- **Movies and books (17 Oct, not deployed):** agent tools `title_info`, `watch_ideas`, `book` (replaced `tmdb`). Keys in the Mac `.env`: `GOOGLE_BOOKS_API_KEY`, `EXA_API_KEY`, `LIBRARY_BARCODE`; the Pi needs them too. `library` config: `system`, `pickup` ("Darling Square Library", the catalogue's name), `branches`.
 - **Reviews applied:** Gemini (design; triage table in the Claude Doc "chota — Gemini feedback"), GPT-6 Astra via OpenCode, `/ko-review` on every commit.
 
 ## Next, in order
@@ -19,8 +20,9 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 2. **WhatsApp onto the box:** KO runs `! ssh pop-os 'echo WHATSAPP_ENABLED=true >> ~/code/chota-bot/.env'`; deploy; the pairing code arrives on Telegram; KO types it on the bot phone; stop the Mac dev server and unlink the Mac device; back up `data/whatsapp-auth/`.
 3. **Printer check** (`docs/jobs.md` §Alerts → Device checks): `DLE EOT`, `printer-check` every 30 min `{ logOk: false }`, check before each print. Needs the box + MUNBYN.
 4. **Reminders and the weekly parent digest:** the user-jobs table + dispatcher (`docs/jobs.md` §Future), dated Family items, kids' reminders direct (KO deciding vs TickTick's own notifications).
-5. **List enrichment job:** Watch → TMDB (runtime, genre, age rating) + an Exa 1–3 line review in the note; _To buy_ → a short research note with 2–3 links.
-6. **Later:** approvals (interceptor resumes the paused turn) + `print` tool + calendar write (`agent.md` §Channels); Telegram photos/voice/triage; allowlists from `family[]` roles; Sentral term calendar and newsletters (`tools.md`); family memory folder; home lib weather (waiting on npm); Pi 5.
+5. **Library reserve:** KO fills `LIBRARY_PIN` in `.env`. Then a read-only spike of the logged-in catalogue (agent-browser: login, the title's Reserve tab, the "Collect at" dropdown, which should already default to `library.pickup`), then a `book_reserve` tool behind an approval (`agent.md` §Channels). The Reserve button is on each result; `UReserves.aspx` lists current reserves.
+6. **List enrichment job:** Watch → TMDB (runtime, genre, age rating) + an Exa 1–3 line review in the note; _To buy_ → a short research note with 2–3 links.
+7. **Later:** approvals (interceptor resumes the paused turn) + `print` tool + calendar write (`agent.md` §Channels); Telegram photos/voice/triage; allowlists from `family[]` roles; Sentral term calendar and newsletters (`tools.md`); family memory folder; home lib weather (waiting on npm); Pi 5.
 
 ## Notes
 

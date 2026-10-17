@@ -71,11 +71,13 @@
 		"better-sqlite3": "^13.0.3",
 		"cheerio": "^1.2.0",
 		"croner": "^10.0.1",
+		"exa-js": "^2.25.0",
 		"googleapis": "^186.0.0",
 		"grammy": "^1.45.0",
 		"lru-cache": "^11.5.3",
 		"node-ical": "^0.27.3",
 		"node-thermal-printer": "^4.6.0",
+		"tmdb-ts": "^2.3.0",
 		"usb": "^2.18.0",
 		"zod": "^4.4.3"
 	},

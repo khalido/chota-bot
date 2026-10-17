@@ -43,7 +43,8 @@ export const chotaAgent = new ToolLoopAgent({
 		weather: weatherTool,
 		calendar: calendarTool,
 		ticktick: ticktickTool,
-		tmdb: tmdbTool,
+		title_info: titleInfoTool, // + watch_ideas (tools/tmdb.ts)
+		book: bookTool,
 		// AI Gateway's web tools (tools/web.ts) — run gateway-side, any model.
 		web_search: webSearchTool, // Exa, highlights
 		web_fetch: webFetchTool // Browserbase Fetch → Markdown

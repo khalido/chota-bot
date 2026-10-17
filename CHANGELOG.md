@@ -11,6 +11,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Movies, shows and books in chat:** `title_info` (AU rating with a mature flag, where it streams in Australia, cinema dates, trailer), `watch_ideas` (trending, in cinemas, coming soon, "something like X") and `book` (what it's about, reader age, reception, and whether the City of Sydney Library has a copy on the shelf near us). TMDB now runs on `tmdb-ts`; books combine Google Books, Open Library, the library catalogue and one Exa search.
+- **Family-group replies stay short:** turns from a group carry a hint to answer in 1–3 lines a 10-year-old follows.
 - **Job run history in the DB:** every fire goes to a `job_run` table (30 days), so `/admin/jobs` and `/api/health` keep it across deploys.
 - **Missed-print alerts:** `job-check` alerts when the 06:45 or Friday 18:00 print's slot passed with no run (box off, restarting, or cut off mid-run).
 - **Group follow-ups:** an untagged group message that follows up on the bot's last reply ("what else can you tell me about this book?") now gets an answer. Jev sees the bot's own lines in its context and has a `follow_up` choice, answered at 0.85.

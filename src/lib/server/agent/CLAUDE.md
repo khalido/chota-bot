@@ -41,7 +41,8 @@ agent/
     weather.ts         # weather + the beach/surf report folded in (sky + sea)
     calendar.ts
     ticktick.ts
-    tmdb.ts
+    tmdb.ts            # title_info (one movie/show) + watch_ideas (trending, cinemas, like X)
+    books.ts           # book — tools/books/ lookup, compact
     bus.ts             # next live departures for the kids' configured trips
     chores.ts          # chore rotation by day / person
     school.ts          # school_day (a kid's timetable) + school_dates (terms, holidays)
@@ -51,7 +52,7 @@ agent/
 ```
 
 Registered in `index.ts > tools: { … }`: `weather` (also returns the beach
-report), `calendar` (range / date / search), `ticktick` + `ticktick_add` + `ticktick_done`, `bus`, `chores`, `school_day`, `school_dates`, `tmdb`, `volleyball`, `web_search` and `web_fetch` (AI Gateway's Exa search
+report), `calendar` (range / date / search), `ticktick` + `ticktick_add` + `ticktick_done`, `bus`, `chores`, `school_day`, `school_dates`, `title_info`, `watch_ideas`, `book`, `volleyball`, `web_search` and `web_fetch` (AI Gateway's Exa search
 and Browserbase Fetch, run gateway-side, so they work with any model).
 
 The system prompt has four layers (see `prompts.ts`):
