@@ -5,10 +5,11 @@ import { kernel, frame, callout, svgOpen, dim } from './common.mjs';
 // ---- sizes (mm). Change a measured number here; the drawing and the cut list follow. ----
 export const S = {
 	t: 12, // wall, base and divider thickness (birch ply)
-	lidT: 28, // lid and service-lid depth: 22 mm frame strips on edge + 6 mm ply skin
+	lidT: 20, // lid and service-lid depth: 14 mm frame strips on edge + 6 mm ply skin
 	screen: [235, 161], // Waveshare 10.1" DSI (C) module, from box.md, unverified
 	lip: 4.5, // wood lip left round the screen glass
-	spk: 50, // under the screen: a 10 mm cross-rail, then the speaker baffle
+	band: 50, // plain band under the screen: keeps the lid long enough to open over the deck
+	driver: 57, // 2" full-range driver frame, in the front wall
 	strip: 42, // fixed hinge strip along the back
 	printer: { pw: 140, pd: 180, ph: 125 }, // MUNBYN ITPP098P, Newegg listing (7.09 x 5.51 x 4.92 in), unmeasured
 	cableGap: 40, // behind the printer for its USB and power plugs
@@ -17,18 +18,21 @@ export const S = {
 };
 const t = S.t;
 const lidW = S.screen[0] + 2 * S.lip; // 244
-const lidD = S.screen[1] + 2 * S.lip + S.spk; // 220
+const lidD = S.screen[1] + 2 * S.lip + S.band; // 220
 const zoneL = lidW; // divider centre line = lid's right edge
 const bayIn = S.printer.pw + 22; // printer + finger room
 export const W = Math.round(zoneL + t / 2 + bayIn + t); // 424
 export const D = S.strip + lidD; // 250
 const RIM = t + S.printer.ph + 3; // wall tops: printer + 3 mm clearance = 140
-export const H = RIM + S.lidT; // 168
+export const H = RIM + S.lidT; // 160
 const DECK = RIM - S.deckGap; // deck top, 102
 const divU = zoneL - t / 2; // divider u 238..250
 const bayU = divU + t; // bay interior from 250
 const PR = { u: bayU + (bayIn - S.printer.pw) / 2, w: t + S.cableGap, z: t, ...S.printer };
 const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's front
+const SPK = [46, divU - 46]; // speaker centres along the front wall
+const SPK_Z = t + 48; // below the deck
+const MIC_U = 104;
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
 // ---- cut list, from the same numbers ----
@@ -43,7 +47,7 @@ export function cutList() {
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'vents, mic grille, TALK and power inlet cut before glue-up'
+			note: 'front: two 50 mm speaker holes, mic grille, TALK; vents and power inlet; cut before glue-up'
 		},
 		{
 			part: 'Ends',
@@ -64,7 +68,7 @@ export function cutList() {
 			qty: 1,
 			size: [W, S.strip, S.lidT],
 			mat: 'hardwood (Tas oak)',
-			note: '25 × 12 notch for the screen ribbon and speaker wire'
+			note: '25 × 12 notch for the screen ribbon'
 		},
 		{
 			part: 'Strip cleat',
@@ -72,6 +76,13 @@ export function cutList() {
 			size: [W - 2 * t, 12, 12],
 			mat: 'hardwood',
 			note: "inside the back wall's top; screw the strip down through it"
+		},
+		{
+			part: 'Speaker boxes',
+			qty: 2,
+			size: [70, 75, 45],
+			mat: '9 mm ply, glued and sealed',
+			note: 'about 0.2 L each behind the front wall, below the deck; loose polyfill inside'
 		},
 		{
 			part: 'Deck',
@@ -106,14 +117,14 @@ export function cutList() {
 			qty: 2,
 			size: [lidD - gap - t - 20, S.lidT - 6, t],
 			mat: 'hardwood',
-			note: 'notch one for the ribbon and speaker wire'
+			note: 'notch one for the screen ribbon'
 		},
 		{
 			part: 'Lid cross-rail',
 			qty: 1,
 			size: [lidW - 2 * t, 22, 10],
 			mat: 'hardwood',
-			note: 'between screen and speakers; stiffens the lid'
+			note: 'between the screen and the band; stiffens the lid'
 		},
 		{
 			part: 'Lid skin',
@@ -121,13 +132,6 @@ export function cutList() {
 			size: [lidW - gap, lidD - gap, 6],
 			mat: '6 mm ply',
 			note: 'glued on: the lid becomes a torsion box'
-		},
-		{
-			part: 'Speaker baffle',
-			qty: 1,
-			size: [lidW - 2 * t, 40, 9],
-			mat: '9 mm ply',
-			note: 'two 70 × 30 cut-outs, brass mesh over, sealed behind'
 		},
 		{
 			part: 'Screen clips',
@@ -167,7 +171,7 @@ export function cutList() {
 			qty: 1,
 			size: [svcW - gap, lidD - gap, 6],
 			mat: '6 mm ply',
-			note: 'slot 90 × 5, at least 15 mm clear of the front strip; angled guide under it'
+			note: 'slot 90 × 5 with a chamfered mouth, at least 15 mm clear of the front strip; angled guide under it'
 		}
 	];
 }
@@ -175,11 +179,11 @@ export const hardware = [
 	'2 pairs brass butt hinges, 40 mm, mortised into hardwood',
 	'2 brass chains, about 150 mm, on screw eyes in hardwood',
 	'brass mesh: two speaker grilles and the mic grille',
-	'2 slim full-range drivers, about 70 × 30 mm, 15 mm deep',
+	'2 full-range drivers, 2" (about 57 mm frame, 30 mm deep), 4 Ω, 3–5 W',
 	'M2.5 brass standoffs, M3 brass screws for the deck',
 	'IEC inlet or a grommet for one power cord; a 2-outlet powerboard inside',
 	'2 magnet pairs as lid catches; 2 dowels to seat the service lid',
-	'4 rubber feet, 8–10 mm (airflow under the box; 176–178 mm tall overall)'
+	'4 rubber feet, 8–10 mm (airflow under the box; 168–170 mm tall overall)'
 ];
 
 const rad = (d) => (d * Math.PI) / 180;
@@ -420,15 +424,8 @@ export function renderBox(state = {}) {
     <text class="screen-text" x="${lp + sw / 2}" y="${lp + 88}" text-anchor="middle" font-size="46">06:52</text>
     <text class="screen-text" x="${lp + sw / 2}" y="${lp + 112}" text-anchor="middle" font-size="9" opacity=".8">the literary clock</text>
     <text class="screen-text" x="${lp + sw / 2}" y="${lp + 126}" text-anchor="middle" font-size="7" opacity=".6">dims at 9 pm, off at night</text>
-    ${[22, lidW - 22 - 82]
-			.map(
-				(
-					x
-				) => `<rect class="face brass f" x="${x}" y="${lp + sh + 14}" width="82" height="${S.spk - 22}" rx="5"/>
-      <rect class="mesh" x="${x + 3}" y="${lp + sh + 17}" width="76" height="${S.spk - 28}" rx="3"/>
-      ${Array.from({ length: 10 }, (_, i) => `<line class="detail" x1="${x + 7 + i * 7.5}" y1="${lp + sh + 19}" x2="${x + 7 + i * 7.5}" y2="${lp + sh + S.spk - 13}"/>`).join('')}`
-			)
-			.join('')}`;
+    <rect class="face brass f" x="${lidW / 2 - 30}" y="${lp + sh + 16}" width="60" height="20" rx="2"/>
+    <text class="face-text" x="${lidW / 2}" y="${lp + sh + 30}" text-anchor="middle" font-size="10" font-weight="600">CHOTA</text>`;
 	const lidOuter = `<rect class="hair" x="${t}" y="${t}" width="${lidW - 2 * t}" height="${lidD - 2 * t}"/>
     <rect class="face brass t" x="${lidW / 2 - 14}" y="${lidD - 6}" width="28" height="4" rx="2"/>`;
 	const lid = () =>
@@ -465,12 +462,6 @@ export function renderBox(state = {}) {
 				'Lid screen',
 				'10.1" DSI, edge to edge'
 			);
-			mark(
-				2,
-				Pt(...L0.p(S.spk / 2 - 4, S.lidT, lidW - 60)),
-				'Lid speakers',
-				'2 slim drivers, brass mesh'
-			);
 			mark(3, Pt(...L0.p(lidD - 2, 0, 0)), 'Lid', 'stops 20° past upright');
 		}
 		return L0.svg;
@@ -504,6 +495,8 @@ export function renderBox(state = {}) {
 			bbox(170, 94, t + 9.6, 11, 14, 14, 'plain') +
 			bbox(170, 110, t + 9.6, 11, 14, 14, 'plain');
 		mark(12, Pt(120, 90, t + 18), 'Pi 5', '4GB, Active Cooler');
+		// sealed speaker boxes behind the front wall
+		for (const u of SPK) s += bbox(u - 35, D - t - 45, t + 4, 70, 45, 75, 'dark', 3);
 		// amp and mic board
 		s += bbox(24, 160, t, 40, 30, 3, 'pcb', 2) + bbox(30, 166, t + 3, 10, 8, 6, 'dark');
 		mark(13, Pt(44, 175, t + 3), 'Amp', '2×5 W, from the mic board');
@@ -614,23 +607,26 @@ export function renderBox(state = {}) {
 		bbox(0, S.strip, t, t, D - t - S.strip, RIM - t, 'wood') +
 		bbox(0, D - t, t, W, t, RIM - t, 'wood') +
 		`</g>`;
-	// front: mic grille and TALK; bay vents. left end: vents by the Pi
-	s += g(
-		PLANE_AT_W(51, D, 64),
-		`<circle class="face brass f" r="24"/><circle class="mesh" r="20"/>${Array.from(
-			{ length: 37 },
+	// front: two speakers either side of the mic grille and TALK; bay vents. left end: vents by the Pi
+	const grille = (r) =>
+		`<circle class="face brass f" r="${r + 4}"/><circle class="mesh" r="${r}"/>${Array.from(
+			{ length: 60 },
 			(_, i) => {
-				const r = 3 + Math.floor(i / 6) * 3,
+				const rr = 3 + Math.floor(i / 6) * 3,
 					th = i * 2.4;
-				return `<circle class="face dark s" cx="${f1(r * Math.cos(th))}" cy="${f1(r * Math.sin(th))}" r=".9"/>`;
+				return rr < r - 1
+					? `<circle class="face dark s" cx="${f1(rr * Math.cos(th))}" cy="${f1(rr * Math.sin(th))}" r=".9"/>`
+					: '';
 			}
-		).join('')}`
-	);
+		).join('')}`;
+	for (const u of SPK) s += g(PLANE_AT_W(u, D, SPK_Z), grille(S.driver / 2 - 3));
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '2" drivers, sealed boxes');
+	s += g(PLANE_AT_W(MIC_U, D, 64), grille(14));
 	s += g(
-		PLANE_AT_W(100, D, 64),
+		PLANE_AT_W(MIC_U + 34, D, 64),
 		`<circle class="face brass f" r="10"/><circle class="face brass t" r="7"/><text class="face-text" y="22" text-anchor="middle" font-size="7">TALK</text>`
 	);
-	mark(11, Pt(51, D, 64), 'Mic + TALK', 'XVF3800 behind the grille');
+	mark(11, Pt(MIC_U, D, 64), 'Mic + TALK', 'XVF3800 behind the grille');
 	s += g(
 		PLANE_AT_W(bayU + 30, D, 40),
 		Array.from(
@@ -706,15 +702,15 @@ export function renderBox(state = {}) {
 	const SLOTS = {
 		3: [[L, 90], 'l'],
 		1: [[L, 180], 'l'],
-		2: [[L, 270], 'l'],
 		9: [[L, 430], 'l'],
 		10: [[L, 520], 'l'],
 		13: [[L, 610], 'l'],
+		2: [[L, 700], 'l'],
 		11: [[L, 790], 'l'],
 		4: [[R, 120], 'r'],
 		5: [[R, 230], 'r'],
 		6: [[R, 320], 'r'],
-		12: [[R, 420], 'r'],
+		12: [[R, 375], 'r'],
 		8: [[R, 510], 'r'],
 		7: [[R, 600], 'r'],
 		14: [[R, 690], 'r']

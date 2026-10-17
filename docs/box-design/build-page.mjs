@@ -84,8 +84,8 @@ tr:last-child th, tr:last-child td { border-bottom: 0; }
 .box-note h3 { margin: 0 0 4px; font-size: 15px; }
 </style>
 <main>
-<h1>Chota box · v2</h1>
-<p class="lead">The box shrinks to <b>${W} × ${D} × ${H} mm</b>, down from about 490 × 300 × 205. The lid is all screen, with both speakers in a strip under it. The printer still needs measuring before any wood is cut.</p>
+<h1>Chota box · v3</h1>
+<p class="lead">The box shrinks to <b>${W} × ${D} × ${H} mm</b>, down from about 490 × 300 × 205. The lid is just the screen, 20 mm thin. Both speakers sit in the front wall in sealed boxes, where they get real air. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
 
 <figure class="card" id="fig-box">
   <div class="bar"><span class="plate">Fig 1 · The box</span>
@@ -101,18 +101,18 @@ tr:last-child th, tr:last-child td { border-bottom: 0; }
 <div class="box-note">
 <h3>Still to measure</h3>
 <ul class="tight">
-<li><b>The printer.</b> Width, depth, height, where the paper leaves (distance back from the front edge), and how far its cover swings. The listings disagree: Amazon AU says 164 × 286 × 160 (likely the shipping box), Newegg 140 × 180 × 125. I drew the Newegg size; the box is built from it, so one measurement redraws everything.</li>
+<li><b>The printer</b> (MUNBYN ITPP098P, kept: it works, and smaller 80 mm printers save only 10–15 mm). Drawn at Newegg's 140 × 180 × 125; Amazon's 164 × 286 × 160 is the carton. Measure width, depth, height, where the paper leaves (distance back from the front edge) and how far its cover swings; one measurement redraws the box and cut list. Your 80 × 80 mm rolls are near its roll-bay limit.</li>
 <li><b>The 10.1" screen's thickness</b>, and its 235 × 161 outline against Waveshare's drawing. It sets the lid depth.</li>
-<li><b>The slim drivers.</b> I assumed 70 × 30 mm, 15 mm deep. Pick a model and I'll fit the strip to it.</li>
+<li><b>The drivers.</b> Drawn as 2" full-range (57 mm frame, 30 mm deep). Pick a model and I'll size the holes and boxes to it.</li>
 </ul>
 </div>
 <div class="box-note">
 <h3>Changed from box.md</h3>
 <ul class="tight">
-<li><b>The paper slot moved into the service lid.</b> The printer's cover hinges at its back, so its front edge lifts first. A fixed strip right above the paper exit would stop it opening. Two dowels locate the lid so the slot always lines up.</li>
-<li><b>One rim height.</b> Every wall stops at 140 mm and both lids are 28 mm deep, so the box closes flat. The deck sits 38 mm under the lid.</li>
+<li><b>The paper slot is cut into the printer's lid</b>, right over the paper exit, with a chamfered mouth and an angled guide under it so the curl can't fold back. To change the roll: lift that lid ("Printer open"), flip the printer's cover, drop in the roll. The printer's cover hinges at its back, so a fixed strip above the exit would block it; two dowels seat the lid so the slot always lines up.</li>
+<li><b>One rim height.</b> Every wall stops at 140 mm and both lids are 20 mm deep, so the box closes flat. The deck sits 38 mm under the lid.</li>
 <li><b>Mic and a TALK button on the front</b>, so voice works with the lid shut. Sound goes out through the mic board, which then hears and cancels its own echo.</li>
-<li><b>Speakers in a 28 mm lid</b> share about half a litre of air: fine for voice, thin for music. Drivers in the front wall would sound better.</li>
+<li><b>Speakers moved from the lid to the front wall</b> (v3). In the lid they had 15 mm of depth and half a litre between them; in the box each 2" driver gets its own sealed 0.2 L box below the deck. Better voice, listenable music, and only the screen ribbon crosses the hinge.</li>
 </ul>
 </div>
 </div>
