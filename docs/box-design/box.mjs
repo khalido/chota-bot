@@ -41,7 +41,7 @@ const TALK_U = 115,
 	TALK_Z = RIM - 17; // on the rim between mic and camera
 const CAM_U = 168,
 	CAM_Z = RIM - 17; // front rim, above the deck
-const INK = { x: 39, y: 28, bw: 103, bd: 78, aw: 85, ad: 56 }; // Inky Impression 4": board and active area, on the service lid (x from its left edge, y from the hinge)
+const INK = { x: 39, y: 28, bw: 103, bd: 78.5, aw: 84.8, ad: 63.6 }; // Waveshare 4.2" e-ink: board and active area, on the service lid (x from its left edge, y from the hinge)
 const OLED = [
 	// [u, w, window w, window d, text]: amber OLEDs behind smoked acrylic, run by the Pico
 	[48, 55, 30, 15, 'KID2'],
@@ -749,7 +749,7 @@ export function renderBox(state = {}) {
 				17,
 				Pt(lidW + INK.x + INK.bw / 2, S.strip + INK.y + INK.bd / 2, H),
 				'E-ink',
-				'Inky 4", shows the day shut'
+				'4.2", shows the day shut'
 			);
 		}
 	}

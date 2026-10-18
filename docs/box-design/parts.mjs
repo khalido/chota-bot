@@ -82,12 +82,12 @@ export const equipment = [
 
 	{
 		group: 'Screen + camera',
-		item: 'Pimoroni Inky Impression 4.0" (Spectra 6, 600 × 400)',
+		item: 'Waveshare 4.2" e-ink module, 400 × 300, black/white/red (WS-13454)',
 		qty: 1,
 		status: 'buy',
-		aud: 151,
-		source: 'Pakronics (in stock, 7–10 days); not at Core Electronics',
-		why: 'on the printer lid: the day, readable with the box shut, no power between updates; 103 × 78 board fits behind the slot. Pi 5 GPIO header over a 40-pin ribbon (bench-test the length)'
+		aud: 58,
+		source: 'Core Electronics (supplier stock, ~1–2 weeks)',
+		why: 'on the printer lid: the day, readable with the box shut, no power between updates; 103 × 78.5 board fits behind the slot. Bare SPI module on an 8-wire cable to the Pi’s pins; check its Pi 5 GPIO support'
 	},
 	{
 		group: 'Screen + camera',
