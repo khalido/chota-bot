@@ -9,12 +9,12 @@ export const S = {
 	screen: [235, 161], // Waveshare 10.1" DSI (C) module, from box.md, unverified
 	lip: 4.5, // wood lip left round the screen glass
 	band: 50, // plain band under the screen: keeps the lid long enough to open over the deck
-	driver: 85, // 3.5" Dayton ND91-8 frame (76.5 mm cut-out; one listing says 103.5, check the PDF)
-	bass: 20, // extra wall height so a 3.5" driver fits the face under the deck
+	driver: 103.5, // 3.5" Dayton ND91-8 frame per Dayton's page (85 mm cut-out); a retailer says 93/77: check with one in hand
+	bass: 24, // extra wall height so the front-mounted driver and its rebate fit the face under the deck
 	strip: 42, // fixed hinge strip along the back
 	printer: { pw: 140, pd: 180, ph: 125 }, // MUNBYN ITPP098P, Newegg listing (7.09 x 5.51 x 4.92 in), unmeasured
 	cableGap: 40, // behind the printer for its USB and power plugs
-	deckGap: 38, // deck top to the lid's inner face (knobs are 20, toggles 18)
+	deckGap: 34, // deck top to the lid's inner face (knobs are 20, toggles 18)
 	deck: 9
 };
 const t = S.t;
@@ -24,23 +24,28 @@ const zoneL = lidW; // divider centre line = lid's right edge
 const bayIn = S.printer.pw + 22; // printer + finger room
 export const W = Math.round(zoneL + t / 2 + bayIn + t); // 424
 export const D = S.strip + lidD; // 262
-const RIM = t + S.printer.ph + 3 + S.bass; // wall tops: printer + 3 mm clearance + bass room = 160
-export const H = RIM + S.lidT; // 180
-const DECK = RIM - S.deckGap; // deck top, 122
+const RIM = t + S.printer.ph + 3 + S.bass; // wall tops: printer + 3 mm clearance + bass room = 164
+export const H = RIM + S.lidT; // 184
+const DECK = RIM - S.deckGap; // deck top, 130
 const divU = zoneL - t / 2; // divider u 238..250
 const bayU = divU + t; // bay interior from 250
 const PR = { u: bayU + (bayIn - S.printer.pw) / 2, w: t + S.cableGap, z: t, ...S.printer };
 const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's front
-const SPK = [t + 50, divU - 50]; // speaker centres: each chamber is 100 wide
-const SPK_Z = t + 51; // centred on the face under the deck
-const CH_D = 90; // speaker chamber depth: the deck behind it keeps 118 mm clear for deep controls
+const SPK = [67, 183]; // speaker centres, in one shared chamber across the left zone
+const SPK_Z = 66; // lowest centre whose frame rebate clears the base
+const CH_D = 90; // chamber depth: the deck behind it keeps 118 mm clear for deep controls
+const PLENUM = 4; // strips on the chamber top: the camera ribbon and mic lead run over it
 const MIC_U = 62,
-	MIC_Z = RIM - 19; // ReSpeaker Lite flat behind the front rim, above the deck, away from the drivers
+	MIC_Z = RIM - 17; // ReSpeaker Lite flat behind the front rim, above the deck, away from the drivers
 const TALK_U = 115,
-	TALK_Z = RIM - 19; // on the rim between mic and camera
+	TALK_Z = RIM - 17; // on the rim between mic and camera
 const CAM_U = 168,
-	CAM_Z = RIM - 19; // front rim, above the deck
+	CAM_Z = RIM - 17; // front rim, above the deck
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
+
+/** Air inside the speaker chamber, litres, before the drivers and wool take their share. */
+export const chamberL = () =>
+	+(((divU - t) * (DECK - S.deck - PLENUM - t - 6) * (CH_D - 6)) / 1e6).toFixed(1);
 
 // ---- cut list, from the same numbers ----
 export function cutList() {
@@ -54,7 +59,7 @@ export function cutList() {
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'front: two 77 mm speaker cut-outs (check the ND91 PDF); rim: two mic holes, TALK, camera window; vents and power inlet; cut before glue-up'
+			note: 'front: two 85 mm holes, each in a 104.5 × 4 mm rebate (template from a driver in hand); rim: two mic holes, TALK, camera window. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, six 8 × 24 exhaust slots high on the right of the left zone. Cut before glue-up'
 		},
 		{
 			part: 'Ends',
@@ -85,18 +90,25 @@ export function cutList() {
 			note: "inside the back wall's top; screw the strip down through it"
 		},
 		{
-			part: 'Speaker chambers',
-			qty: 2,
-			size: [100, DECK - S.deck - t - 2, CH_D],
-			mat: '6 mm ply, 5 sides',
-			note: 'the front wall is the baffle; ~0.7 L inside each; the front of the deck rests on their tops; damping wool; glue + silicone every seam'
+			part: 'Speaker chamber, back',
+			qty: 1,
+			size: [divU - t, DECK - S.deck - PLENUM - t - 6, 6],
+			mat: '6 mm ply',
+			note: `one chamber for both drivers: the base, front wall, left end and divider are its other sides; ~${chamberL()} L inside; glue + silicone every seam, wool inside`
+		},
+		{
+			part: 'Speaker chamber, top',
+			qty: 1,
+			size: [divU - t, CH_D, 6],
+			mat: '6 mm ply',
+			note: `the front of the deck rests on ${PLENUM} mm strips along it; the gap carries the camera ribbon and mic lead`
 		},
 		{
 			part: 'Deck',
 			qty: 1,
 			size: [divU - t - gap, D - t - S.strip - gap, S.deck],
 			mat: '9 mm birch ply',
-			note: 'lifts out with its wiring; nothing deep over the speaker chambers (front 90 mm)'
+			note: 'lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it'
 		},
 		{
 			part: 'Deck cleats',
@@ -226,7 +238,12 @@ export const hardware = [
 		qty: '1 sheet',
 		note: 'gaskets: mic board, screen clips, driver frames'
 	},
-	{ item: 'Polyfill (pillow stuffing)', qty: 'a handful', note: 'loosely in each speaker box' },
+	{ item: 'Polyfill (pillow stuffing)', qty: 'a handful', note: 'loosely in the speaker chamber' },
+	{
+		item: 'Rubber grommets, 22 and 16 mm',
+		qty: 2,
+		note: 'the two power leads through the back wall'
+	},
 	{ item: 'PVA wood glue, finish oil', qty: 1, note: 'glue-up and finish' }
 ];
 
@@ -515,44 +532,47 @@ export function renderBox(state = {}) {
 	// ---- left zone: insides, deck, controls ----
 	const see = st.xray ? ` class="see-through"` : '';
 	if (st.xray) {
-		// powerboard and plug-packs along the back wall
-		s += bbox(18, t + 4, t, 150, 40, 30, 'plain', 3);
-		for (const u of [40, 110])
-			s += g(BTOP(u, t + 14, t + 30), `<rect class="face dark t" width="16" height="14" rx="2"/>`);
-		s += bbox(30, t + 6, t + 30, 50, 34, 36, 'plain', 4);
-		s += bbox(divU - 52, t + 4, t, 50, 105, 30, 'dark', 4); // printer brick, along the divider
+		// the two power leads in through the back wall: the Pi's at the left, 24 V at the right
+		s += path3(
+			[
+				[40, 0, 40],
+				[40, t + 20, 30],
+				[90, 60, t + 14]
+			],
+			'cable'
+		);
 		// Pi 5 on standoffs, cooler, fan
 		for (const [u, w] of [
-			[100, 74],
-			[181, 74],
-			[100, 122],
-			[181, 122]
+			[94, 74],
+			[175, 74],
+			[94, 122],
+			[175, 122]
 		])
 			s += bcyl(u, w, t, 2.5, 8, 'brass');
-		s += bbox(96, 70, t + 8, 85, 56, 1.6, 'pcb', 2);
+		s += bbox(90, 70, t + 8, 85, 56, 1.6, 'pcb', 2);
 		s +=
-			bbox(108, 78, t + 9.6, 58, 42, 8, 'dark', 3) +
-			circTop(137, 99, t + 17.6, 13, 'face plain t') +
-			circTop(137, 99, t + 17.6, 4, 'face dark t');
+			bbox(102, 78, t + 9.6, 58, 42, 8, 'dark', 3) +
+			circTop(131, 99, t + 17.6, 13, 'face plain t') +
+			circTop(131, 99, t + 17.6, 4, 'face dark t');
 		s +=
-			bbox(170, 72, t + 9.6, 11, 16, 14, 'plain') +
-			bbox(170, 94, t + 9.6, 11, 14, 14, 'plain') +
-			bbox(170, 110, t + 9.6, 11, 14, 14, 'plain');
-		mark(12, Pt(120, 90, t + 18), 'Pi 5', '4GB, Active Cooler');
-		// sealed speaker boxes behind the front wall
-		for (const u of SPK)
-			s += bbox(u - 50, D - t - CH_D, t + 2, 100, CH_D, DECK - S.deck - t - 2, 'dark', 3);
-		// amp and mic board
-		s += bbox(24, 70, t, 60, 45, 3, 'pcb', 2) + bbox(34, 80, t + 3, 22, 22, 14, 'dark');
-		mark(13, Pt(54, 92, t + 3), 'Amp', 'TPA3116, 24 V, + USB DAC');
-		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 17, 86, 2, 35, 'pcb'); // ReSpeaker Lite
-		// Pico under the deck
-		s += bbox(130, 100, DECK - S.deck - 3, 51, 21, 1.2, 'pcb');
-		mark(14, Pt(150, 110, DECK - S.deck - 2), 'Pico 2 WH', 'under the deck');
+			bbox(164, 72, t + 9.6, 11, 16, 14, 'plain') +
+			bbox(164, 94, t + 9.6, 11, 14, 14, 'plain') +
+			bbox(164, 110, t + 9.6, 11, 14, 14, 'plain');
+		mark(12, Pt(114, 90, t + 18), 'Pi 5', '4GB, Active Cooler');
+		// one sealed speaker chamber behind the front wall, full width of the zone
+		s += bbox(t, D - t - CH_D, t, divU - t, CH_D, DECK - S.deck - PLENUM - t, 'dark', 3);
+		// amp by the divider, where the 24 V lead comes in; USB sound card on the floor at the left
+		s += bbox(178, 22, t, 58, 95, 3, 'pcb', 2) + bbox(190, 40, t + 3, 34, 30, 22, 'dark');
+		mark(13, Pt(207, 70, t + 3), 'Amp', 'TPA3116, 24 V');
+		s += bbox(30, 60, t, 45, 20, 12, 'plain', 3);
+		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 16, 86, 2, 32, 'pcb'); // ReSpeaker Lite
+		// Pico under the deck, clear of the meter and the dial pots
+		s += bbox(22, 50, DECK - S.deck - 3, 51, 21, 1.2, 'pcb');
+		mark(14, Pt(47, 60, DECK - S.deck - 2), 'Pico 2 WH', 'under the deck');
 		// display ribbons
 		s += path3(
 			[
-				[150, 72, t + 10],
+				[144, 72, t + 10],
 				[150, 40, 60],
 				[150, t + 6, 120],
 				[150, S.strip - 4, H - 6]
@@ -561,16 +581,16 @@ export function renderBox(state = {}) {
 		);
 		s += path3(
 			[
-				[160, 72, t + 10],
-				[150, 150, 60],
+				[154, 72, t + 10],
+				[120, 150, 60],
 				[CAM_U, D - t - 6, CAM_Z]
 			],
 			'ffc'
 		); // camera ribbon
 		s += path3(
 			[
-				[181, 100, t + 14],
-				[210, 100, t + 30],
+				[175, 100, t + 14],
+				[200, 125, t + 30],
 				[divU, 100, t + 40]
 			],
 			'cable'
@@ -661,7 +681,7 @@ export function renderBox(state = {}) {
 			}
 		).join('')}`;
 	for (const u of SPK) s += g(PLANE_AT_W(u, D, SPK_Z), grille(S.driver / 2 - 3));
-	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', '3.5" Dayton ND91, ~0.7 L');
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', `3.5" ND91 pair, ${chamberL()} L shared`);
 	s += g(
 		PLANE_AT_W(MIC_U, D, MIC_Z),
 		`<rect class="face brass f" x="-30" y="-9" width="60" height="18" rx="9"/>${[-20, 20].map((x) => `<circle class="mesh" cx="${x}" r="6"/><circle class="face dark s" cx="${x}" r="1.4"/>`).join('')}<circle class="led on" cx="0" cy="0" r="2"/>`

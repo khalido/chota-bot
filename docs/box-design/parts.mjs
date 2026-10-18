@@ -41,15 +41,6 @@ export const equipment = [
 		status: 'have',
 		why: 'near the printer’s largest roll'
 	},
-	{
-		group: 'Core',
-		item: 'Powerboard, 3 outlets, + a grommet for the cord',
-		qty: 1,
-		status: 'buy',
-		aud: 25,
-		source: 'Bunnings / Jaycar',
-		why: 'one cord out of the box; the Pi supply, printer brick and amp plug-pack plug in inside'
-	},
 
 	// screen and camera
 	{
@@ -63,12 +54,12 @@ export const equipment = [
 	},
 	{
 		group: 'Screen + camera',
-		item: '22→15-pin DSI ribbon for Pi 5',
+		item: 'DSI cable for Pi 5, 22-pin, 300–500 mm',
 		qty: 1,
 		status: 'buy',
 		aud: 8,
-		source: 'Core Electronics',
-		why: 'the panel has the older 15-pin socket'
+		source: 'Core Electronics (match the panel end; the official Pi display cable comes in 500 mm)',
+		why: 'the Pi sits on the floor, so the 12–20 cm cable in the box is too short; bench-test the long one'
 	},
 	{
 		group: 'Screen + camera',
@@ -115,7 +106,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 70,
 		source: 'NB Audio / Soundlabs: price not confirmed, ask',
-		why: 'near-Nest sound: 5 mm cone travel, ~0.9 L sealed each, bass EQ on the Pi'
+		why: 'near-Nest sound: 5 mm cone travel, one ~1.9 L sealed chamber for the pair, bass EQ on the Pi'
 	},
 	{
 		group: 'Voice + sound',
@@ -128,12 +119,12 @@ export const equipment = [
 	},
 	{
 		group: 'Voice + sound',
-		item: '24 V 3 A plug-pack',
+		item: '24 V 5 A brick + DC Y-splitter + 2200 µF capacitor',
 		qty: 1,
 		status: 'buy',
-		aud: 35,
-		source: 'Jaycar / Altronics',
-		why: "the amp's own supply (24 V: 3–4× the headroom of 12 V); sharing the printer's 24 V brick would sag the music while it prints"
+		aud: 55,
+		source: 'Jaycar / Altronics (match the printer’s DC plug)',
+		why: "outside the box, one lead in: feeds the printer and the amp, and retires the printer's own brick. The capacitor sits at the amp. If prints tick in the music, give the amp its own 24 V 3 A pack (A$35)"
 	},
 	{
 		group: 'Voice + sound',
@@ -204,6 +195,15 @@ export const equipment = [
 		aud: 40,
 		source: 'Jaycar / Amazon AU',
 		why: 'Dupont loosens in a box that moves'
+	},
+	{
+		group: 'Wiring',
+		item: 'Right-angle USB-A and USB-C adapters',
+		qty: 3,
+		status: 'buy',
+		aud: 4,
+		source: 'Amazon AU',
+		why: 'the plugs on the Pi face the back wall with 45 mm to spare'
 	},
 	{
 		group: 'Wiring',

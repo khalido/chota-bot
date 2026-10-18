@@ -1,6 +1,6 @@
 // Builds index.html: both figures render at runtime (lids open), prerendered for first paint.
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { renderBox, cutList, hardware, W, D, H } from './box.mjs';
+import { renderBox, cutList, hardware, W, D, H, S, chamberL } from './box.mjs';
 import { equipment, toBuy } from './parts.mjs';
 const DIR = new URL('.', import.meta.url).pathname;
 const rd = (f) => readFileSync(DIR + f, 'utf8');
@@ -111,8 +111,8 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 .src { color: var(--ink); font-size: 13px; }
 </style>
 <main>
-<h1>Chota box · v7</h1>
-<p class="lead">The box is <b>${W} × ${D} × ${H} mm</b>. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Two 3.5" speakers fill the front wall, each in its own ~0.7 L sealed chamber under the front of the deck, with bass EQ on the Pi: close to a Nest Audio. The mic, TALK and camera ride on the rim above. Hold TALK and the box goes quiet and listens. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
+<h1>Chota box · v8</h1>
+<p class="lead">The box is <b>${W} × ${D} × ${H} mm</b>. One screen: the 10.1" in the lid, 20 mm thin. The deck has dials, PRINT and a needle meter, and a camera with a brass shutter sits on the front rim. Two 3.5" speakers fill the front wall and share one sealed ~${chamberL()} L chamber under the front of the deck, with bass EQ on the Pi: close to a Nest Audio. No mains inside: two leads come in at the back, the Pi's own supply and one 24 V brick for the printer and amp. The mic, TALK and camera ride on the rim above. Hold TALK and the box goes quiet and listens. Paper rises through a slot in the printer's own lid; lift that lid to change the roll.</p>
 
 <div class="tabs" role="tablist">
 <button role="tab" id="tab-design" aria-controls="design" aria-selected="true">Design</button>
@@ -138,19 +138,20 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 <li><b>The printer</b> (MUNBYN ITPP098P, kept: it works, and smaller 80 mm printers save only 10–15 mm). Drawn at Newegg's 140 × 180 × 125; Amazon's 164 × 286 × 160 is the carton. Measure width, depth, height, where the paper leaves (distance back from the front edge) and how far its cover swings; one measurement redraws the box and cut list. Your 80 × 80 mm rolls are near its roll-bay limit.</li>
 <li><b>The 10.1" screen's thickness</b>, and its 235 × 161 outline against Waveshare's drawing. It sets the lid depth.</li>
 <li><b>The lid screen's outline.</b> Waveshare's sibling 10.1" panel is 228.6 × 143.0 × 2.6 mm, so it should fit the 244 × 170 face; confirm on the (C) drawing before cutting the rebate.</li>
-<li><b>The ND91's frame.</b> Parts Express lists 85 mm across with a 76.5 mm cut-out; another shop lists 103.5 mm. The drawing uses 85. Check Dayton's PDF before cutting the front wall; a 103.5 mm frame needs the box 10 mm taller again.</li>
+<li><b>The ND91's frame.</b> Dayton's page gives 103.5 mm across with an 85 mm cut-out; a retailer lists 93 / 77. The drawing uses 103.5, front-mounted in a 4 mm rebate. Make a paper template from a driver in hand before cutting the front wall.</li>
 </ul>
 </div>
 <div class="box-note">
 <h3>Changed from box.md</h3>
 <ul class="tight">
 <li><b>The paper slot is cut into the printer's lid</b>, right over the paper exit, with a chamfered mouth and an angled guide under it so the curl can't fold back. To change the roll: lift that lid ("Printer open"), flip the printer's cover, drop in the roll. The printer's cover hinges at its back, so a fixed strip above the exit would block it; two dowels seat the lid so the slot always lines up.</li>
-<li><b>One rim height.</b> Every wall stops at ${H - 20} mm and both lids are 20 mm deep, so the box closes flat. The deck sits 38 mm under the lid. v6 added 20 mm of height so a 3.5" driver fits the face under the deck.</li>
+<li><b>One rim height.</b> Every wall stops at ${H - 20} mm and both lids are 20 mm deep, so the box closes flat. The deck sits ${S.deckGap} mm under the lid. v6 added 20 mm of height so a 3.5" driver fits the face under the deck, and v8 another 4 mm for its 103.5 mm frame.</li>
 <li><b>Mic and a TALK button on the front rim</b>, so voice works with the lid shut.</li>
 <li><b>One screen (v4).</b> The deck screen is gone: the dials are only reachable with the lid open, and then the lid screen faces you, so turning WHO or WHAT shows there. That frees the Pi's second camera/display port for a Pi Camera Module 3 and means one kiosk window instead of two. A needle meter takes its place on the deck.</li>
 <li><b>ReSpeaker Lite, not the XVF3800 (v5).</b> Two mics, the same XMOS echo cancelling, A$43 instead of A$113. In v1 it only listens: all sound (speech and music) plays through a small USB sound card into the amp, because the Lite tops out at 16 kHz. TALK pauses everything while held, so there's no echo to cancel. The mic sits behind the front rim, above the deck: higher, and away from the speakers.</li>
-<li><b>Deck controls moved back (v7, from Gemini's review).</b> The speaker chambers fill the front 90 mm under the deck, so the button, dials, meter, toggles and LEDs sit in the back 118 mm; the front of the deck is a clear tear-off zone. The deck is cut 207 mm deep so it lifts out past the hinge strip.</li>
-<li><b>Speakers: two 3.5" Dayton ND91-8 (v6).</b> Bass is where small speakers lose to a Nest, and bass needs cone travel and air, not tweeters. The ND91 moves 5 mm each way; in ~0.7 L sealed it rolls off near 115 Hz, and a gentle bass EQ on the Pi (PipeWire filter-chain or CamillaDSP, a few % of one core) brings usable bass to about 75 Hz. A TPA3116 amp on its own 24 V plug-pack drives them. 2.5" drivers, racetracks and exciters were all checked: too little cone travel.</li>
+<li><b>One speaker chamber, power outside (v8).</b> A single sealed chamber across the front, built from two 6 mm panels (the base, front wall, end and divider are its other sides): ~${chamberL()} L instead of 2 × 0.7, so the bass EQ works less hard. The deck rests on 4 mm strips along its top, and the camera ribbon and mic lead run in that gap. No powerboard and no bricks inside: the Pi's lead and one 24 V 5 A brick (printer + amp, split inside) come in through grommets in the back wall. If printing ticks in the music, the amp gets its own pack.</li>
+<li><b>Deck controls moved back (v7, from Gemini's review).</b> The speaker chamber fills the front 90 mm under the deck, so the button, dials, meter, toggles and LEDs sit in the back 118 mm; the front of the deck is a clear tear-off zone. The deck is cut 207 mm deep so it lifts out past the hinge strip.</li>
+<li><b>Speakers: two 3.5" Dayton ND91-8 (v6).</b> Bass is where small speakers lose to a Nest, and bass needs cone travel and air, not tweeters. The ND91 moves 5 mm each way; sealed in this volume it rolls off around 110–120 Hz, and a gentle bass EQ on the Pi (PipeWire filter-chain or CamillaDSP, a few % of one core) brings usable bass to about 75 Hz. A TPA3116 amp on 24 V drives them. 2.5" drivers, racetracks and exciters were all checked: too little cone travel.</li>
 </ul>
 </div>
 </div>
@@ -161,7 +162,7 @@ tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spac
 <li><b>Bigger air.</b> The same two ND91s share one ~2.4 L chamber, with two 3–4" passive radiators in the back wall tuned to 50–55 Hz: bass to about 55 Hz with EQ. The box grows another 20–30 mm in height and a few cm in depth; the Pi and power move beside the chamber.</li>
 <li><b>Optional tweeters.</b> Two Dayton ND20FB-4 on a simple crossover at ~3.5 kHz (about A$70). The ND91 already reaches 17 kHz, so this is polish, not a fix.</li>
 <li><b>Wake word over music.</b> Swap the Lite for the XVF3800 (A$113) and play everything through it (its 48 kHz firmware), with the EQ on the Pi before it. It then hears exactly what the speakers play and can cancel it.</li>
-<li><b>One 24 V brick, nothing mains inside.</b> A ~120 W 24 V supply outside (Mean Well GST120A24, about A$60) on one DC socket. Inside, the printer takes 24 V directly, the amp runs on 24 V, and a 24→5 V 5 A converter feeds the Pi (set <code>usb_max_current_enable=1</code>).</li>
+<li><b>One lead.</b> A ~120 W 24 V supply outside (Mean Well GST120A24, about A$60) on one DC socket, and a 24→5 V 5 A converter for the Pi (set <code>usb_max_current_enable=1</code>), so the Pi's own lead goes too.</li>
 <li><b>Cost:</b> about A$300–400 on top of v1.</li>
 </ul>
 </div>
