@@ -2,6 +2,8 @@
 // Prices are AUD, approximate (the source named); "have" rows carry no price.
 // v1 is the printer, the lid screen, the speaker and the face, with PRINT and the volume knob on the Pi's
 // pins; "later" marks what waits for the deck, voice and the e-ink. The box is cut for all of it.
+// Rows carry an optional `url` (a known product page) and `phase: 2` for parts on hand that wait for v2;
+// the Equipment tab splits into v1, v2 and tools from these, and saves each row's link, status and notes.
 // The box's own fittings (hinges, magnets, feet) are `hardware` in box.mjs.
 
 export const equipment = [
@@ -215,6 +217,7 @@ export const equipment = [
 		item: 'Raspberry Pi Pico 2 WH',
 		qty: 1,
 		status: 'have',
+		phase: 2,
 		why: 'reads every dial, switch and button; one USB cable to the Pi'
 	},
 	{
@@ -222,6 +225,7 @@ export const equipment = [
 		item: '10k linear panel pots, ¼" shaft',
 		qty: 2,
 		status: 'have',
+		phase: 2,
 		why: 'WHO and WHAT dials'
 	},
 	{
@@ -236,6 +240,7 @@ export const equipment = [
 		item: 'Mini SPDT toggles + 1 chunky SPST',
 		qty: 4,
 		status: 'have',
+		phase: 2,
 		why: 'deck toggles; the chunky one under a cover'
 	},
 	{ group: 'Controls', item: '30 mm red LED arcade button', qty: 1, status: 'have', why: 'PRINT; on a Pi pin in v1' },
@@ -264,16 +269,7 @@ export const equipment = [
 		source: 'Core Electronics: price not checked',
 		why: 'in an aluminium channel on the plinth, under the overhang: the LEDs facing whoever walks up wash the bench dimly. Run by the Pico'
 	},
-	{ group: 'Controls', item: '10 mm diffused LEDs', qty: 25, status: 'have', why: 'status lights' },
-	{
-		group: 'Controls',
-		item: '220–470 Ω resistor assortment',
-		qty: 1,
-		status: 'later',
-		aud: 8,
-		source: 'Jaycar',
-		why: 'one per LED'
-	},
+	{ group: 'Controls', item: '10 mm diffused LEDs', qty: 25, status: 'have', phase: 2, why: 'status lights' },
 	{
 		group: 'Controls',
 		item: 'Analog panel meter, 0–1 mA',
@@ -304,16 +300,197 @@ export const equipment = [
 		why: 'the Pi’s plugs, and the printer’s: right-angle plugs at its back take 15 mm off the box’s depth. Check they fit its sockets'
 	},
 	{
-		group: 'Wiring',
-		item: 'Soldering iron (Pinecil-class USB-C)',
+		group: 'Tools',
+		item: 'Pinecil soldering iron (TOL-23913)',
+		qty: 1,
+		status: 'buy',
+		aud: 150,
+		source: 'Core Electronics, in stock (Pine64 sells the V2 direct for much less, plus shipping)',
+		url: 'https://core-electronics.com.au/pinecil-smart-mini-portable-soldering-iron.html',
+		why: 'the buck, GlowBit, amp leads, pots and meter. USB-C PD at 12–24 V'
+	},
+	{
+		group: 'Tools',
+		item: 'Raspberry Pi 45 W USB-C PSU (CE10156)',
+		qty: 1,
+		status: 'buy',
+		aud: 25,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/raspberry-pi-45-w-usb-c-power-supply-au.html',
+		why: 'powers the Pinecil at 20 V; the 27 W Pi supply stays on the Pi'
+	},
+	{
+		group: 'Tools',
+		item: 'Assembled Pi T-Cobbler Plus + ribbon (ADA2028)',
+		qty: 1,
+		status: 'buy',
+		aud: 17,
+		source: 'Core Electronics (bare CE04441 breakout is A$6)',
+		url: 'https://core-electronics.com.au/assembled-pi-t-cobbler-plus-gpio-breakout-for-raspberry-pi-b.html',
+		why: 'the Pi’s 40 pins onto the breadboard, labelled'
+	},
+	{
+		group: 'Tools',
+		item: 'Multimeter, autoranging, continuity beep',
+		qty: 1,
+		status: 'buy',
+		aud: 45,
+		source: 'Jaycar QM1321 (stock not checked); Core’s Basic TOL-12966 is A$44, not autoranging',
+		url: 'https://www.jaycar.com.au/economy-true-rms-autorange-multimeter/p/QM1321',
+		why: 'voltages, continuity and shorts before anything powers up'
+	},
+	{
+		group: 'Tools',
+		item: 'Solder 0.8 mm (lead-free 15 g, or 60/40 200 g A$34)',
+		qty: 1,
+		status: 'buy',
+		aud: 6,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/tools/soldering/solder.html',
+		why: '60/40 flows more easily; wash hands after'
+	},
+	{
+		group: 'Tools',
+		item: 'Flux pen (MEK-H010017)',
+		qty: 1,
+		status: 'buy',
+		aud: 12,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/refillable-flux-pen-soldering-mektronics.html',
+		why: 'clean joints on header pins and pads'
+	},
+	{
+		group: 'Tools',
+		item: 'Brass tip cleaner (Hakko)',
+		qty: 1,
+		status: 'buy',
+		aud: 29,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/hakko-brass-sponge-solder-tip-cleaner.html',
+		why: 'keeps the tip tinned; a damp sponge works too'
+	},
+	{
+		group: 'Tools',
+		item: 'Wire stripper 22–10 AWG (CE09625)',
+		qty: 1,
+		status: 'buy',
+		aud: 6,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/wire-stripper-22-10-awg.html',
+		why: ''
+	},
+	{
+		group: 'Tools',
+		item: 'Flush cutters (CHP170)',
+		qty: 1,
+		status: 'buy',
+		aud: 20,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/flush-diagonal-cutters-chp170.html',
+		why: 'trims leads flush after soldering'
+	},
+	{
+		group: 'Tools',
+		item: 'Needle-nose pliers',
+		qty: 1,
+		status: 'buy',
+		aud: 7,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/needle-nose-pliers.html',
+		why: ''
+	},
+	{
+		group: 'Tools',
+		item: '22 AWG solid hook-up wire, 6 × 25 ft',
 		qty: 1,
 		status: 'buy',
 		aud: 45,
 		source: 'Core Electronics',
-		why: 'pots, LEDs, meter, amp'
+		url: 'https://core-electronics.com.au/hook-up-wire-spool-set-22awg-solid-core-6-x-25-ft.html',
+		why: 'sits neatly in the breadboard'
 	},
 	{
-		group: 'Wiring',
+		group: 'Tools',
+		item: '22 AWG silicone stranded wire, 6 colours',
+		qty: 1,
+		status: 'buy',
+		aud: 30,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/silicone-hookup-wire-kit-6-colours-stranded.html',
+		why: 'flexible leads for power and anything that moves'
+	},
+	{
+		group: 'Tools',
+		item: 'Resistor kit, 600 × ¼ W 1% (CE05092)',
+		qty: 1,
+		status: 'buy',
+		aud: 3,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/600-pack-of-1-4-watt-1-resistors-30-values-20-of-each.html',
+		why: '330 Ω for LEDs and the GlowBit data line, plus pull-ups'
+	},
+	{
+		group: 'Tools',
+		item: '1000 µF 25 V capacitor (COM-08982)',
+		qty: 2,
+		status: 'buy',
+		aud: 1,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/electrolytic-decoupling-capacitors-1000uf-25v.html',
+		why: 'across the GlowBit’s 5 V'
+	},
+	{
+		group: 'Tools',
+		item: 'Heat-shrink pack, 95 pc',
+		qty: 1,
+		status: 'buy',
+		aud: 16,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/heatshrink-pack-standard.html',
+		why: ''
+	},
+	{
+		group: 'Tools',
+		item: 'Silicone heat mat',
+		qty: 1,
+		status: 'buy',
+		aud: 14,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/silicone-heat-mat.html',
+		why: 'saves the desk'
+	},
+	{
+		group: 'Tools',
+		item: 'Third hand with magnifier',
+		qty: 1,
+		status: 'buy',
+		aud: 14,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/third-hand-and-magnifying-glass.html',
+		why: 'holds boards and wires while you solder'
+	},
+	{
+		group: 'Tools',
+		item: 'Precision screwdriver kit, 24-in-1',
+		qty: 1,
+		status: 'buy',
+		aud: 6,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/24-in-1-precision-screwdriver-kit.html',
+		why: 'screw terminals on the amp and buck'
+	},
+	{
+		group: 'Tools',
+		item: 'USB logic analyser, 24 MHz 8-ch (TOL-18627), optional',
+		qty: 1,
+		status: 'later',
+		aud: 49,
+		source: 'Core Electronics; works with PulseView',
+		url: 'https://core-electronics.com.au/usb-logic-analyzer-24mhz-8-channel.html',
+		why: 'shows the signals on a wire when something won’t talk'
+	},
+	{
+		group: 'Tools',
 		item: 'Brass M2.5 standoffs, breadboard, jumpers',
 		qty: 1,
 		status: 'have',
@@ -333,4 +510,7 @@ export const equipment = [
 
 /** Sum of the "buy" rows, price × qty. */
 export const toBuy = () =>
-	equipment.filter((e) => e.status === 'buy').reduce((n, e) => n + (e.aud ?? 0) * e.qty, 0);
+	equipment.filter((e) => e.status === 'buy' && e.group !== 'Tools').reduce((n, e) => n + (e.aud ?? 0) * e.qty, 0);
+
+export const toolsCost = () =>
+	equipment.filter((e) => e.group === 'Tools' && e.status === 'buy').reduce((n, e) => n + (e.aud ?? 0) * e.qty, 0);

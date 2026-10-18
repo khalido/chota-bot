@@ -1,7 +1,7 @@
 // Builds index.html: both figures render at runtime (lids open), prerendered for first paint.
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { renderBox, cutList, hardware, W, D, H, S, chamberL, PLINTH } from './box.mjs';
-import { equipment, toBuy } from './parts.mjs';
+import { equipment, toBuy, toolsCost } from './parts.mjs';
 const DIR = new URL('.', import.meta.url).pathname;
 const rd = (f) => readFileSync(DIR + f, 'utf8');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -36,20 +36,33 @@ const cutRows = cutList()
 	)
 	.join('');
 const pieces = cutList().reduce((n, c) => n + c.qty, 0);
-const STATUS = { have: 'have', buy: 'buy', later: 'later' };
-const eqRows = [...new Set(equipment.map((e) => e.group))]
-	.map(
-		(g) =>
-			`<tr class="grp"><th colspan="5">${esc(g)}</th></tr>` +
-			equipment
-				.filter((e) => e.group === g)
-				.map(
-					(e) =>
-						`<tr><th>${esc(e.item)}</th><td class="n">${e.qty}</td><td><span class="st ${e.status}">${STATUS[e.status]}</span></td><td class="n">${e.aud ? `$${e.aud * e.qty}` : ''}</td><td>${esc(e.why)}${e.source ? ` <span class="src">· ${esc(e.source)}</span>` : ''}</td></tr>`
-				)
-				.join('')
-	)
-	.join('');
+// The Equipment tab is a shopping list: v1, v2 and tools. Link, status and notes are inputs the page saves to its db.
+const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+const sectionOf = (e) => (e.group === 'Tools' ? 'tools' : (e.phase ?? (e.status === 'later' ? 2 : 1)) === 2 ? 'v2' : 'v1');
+const OPTS = [['', '—'], ['buy', 'To buy'], ['ordered', 'Ordered'], ['have', 'Have'], ['skip', 'Skip']];
+const shopRow = (e) => {
+	const st = e.status === 'have' ? 'have' : '';
+	const cost = (e.aud ?? 0) * e.qty;
+	return `<tr data-id="${slug(e.item)}" data-aud="${cost}" data-def-status="${st}" data-def-link="${esc(e.url ?? '')}">
+<th><span class="it">${esc(e.item)}</span><span class="why">${esc([e.why, e.source].filter(Boolean).join(' · '))}</span></th>
+<td class="n">${e.qty}</td><td class="n">${cost ? `$${cost}` : ''}</td>
+<td class="lk"><span class="lkw"><input type="url" name="link" aria-label="Link for ${esc(e.item)}" placeholder="paste link" value="${esc(e.url ?? '')}"><a class="go" href="${esc(e.url ?? '#')}" target="_blank" rel="noopener"${e.url ? '' : ' hidden'} aria-label="Open link">↗</a></span></td>
+<td><select name="status" aria-label="Status of ${esc(e.item)}">${OPTS.map(([v, l]) => `<option value="${v}"${v === st ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
+<td><textarea name="notes" rows="1" aria-label="Notes on ${esc(e.item)}" placeholder="—"></textarea></td></tr>`;
+};
+const SECTIONS = [
+	['v1', 'v1 · build now', 'The printer, the lid screen, sound out and the face, with PRINT and the volume knob on the Pi’s pins.'],
+	['v2', 'v2 · later', 'Waits for the deck, voice and the e-ink. The box is cut for all of it.'],
+	['tools', 'Tools', 'For the desk build and the box: wiring the Pi’s pins, soldering, measuring.']
+];
+const shopTables = SECTIONS.map(([id, title, blurb]) => {
+	const rows = equipment.filter((e) => sectionOf(e) === id);
+	return `<h2>${title}</h2><p>${blurb} <span class="sum" data-sec="${id}"></span></p>
+<div class="table-wrap"><table class="shop" data-sec="${id}">
+<thead><tr><th>Item</th><th>Qty</th><th>A$</th><th>Link</th><th>Status</th><th>Notes</th></tr></thead>
+<tbody>${rows.map(shopRow).join('')}</tbody>
+</table></div>`;
+}).join('\n');
 const hwRows = hardware
 	.map((h) => `<tr><th>${esc(h.item)}</th><td class="n">${h.qty}</td><td>${esc(h.note)}</td></tr>`)
 	.join('');
@@ -105,10 +118,22 @@ tr:last-child th, tr:last-child td { border-bottom: 0; }
 .tabs button[aria-selected="true"] { color: var(--ink-hi); border-bottom-color: var(--ink-hi); }
 .tabs button:focus-visible { outline: 2px solid var(--live); outline-offset: -2px; }
 tr.grp th { font: 600 12px "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--bg); }
-.st { font: 600 11px "IBM Plex Mono", ui-monospace, monospace; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--edge); }
-.st.buy { background: var(--ink-hi); color: var(--panel); border-color: var(--ink-hi); }
-.st.later { color: var(--ink); border-style: dashed; }
 .src { color: var(--ink); font-size: 13px; }
+table.shop { min-width: 860px; }
+table.shop tbody th { white-space: normal; min-width: 240px; font-weight: 400; }
+table.shop .it { display: block; font-weight: 600; }
+table.shop .why { display: block; font-size: 12.5px; color: var(--ink); line-height: 1.4; margin-top: 2px; }
+table.shop input, table.shop select, table.shop textarea { font: 13px "IBM Plex Sans", system-ui, sans-serif; color: var(--ink-hi); background: var(--bg); border: 1px solid var(--edge); border-radius: 6px; padding: 4px 6px; }
+table.shop input:focus-visible, table.shop select:focus-visible, table.shop textarea:focus-visible { outline: 2px solid var(--live); outline-offset: 0; }
+table.shop :disabled { opacity: .7; cursor: default; }
+.lkw { display: flex; gap: 4px; align-items: center; }
+table.shop input[type=url] { width: 130px; }
+table.shop .go { text-decoration: none; color: var(--ink-hi); font-weight: 600; padding: 2px 4px; }
+table.shop textarea { width: 100%; min-width: 180px; resize: vertical; field-sizing: content; min-height: 28px; }
+tr[data-status="have"] .it, tr[data-status="ordered"] .it { color: var(--ink); }
+tr[data-status="skip"] .it { text-decoration: line-through; color: var(--ink); }
+.sum { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; color: var(--ink); white-space: nowrap; }
+.save { font-size: 13px; color: var(--ink); }
 </style>
 <main>
 <h1>Chota box · v13</h1>
@@ -206,11 +231,8 @@ ${
 </section>
 
 <section id="equipment" role="tabpanel" aria-labelledby="tab-equipment" hidden>
-<p>Everything electronic that goes in the box. <b>About $${toBuy()} to buy for v1</b> (prices approximate, AUD): the printer, the lid screen, sound out and the face, with PRINT and the volume knob on the Pi's pins. "Later" parts wait for the deck, voice and the e-ink (about $${equipment.filter((e) => e.status === 'later').reduce((n, e) => n + (e.aud ?? 0) * e.qty, 0)} priced, some not yet). The Pi, printer and control parts are on hand.</p>
-<div class="table-wrap"><table>
-<thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>A$</th><th>Why</th></tr></thead>
-<tbody>${eqRows}</tbody>
-</table></div>
+<p>The shopping list for the electronics: about <b>$${toBuy()} for v1</b>, plus about $${toolsCost()} of tools (AUD, approximate). Add a link, set the status and write notes in any row; they save to this page for everyone who opens it. <span class="save" id="save-state"></span></p>
+${shopTables}
 </section>
 
 <section id="build" role="tabpanel" aria-labelledby="tab-build" hidden>
@@ -293,6 +315,61 @@ ${wall}
       try { await acts[b.dataset.fig][b.dataset.act](next); } finally { busy = false; }
     });
   });
+})();
+(async () => {
+  // Shopping list: rows carry their defaults; db docs items/<id> hold {link, status, notes}.
+  const rows = new Map([...document.querySelectorAll("table.shop tr[data-id]")].map((r) => [r.dataset.id, r]));
+  const saveEl = document.getElementById("save-state");
+  const field = (r, n) => r.querySelector('[name="' + n + '"]');
+  const paint = (r) => {
+    const link = field(r, "link").value.trim(), a = r.querySelector("a.go");
+    a.hidden = !/^https?:/.test(link); if (!a.hidden) a.href = link;
+    r.dataset.status = field(r, "status").value;
+  };
+  const sums = () => document.querySelectorAll(".sum[data-sec]").forEach((el) => {
+    const rs = [...document.querySelectorAll('table.shop[data-sec="' + el.dataset.sec + '"] tr[data-id]')];
+    const total = rs.reduce((n, r) => n + +r.dataset.aud, 0);
+    const left = rs.filter((r) => !["have", "ordered", "skip"].includes(r.dataset.status)).reduce((n, r) => n + +r.dataset.aud, 0);
+    el.textContent = total ? "$" + left + " of $" + total + " priced still to get." : "";
+  });
+  rows.forEach(paint); sums();
+  const lock = (msg) => { rows.forEach((r) => r.querySelectorAll("input,select,textarea").forEach((x) => (x.disabled = true))); saveEl.textContent = msg; };
+  const db = window.claude?.use ? await window.claude.use("db") : null;
+  if (!db) return lock("Open this page on claude.ai, signed in, to edit the list.");
+  const user = await window.claude.use("user");
+  if ((await user?.can("data.write")) === false) return lock("View only.");
+  const col = db.collection("items");
+  const queue = new Map(), timers = new Map();
+  const write = (id) => {
+    const r = rows.get(id);
+    const body = { link: field(r, "link").value.trim(), status: field(r, "status").value, notes: field(r, "notes").value, updated: new Date().toISOString() };
+    saveEl.textContent = "Saving…";
+    const p = (queue.get(id) || Promise.resolve()).then(() => col.doc(id).set(body)).then(
+      () => { saveEl.textContent = "Saved."; },
+      (e) => { if (e?.code === "invalid_argument") lock("View only."); else saveEl.textContent = "Not saved (" + (e?.code || "error") + "). Try again."; }
+    );
+    queue.set(id, p);
+  };
+  rows.forEach((r, id) => {
+    field(r, "status").addEventListener("change", () => { paint(r); sums(); write(id); });
+    ["link", "notes"].forEach((n) => {
+      const el = field(r, n);
+      el.addEventListener("input", () => { if (n === "link") paint(r); clearTimeout(timers.get(id)); timers.set(id, setTimeout(() => write(id), 800)); });
+      el.addEventListener("blur", () => { if (timers.has(id)) { clearTimeout(timers.get(id)); timers.delete(id); write(id); } });
+    });
+  });
+  col.onSnapshot((snap) => {
+    snap.docs.forEach((d) => {
+      const r = rows.get(d.id); if (!r || !d.exists) return;
+      const v = d.data();
+      for (const n of ["link", "status", "notes"]) {
+        const el = field(r, n);
+        if (typeof v[n] === "string" && document.activeElement !== el && !timers.has(d.id)) el.value = v[n];
+      }
+      paint(r);
+    });
+    sums();
+  }, (e) => { saveEl.textContent = "Live updates stopped (" + e.code + "). Reload to resume."; });
 })();
 </script>
 `;
