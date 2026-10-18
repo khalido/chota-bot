@@ -121,7 +121,7 @@ export function cutList() {
 			qty: 1,
 			size: [W, S.strip, S.lidT],
 			mat: 'hardwood (Tas oak)',
-			note: '25 × 12 notch for the screen ribbon'
+			note: '25 × 12 notch for the screen ribbon; 10 mm roundover on its front top edge so the lids can swing past 90° on barrel hinges'
 		},
 		{
 			part: 'Strip cleat',
@@ -184,14 +184,14 @@ export function cutList() {
 			qty: 1,
 			size: [lidW - gap, S.lidT - 6, t],
 			mat: 'hardwood',
-			note: `${t - S.lip} mm rebate for the screen glass, all four rails: the glass sits flush with the wood, a hairline gap all round, no lip over its edge`
+			note: `${t - S.lip} mm rebate for the screen glass, all four rails: the glass sits flush with the wood, a hairline gap all round, no lip over its edge (cut 1 mm short of the lid, the border is ~2.5 mm)`
 		},
 		{
 			part: 'Lid frame, back',
 			qty: 1,
 			size: [lidW - gap, S.lidT - 6, 20],
 			mat: 'hardwood',
-			note: 'barrel hinges and the chain go into this, never the ply'
+			note: 'barrel hinges and the chain go into this, never the ply; 10 mm roundover on its back edge, or the lid binds at ~90°'
 		},
 		{
 			part: 'Lid frame, sides',
@@ -232,7 +232,7 @@ export function cutList() {
 			qty: 1,
 			size: [svcW - gap, S.lidT - 6, 20],
 			mat: 'hardwood',
-			note: 'barrel hinges go into this'
+			note: 'barrel hinges go into this; 10 mm roundover on its back edge'
 		},
 		{
 			part: 'Service lid frame, sides',

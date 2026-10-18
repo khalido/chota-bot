@@ -11,7 +11,7 @@ Layout: the left zone (200 mm wide) holds a recessed control deck (two dials, a 
 | Plinth, ends | 2 | 195 × 12 × 12 | hardwood, painted black | between front and back; felt pads under the corners |
 | Front and back walls | 2 | 356 × 133 × 12 | 12 mm birch ply | front: a 3 × 2 groove at u 200, under the lid seam, top to bottom, so the front reads as two panels. Left panel: two 56 mm holes (cut-out assumed: check the datasheet), the SB65s screwed on from inside, the holes chamfered 45° at the back; a Ø66 × 2 rebate in front of each for a black mesh disc; two Ø1.5 mic pinholes and a Ø3 LED above. Right panel: one 120 × 70 window, 8 mm corners, rebated 3 mm from inside for smoked acrylic (a clear Ø8 spot for the camera); under it Ø7 knob, Ø19 TALK and three Ø7 button holes, each counterbored from inside so the parts sit inside the 15 mm in front of the printer. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, a field of Ø4 holes high in the left zone and across the bay. Cut before glue-up |
 | Ends | 2 | 215 × 133 × 12 | 12 mm birch ply | between front and back; a 7 × 5 field of Ø4 holes at 10 mm pitch low on the left, and one on the right beside the printer, black mesh behind |
-| Hinge strip | 1 | 356 × 30 × 20 | hardwood (Tas oak) | 25 × 12 notch for the screen ribbon |
+| Hinge strip | 1 | 356 × 30 × 20 | hardwood (Tas oak) | 25 × 12 notch for the screen ribbon; 10 mm roundover on its front top edge so the lids can swing past 90° on barrel hinges |
 | Strip cleat | 1 | 332 × 12 × 12 | hardwood | inside the back wall's top; screw the strip down through it |
 | Speaker chamber, back | 1 | 176 × 80 × 6 | 6 mm ply | the base, front wall, left end and the chamber end are its other sides; ~0.9 L inside, shared by the two SB65s; glue + silicone every seam, wool inside |
 | Speaker chamber, end | 1 | 72 × 86 × 12 | 12 mm birch ply | at the lid seam: closes the chamber and is the deck frame's front post. The bay front's wires cross over its top, in the plenum under the deck |
@@ -20,14 +20,14 @@ Layout: the left zone (200 mm wide) holds a recessed control deck (two dials, a 
 | Deck cleat | 1 | 143 × 12 × 12 | pine | on the left end, top 90 mm above the base |
 | Deck frame: post and rail | 2 | 143 × 15 × 15 | hardwood | no divider: a post (cut to 75 mm) at the back under the rail, and the rail under the deck's right edge from the post to the chamber end. The printer sits 2 mm clear of it, and the lids' inner edges rest on the front wall and hinge strip only (stiff torsion boxes, magnet catches) |
 | Printer locating blocks | 4 | 40 × 15 × 10 | hardwood offcut | glued to the base round the printer's feet, 2 mm clear, so the paper always lines up with the slot |
-| Lid frame, front | 1 | 199 × 14 × 12 | hardwood | 9 mm rebate for the screen glass, all four rails: the glass sits flush with the wood, a hairline gap all round, no lip over its edge |
-| Lid frame, back | 1 | 199 × 14 × 20 | hardwood | barrel hinges and the chain go into this, never the ply |
+| Lid frame, front | 1 | 199 × 14 × 12 | hardwood | 9 mm rebate for the screen glass, all four rails: the glass sits flush with the wood, a hairline gap all round, no lip over its edge (cut 1 mm short of the lid, the border is ~2.5 mm) |
+| Lid frame, back | 1 | 199 × 14 × 20 | hardwood | barrel hinges and the chain go into this, never the ply; 10 mm roundover on its back edge, or the lid binds at ~90° |
 | Lid frame, sides | 2 | 176 × 14 × 12 | hardwood | notch one for the screen ribbon |
 | Lid cross-rail | 1 | 176 × 22 × 10 | hardwood | between the screen and the band; stiffens the lid |
 | Lid skin | 1 | 199 × 208 × 6 | 6 mm ply | glued on: the lid becomes a torsion box |
 | Screen clips | 4 | 30 × 15 × 6 | ply offcut | screwed to the frame behind the module, 1–2 mm foam pad |
 | Service lid frame, front | 1 | 155 × 14 × 12 | hardwood |  |
-| Service lid frame, back | 1 | 155 × 14 × 20 | hardwood | barrel hinges go into this |
+| Service lid frame, back | 1 | 155 × 14 × 20 | hardwood | barrel hinges go into this; 10 mm roundover on its back edge |
 | Service lid frame, sides | 2 | 176 × 14 × 12 | hardwood |  |
 | Paper guide | 1 | 100 × 20 × 6 | hardwood | under the slot, angled 10–15° out so the curl can't fold back |
 | Service lid skin | 1 | 155 × 208 × 6 | 6 mm ply | slot 90 × 5 with a chamfered mouth, at least 15 mm clear of the front strip; angled guide under it. Window 85.8 × 64.6 for the 4" e-ink, 64 mm behind the slot; its board clips under the skin |
