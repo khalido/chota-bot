@@ -40,7 +40,8 @@ const CH_W = lidW - 2 * t; // chamber: left end to its own 12 mm end panel, whic
 const CH_D = 72; // chamber depth: the deck behind it keeps ~125 mm clear for deep controls
 const PLENUM = 4; // strips on the chamber top: the camera ribbon and mic lead run over it
 const CH_H = DECK - S.deck - PLENUM - t - 6; // chamber inside height, 80
-const SPK = [50, 150]; // speaker centres: a pair, now the face lives on the bay front
+const SPK = [100]; // one SB65, centred on the left panel
+const PRAD = { w: 192, z: 52, cut: 52, frame: 65 }; // Dayton ND65-PR on the left end, into the chamber, behind a mesh disc
 const SPK_Z = 54; // frame clears the base; cut-out stays under the chamber top
 const MIC_U = 100,
 	MIC_Z = RIM - 17; // ReSpeaker Lite flat behind the front rim, above the deck: two pinholes, centred over the speakers
@@ -107,14 +108,14 @@ export function cutList() {
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: `front: a 3 × 2 groove at u ${lidW}, under the lid seam, top to bottom, so the front reads as two panels. Left panel: two ${S.cut} mm holes (cut-out assumed: check the datasheet), the SB65s screwed on from inside, the holes chamfered 45° at the back; a Ø${S.cut + 10} × 2 rebate in front of each for a black mesh disc; two Ø1.5 mic pinholes and a Ø3 LED above. Right panel: one ${EYE.w} × ${EYE.h} window, ${EYE.r} mm corners, rebated 3 mm from inside for smoked acrylic (a clear Ø8 spot for the camera); under it Ø7 knob, Ø19 TALK and three Ø7 button holes, each counterbored from inside so the parts sit inside the 15 mm in front of the printer. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, a field of Ø4 holes high in the left zone and across the bay. Cut before glue-up`
+			note: `front: a 3 × 2 groove at u ${lidW}, under the lid seam, top to bottom, so the front reads as two panels. Left panel: one ${S.cut} mm hole (cut-out assumed: check the datasheet), the SB65 screwed on from inside, the hole chamfered 45° at the back; a Ø${S.cut + 10} × 2 rebate in front for a black mesh disc; two Ø1.5 mic pinholes and a Ø3 LED above. Right panel: one ${EYE.w} × ${EYE.h} window, ${EYE.r} mm corners, rebated 3 mm from inside for smoked acrylic (a clear Ø8 spot for the camera); under it Ø7 knob, Ø19 TALK and three Ø7 button holes, each counterbored from inside so the parts sit inside the 15 mm in front of the printer. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, a field of Ø4 holes high in the left zone and across the bay. Cut before glue-up`
 		},
 		{
 			part: 'Ends',
 			qty: 2,
 			size: [inner, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'between front and back; a 7 × 5 field of Ø4 holes at 10 mm pitch low on the left, and one on the right beside the printer, black mesh behind'
+			note: `between front and back. Left: a Ø${PRAD.cut} hole into the speaker chamber, ${PRAD.w} mm from the back and ${PRAD.z} up, in a Ø${PRAD.frame + 1} × 4 rebate for the passive radiator's frame (screwed on from outside, gasketed), a black mesh disc over it; a 7 × 5 field of Ø4 holes at 10 mm pitch further back. Right: one hole field beside the printer, black mesh behind`
 		},
 		{
 			part: 'Hinge strip',
@@ -135,7 +136,7 @@ export function cutList() {
 			qty: 1,
 			size: [CH_W, CH_H, 6],
 			mat: '6 mm ply',
-			note: `the base, front wall, left end and the chamber end are its other sides; ~${chamberL()} L inside, shared by the two SB65s; glue + silicone every seam, wool inside`
+			note: `the base, front wall, left end and the chamber end are its other sides; ~${chamberL()} L inside for the SB65 and the passive radiator; glue + silicone every seam, wool lightly (keep it off the radiator)`
 		},
 		{
 			part: 'Speaker chamber, end',
@@ -271,7 +272,7 @@ export const hardware = [
 	{
 		item: 'Black steel mesh',
 		qty: '1 small sheet',
-		note: `two Ø${S.cut + 10} speaker discs and the vents; the cones sit 12 mm back, so no rattle. Brass is kept for what you touch`
+		note: `two Ø${S.cut + 10} discs (the speaker on the front, the radiator on the left end) and the vents; set 3 mm clear of the cones, so no rattle. Brass is kept for what you touch`
 	},
 	{
 		item: 'Brass slide for the camera shutter',
@@ -627,7 +628,7 @@ export function renderBox(state = {}) {
 		s += bbox(t, D - t - CH_D, t, CH_W, CH_D, CH_H + 6, 'dark', 3);
 		// amp on the floor at the left, USB sound card in front of it, Pico beside the Pi
 		s += bbox(16, 20, t, 58, 95, 3, 'pcb', 2) + bbox(28, 40, t + 3, 34, 30, 22, 'dark');
-		mark(13, Pt(45, 70, t + 3), 'Amp', 'TPA3116, 24 V');
+		mark(13, Pt(45, 70, t + 3), 'Amp', 'small class-D, swappable');
 		s += bbox(18, 128, t, 45, 20, 12, 'plain', 3);
 		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 16, 86, 2, 32, 'pcb'); // ReSpeaker Lite
 		// Pico under the deck, clear of the meter and the dial pots
@@ -780,7 +781,13 @@ export function renderBox(state = {}) {
 			PLANE_AT_W(u, D, SPK_Z),
 			`<circle class="face dark f" r="${R0}"/><circle class="hair" r="${R0 - 2}"/>${holes(R0 - 2)}`
 		);
-	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', `SB65 ×2, ${chamberL()} L shared`);
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speaker', `SB65 2.5", ${chamberL()} L`);
+	// passive radiator on the left end, behind the same mesh disc
+	s += g(
+		PLANE_AT_U(0, PRAD.w, PRAD.z),
+		`<circle class="face dark f" r="${R0}"/><circle class="hair" r="${R0 - 2}"/>${holes(R0 - 2)}`
+	);
+	mark(22, Pt(0, PRAD.w, PRAD.z), 'Passive radiator', 'ND65-PR, on the side');
 	s += g(
 		PLANE_AT_W(MIC_U, D, MIC_Z),
 		`${[-20, 20].map((x) => `<circle class="face dark f" cx="${x}" r="1.6"/>`).join('')}<circle class="led on" r="1.8"/>`
@@ -926,7 +933,8 @@ export function renderBox(state = {}) {
 		18: [[R, 780], 'r'],
 		19: [[R, 555], 'r'],
 		21: [[R, 855], 'r'],
-		20: [[R, 920], 'r']
+		20: [[R, 920], 'r'],
+		22: [[L, 870], 'l']
 	};
 	const seen = parts.filter((q) => SLOTS[q.n]).sort((a, b) => a.n - b.n);
 	const calls = st.labels

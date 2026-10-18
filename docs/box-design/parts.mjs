@@ -155,20 +155,29 @@ export const equipment = [
 	{
 		group: 'Voice + sound',
 		item: 'SB Acoustics SB65WBAC25-4, 2.5" full-range',
-		qty: 2,
+		qty: 1,
 		status: 'buy',
 		aud: 60,
 		source: 'Wagner Electronics (Sydney): price not checked',
-		why: 'a pair sharing ~0.9 L sealed: clear voice and mids, smooth to the top and wide off-axis (audioXpress bench). Twice the cone area of one gives ~6 dB more headroom for the bass EQ on the Pi; each sees ~0.45 L (Qtc ~0.95, Fc ~160 Hz), flattened by the same EQ. 10 cm apart, so play them as mono'
+		why: 'mono, in ~0.9 L with the radiator: clear voice and mids, smooth to the top and wide off-axis (audioXpress bench). Sd 20 cm², Xmax ±2.65 mm (Vd ~5.3 cm³), 20 W rated'
 	},
 	{
 		group: 'Voice + sound',
-		item: 'TPA3116 2 × 50 W amp board',
+		item: 'Dayton Audio ND65-PR, 2.5" passive radiator',
+		qty: 1,
+		status: 'buy',
+		aud: 30,
+		source: 'Wagner / Parts Express: price not checked',
+		why: 'on the left end, into the speaker chamber: bass from ~150 Hz sealed down toward 80–90 Hz, no bigger box. Vd ~7.8 cm³, 1.5× the SB65 (the rule of thumb wants 2×, so the Pi’s EQ high-passes under the tuning). Tune with its 4.3 g mass disc: bare ~94 Hz, with the whole disc ~60 Hz (rough sums; model in WinISD first)'
+	},
+	{
+		group: 'Voice + sound',
+		item: 'Small class-D amp board, 2 channel (TPA3116 / TPA3118 mini)',
 		qty: 1,
 		status: 'buy',
 		aud: 30,
 		source: 'Altronics / Jaycar / Amazon AU',
-		why: 'one channel per SB65 (~82 dB/2.83 V); the bass EQ eats headroom; runs on 12–24 V'
+		why: 'a separate module on the floor: line in from the sound card, speaker out on screw terminals, power off the 24 V lead, so it swaps without touching the Pi. One channel drives the SB65 (~82 dB/2.83 V; the bass EQ eats headroom, and a limiter keeps it under 20 W); the other is spare for tinkering'
 	},
 	{
 		group: 'Voice + sound',
