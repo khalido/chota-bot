@@ -80,6 +80,32 @@ export const equipment = [
 		why: 'the Pi 5 needs the narrow 22-pin end'
 	},
 
+	{
+		group: 'Screen + camera',
+		item: 'Pimoroni Inky Impression 4.0" (Spectra 6, 600 × 400)',
+		qty: 1,
+		status: 'buy',
+		source: 'Pimoroni AU: price not checked',
+		why: 'on the printer lid: the day, readable with the box shut, no power between updates; 103 × 78 board fits behind the slot. Pi 5 GPIO header over a 40-pin ribbon (bench-test the length)'
+	},
+	{
+		group: 'Screen + camera',
+		item: 'Small OLEDs, amber or yellow: 2 × 1.3" 128 × 64, 1 × 2.23" 128 × 32',
+		qty: 3,
+		status: 'buy',
+		source: 'AliExpress / Core Electronics: price not checked',
+		why: 'on the deck: what WHO and WHAT are set to, and what chota is doing. Run by the Pico, so they change the instant a dial turns'
+	},
+	{
+		group: 'Screen + camera',
+		item: 'Smoked acrylic, 2–3 mm offcut',
+		qty: 1,
+		status: 'buy',
+		aud: 10,
+		source: 'Bunnings / a plastics shop',
+		why: 'over the OLED windows: black until lit'
+	},
+
 	// audio
 	{
 		group: 'Voice + sound',

@@ -41,6 +41,13 @@ const TALK_U = 115,
 	TALK_Z = RIM - 17; // on the rim between mic and camera
 const CAM_U = 168,
 	CAM_Z = RIM - 17; // front rim, above the deck
+const INK = { x: 39, y: 28, bw: 103, bd: 78, aw: 85, ad: 56 }; // Inky Impression 4": board and active area, on the service lid (x from its left edge, y from the hinge)
+const OLED = [
+	// [u, w, window w, window d, text]: amber OLEDs behind smoked acrylic, run by the Pico
+	[48, 55, 30, 15, 'KID2'],
+	[208, 55, 30, 15, 'WEEKEND'],
+	[143, 143, 66, 15, 'LISTENING…']
+];
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
 /** Air inside the speaker chamber, litres, before the drivers and wool take their share. */
@@ -108,7 +115,7 @@ export function cutList() {
 			qty: 1,
 			size: [divU - t - gap, D - t - S.strip - gap, S.deck],
 			mat: '9 mm birch ply',
-			note: 'lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it'
+			note: 'lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); three OLED windows (36 × 21 behind each dial, 72 × 21 by PRINT) under smoked acrylic; 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it'
 		},
 		{
 			part: 'Deck cleats',
@@ -190,7 +197,7 @@ export function cutList() {
 			qty: 1,
 			size: [svcW - gap, lidD - gap, 6],
 			mat: '6 mm ply',
-			note: 'slot 90 × 5 with a chamfered mouth, at least 15 mm clear of the front strip; angled guide under it'
+			note: `slot 90 × 5 with a chamfered mouth, at least 15 mm clear of the front strip; angled guide under it. Window ${INK.aw + 1} × ${INK.ad + 1} for the 4" e-ink, ${Math.round(exitW - S.strip - 2 - INK.y - INK.bd)} mm behind the slot; its board clips under the skin`
 		}
 	];
 }
@@ -361,10 +368,17 @@ export function renderBox(state = {}) {
 	const slotX = PR.u + PR.pw / 2 - 45 - lidW,
 		slotY = exitW - S.strip - 2;
 	const slotDraw = `<rect class="cut-fill" x="${f1(slotX)}" y="${f1(slotY)}" width="90" height="5" rx="1"/>`;
-	const flapOuter = `<rect class="hair" x="${t}" y="${t}" width="${W - lidW - 2 * t}" height="${lidD - 2 * t}"/>${slotDraw}
+	const inkAx = INK.x + (INK.bw - INK.aw) / 2,
+		inkAy = INK.y + (INK.bd - INK.ad) / 2;
+	const inkDraw = `<rect class="face dark t" x="${inkAx - 3}" y="${inkAy - 3}" width="${INK.aw + 6}" height="${INK.ad + 6}" rx="2"/><rect class="paper" x="${inkAx}" y="${inkAy}" width="${INK.aw}" height="${INK.ad}" stroke="none"/>
+    <rect class="face accent t" x="${inkAx + 6}" y="${inkAy + 6}" width="18" height="18" rx="2"/>
+    ${[9, 16, 23].map((y, i) => `<line class="paper-ink" x1="${inkAx + 30}" y1="${inkAy + y}" x2="${inkAx + (i ? 66 : 78)}" y2="${inkAy + y}"/>`).join('')}
+    ${[34, 41, 48].map((y, i) => `<line class="paper-ink" x1="${inkAx + 6}" y1="${inkAy + y}" x2="${inkAx + (i % 2 ? 58 : 74)}" y2="${inkAy + y}"/>`).join('')}`;
+	const flapOuter = `<rect class="hair" x="${t}" y="${t}" width="${W - lidW - 2 * t}" height="${lidD - 2 * t}"/>${slotDraw}${inkDraw}
     <rect class="face brass t" x="${(W - lidW) / 2 - 12}" y="${lidD - 6}" width="24" height="4" rx="2"/>`;
 	const flapInner = `<rect class="hair" x="${t}" y="${t}" width="${W - lidW - 2 * t}" height="${lidD - 2 * t}"/>
-    <rect class="cut-fill" x="${f1(slotX)}" y="${f1(lidD - slotY - 5)}" width="90" height="5" rx="1"/>`;
+    <rect class="cut-fill" x="${f1(slotX)}" y="${f1(lidD - slotY - 5)}" width="90" height="5" rx="1"/>
+    <rect class="face pcb t" x="${INK.x}" y="${lidD - INK.y - INK.bd}" width="${INK.bw}" height="${INK.bd}" rx="2"/>`;
 	const flap = () =>
 		slab({
 			u0: lidW,
@@ -649,6 +663,12 @@ export function renderBox(state = {}) {
 		bcyl(90, 148, DECK, 7, 2, 'brass') +
 		rod(Pt(90, 148, DECK + 2), Pt(90, 142, DECK + 16), 4) +
 		bbox(82, 130, DECK, 16, 34, 9, 'brass', 2);
+	// amber OLEDs: what each dial is set to, and what chota is doing
+	for (const [u, w, ow, od, txt] of OLED)
+		dk += g(
+			BTOP(u - ow / 2 - 3, w - od / 2 - 3, DECK),
+			`<rect class="glass" width="${ow + 6}" height="${od + 6}" rx="2"/><rect class="screen-on" x="3" y="3" width="${ow}" height="${od}"/><text class="screen-text" x="${3 + ow / 2}" y="${3 + od / 2 + 2.5}" text-anchor="middle" font-size="7">${txt}</text>`
+		);
 	// PRINT
 	dk +=
 		bcyl(205, 135, DECK, 20, 3, 'brass') +
@@ -660,6 +680,7 @@ export function renderBox(state = {}) {
 		mark(8, Pt(124, 86, DECK + 4), 'Needle meter', 'minutes to the bus');
 		mark(9, Pt(212, 92, DECK + 20), 'WHO + WHAT', 'two dials, wooden knobs');
 		mark(10, Pt(64, 142, DECK + 16), 'Toggles', '3 mini + 1 covered');
+		mark(18, Pt(143, 143, DECK), 'OLEDs', '3 amber: dial values + status');
 	}
 
 	// ---- walls in front ----
@@ -724,6 +745,12 @@ export function renderBox(state = {}) {
         ${[10, 18, 26, 34, 42].map((y, i) => `<line class="paper-ink" x1="8" y1="${y}" x2="${i % 2 ? 60 : 72}" y2="${y}"/>`).join('')}`
 			);
 			mark(4, Pt(PR.u + PR.pw / 2, exitW, H + 40), 'Paper slot', 'in the service lid, 90 × 5');
+			mark(
+				17,
+				Pt(lidW + INK.x + INK.bw / 2, S.strip + INK.y + INK.bd / 2, H),
+				'E-ink',
+				'Inky 4", shows the day shut'
+			);
 		}
 	}
 	if (flapA > 20)
@@ -785,7 +812,9 @@ export function renderBox(state = {}) {
 		12: [[R, 375], 'r'],
 		8: [[R, 510], 'r'],
 		7: [[R, 600], 'r'],
-		14: [[R, 690], 'r']
+		14: [[R, 690], 'r'],
+		17: [[R, 230], 'r'],
+		18: [[R, 780], 'r']
 	};
 	const seen = parts.filter((q) => SLOTS[q.n]).sort((a, b) => a.n - b.n);
 	const calls = st.labels
