@@ -45,12 +45,12 @@ export const equipment = [
 	// screen and camera
 	{
 		group: 'Screen + camera',
-		item: 'Waveshare 10.1" DSI LCD (C), 1280×800',
+		item: 'Waveshare 8" DSI LCD (C), 1280×800, 194 × 119 mm',
 		qty: 1,
 		status: 'buy',
-		aud: 130,
-		source: 'Core Electronics',
-		why: 'the lid screen; dimmable from software'
+		aud: 125,
+		source: 'Waveshare US$79 (AU stockist and price not checked)',
+		why: 'the lid screen; dimmable from software (0–255 in sysfs). Remove its Pi-mounting standoffs: the lid has ~9 mm behind the glass'
 	},
 	{
 		group: 'Screen + camera',
@@ -154,12 +154,12 @@ export const equipment = [
 	},
 	{
 		group: 'Voice + sound',
-		item: 'Dayton Audio ND91-8, 3.5" full-range',
-		qty: 2,
+		item: 'SB Acoustics SB65WBAC25-4, 2.5" full-range',
+		qty: 1,
 		status: 'buy',
-		aud: 70,
-		source: 'NB Audio / Soundlabs: price not confirmed, ask',
-		why: 'near-Nest sound: 5 mm cone travel, one ~1.9 L sealed chamber for the pair, bass EQ on the Pi'
+		aud: 60,
+		source: 'Wagner Electronics (Sydney): price not checked',
+		why: 'mono: clear voice and mids, smooth to the top and wide off-axis (audioXpress bench); ~0.9 L sealed, bass EQ on the Pi to ~90–100 Hz at full kitchen volume. A second channel of the amp is spare for a tweeter later'
 	},
 	{
 		group: 'Voice + sound',
@@ -168,7 +168,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 30,
 		source: 'Altronics / Jaycar / Amazon AU',
-		why: 'the ND91s are 82 dB/2.83 V and the bass EQ eats headroom; runs on 12–24 V'
+		why: 'the SB65 is ~82 dB/2.83 V and the bass EQ eats headroom; runs on 12–24 V'
 	},
 	{
 		group: 'Voice + sound',
