@@ -14,7 +14,7 @@ Layout: the left zone (244 mm wide) holds a recessed control deck (two dials, a 
 | Strip cleat | 1 | 400 × 12 × 12 | hardwood | inside the back wall's top; screw the strip down through it |
 | Speaker chamber, back | 1 | 226 × 99 × 6 | 6 mm ply | one chamber for both drivers: the base, front wall, left end and divider are its other sides; ~1.9 L inside; glue + silicone every seam, wool inside |
 | Speaker chamber, top | 1 | 226 × 90 × 6 | 6 mm ply | the front of the deck rests on 4 mm strips along it; the gap carries the camera ribbon and mic lead |
-| Deck | 1 | 225 × 207 × 9 | 9 mm birch ply | lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); three OLED windows (36 × 21 behind each dial, 72 × 21 by PRINT) under smoked acrylic; 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it |
+| Deck | 1 | 225 × 207 × 9 | 9 mm birch ply | lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); three OLED windows (36 × 21 behind each dial, 62 × 34 by PRINT) under smoked acrylic; 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it |
 | Deck cleats | 2 | 148 × 12 × 12 | pine | on the left end and divider, top 109 mm above the base |
 | Lid frame, front | 1 | 243 × 14 × 12 | hardwood | 7.5 mm rebate for the screen glass, all four rails |
 | Lid frame, back | 1 | 243 × 14 × 20 | hardwood | hinges and chain screw into this, never the ply |

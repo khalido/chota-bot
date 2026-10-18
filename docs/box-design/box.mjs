@@ -46,7 +46,7 @@ const OLED = [
 	// [u, w, window w, window d, text]: amber OLEDs behind smoked acrylic, run by the Pico
 	[48, 55, 30, 15, 'KID2'],
 	[208, 55, 30, 15, 'WEEKEND'],
-	[143, 143, 66, 15, 'LISTENING…']
+	[143, 143, 56, 28, 'LISTENING…'] // 2.42" status
 ];
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
@@ -115,7 +115,7 @@ export function cutList() {
 			qty: 1,
 			size: [divU - t - gap, D - t - S.strip - gap, S.deck],
 			mat: '9 mm birch ply',
-			note: 'lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); three OLED windows (36 × 21 behind each dial, 72 × 21 by PRINT) under smoked acrylic; 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it'
+			note: 'lifts out with its wiring; nothing deep over the speaker chamber (front 90 mm); three OLED windows (36 × 21 behind each dial, 62 × 34 by PRINT) under smoked acrylic; 30 × 10 slot at the front-left corner for the ribbon and mic lead; notch the front edge 90 × 3 if the mic board needs it'
 		},
 		{
 			part: 'Deck cleats',
@@ -680,7 +680,7 @@ export function renderBox(state = {}) {
 		mark(8, Pt(124, 86, DECK + 4), 'Needle meter', 'minutes to the bus');
 		mark(9, Pt(212, 92, DECK + 20), 'WHO + WHAT', 'two dials, wooden knobs');
 		mark(10, Pt(64, 142, DECK + 16), 'Toggles', '3 mini + 1 covered');
-		mark(18, Pt(143, 143, DECK), 'OLEDs', '3 amber: dial values + status');
+		mark(18, Pt(143, 143, DECK), 'OLEDs', '3 amber: dials + status');
 	}
 
 	// ---- walls in front ----

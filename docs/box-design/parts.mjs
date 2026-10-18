@@ -85,16 +85,26 @@ export const equipment = [
 		item: 'Pimoroni Inky Impression 4.0" (Spectra 6, 600 × 400)',
 		qty: 1,
 		status: 'buy',
-		source: 'Pimoroni AU: price not checked',
+		aud: 151,
+		source: 'Pakronics (in stock, 7–10 days); not at Core Electronics',
 		why: 'on the printer lid: the day, readable with the box shut, no power between updates; 103 × 78 board fits behind the slot. Pi 5 GPIO header over a 40-pin ribbon (bench-test the length)'
 	},
 	{
 		group: 'Screen + camera',
-		item: 'Small OLEDs, amber or yellow: 2 × 1.3" 128 × 64, 1 × 2.23" 128 × 32',
-		qty: 3,
+		item: 'Waveshare 2.42" OLED, 128 × 64 (yellow "(C)" if stocked)',
+		qty: 1,
 		status: 'buy',
-		source: 'AliExpress / Core Electronics: price not checked',
-		why: 'on the deck: what WHO and WHAT are set to, and what chota is doing. Run by the Pico, so they change the instant a dial turns'
+		aud: 24,
+		source: 'Core Electronics / Little Bird',
+		why: 'on the deck by PRINT: what chota is doing. Run by the Pico'
+	},
+	{
+		group: 'Screen + camera',
+		item: '1.3" OLED, 128 × 64, I2C (yellow if stocked)',
+		qty: 2,
+		status: 'buy',
+		source: 'Core Electronics: price not checked',
+		why: 'behind WHO and WHAT: what each dial is set to, the instant it turns'
 	},
 	{
 		group: 'Screen + camera',
