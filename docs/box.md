@@ -5,7 +5,8 @@ The Pi 5 counter-top box: thermal printer, a control deck of dials and a big PRI
 ## Status (2026-10-15)
 
 - **Running today:** the X230 (`pop-os`), headless, Node 24. The Pi 5 + Active Cooler + PSU + Pico 2 WH + panel parts are on hand (June 2026 order, received); no screens yet. Next: Phase 1 below.
-- **Still to buy:** microSD (A2, 32–64GB), LED resistors, the lid screen (Waveshare 8" DSI LCD (C), 194 × 119, v11) and a 300–500 mm 22-pin DSI cable for the Pi 5, ReSpeaker Lite (bare USB board), one SB Acoustics SB65WBAC25-4 (Wagner) + a TPA3116 amp + a 24 V 5 A brick with a DC Y-splitter + USB sound card, a TALK button, Pi Camera Module 3 + Pi 5 camera cable, the face (GlowBit 8×8 + level shifter + 24→5 V buck), an LD2450 radar, an SK6812 strip, three small buttons, an analog panel meter, JST-XH connectors, a soldering iron.
+- **v1 (decided 18 Oct 2026):** the printer, the 8" lid screen, sound out (one SB65, amp, sound card) and the face (the Pi drives it; the young library is accepted). PRINT and the volume knob go on the Pi's own pins through the `hw.py` helper. Later: e-ink, mic + TALK, deck OLEDs, needle meter, camera, radar, light strip, small buttons, passive radiator, and the Pico with the deck. The box is still cut for the full design. `parts.mjs` marks each part buy or later.
+- **Still to buy for v1:** microSD (A2, 32–64GB), the lid screen (Waveshare 8" DSI LCD (C)) and a 300–500 mm 22-pin DSI cable, one SB Acoustics SB65WBAC25-4 (Wagner) + a small 2-channel class-D amp + a 24 V 5 A brick with a DC Y-splitter, panel DC jack and 7.5 A fuse + USB sound card, the face (GlowBit 8×8 + level shifter + 24→5 V buck) + smoked acrylic, JST-XH connectors, right-angle plugs, a soldering iron. About A$450.
 - **Open calls:** see §Open questions at the end.
 
 ## Phase 1 — the Pi as the always-on home server (no screens yet)
@@ -57,9 +58,9 @@ The Pi deltas only — from step 4 on, [`deploy.md`](deploy.md) §First-time boo
 ## Build order
 
 1. Pi 5 arrives → first boot (above) → headless server takes over from the X230, sitting bare on a shelf for now.
-2. Breadboard-prototype the controls (Pico + encoder/pots + button) against `POST /api/print/[kind]`.
-3. Buy the Waveshare 10.1" DSI LCD (C) + a 22→15-pin FPC adapter cable; wire the lid `/clock` kiosk (it also shows the WHO/WHAT selection) + backlight schedule.
-4. Buy a soldering iron; build the box; solder panel components; move everything in.
+2. Bench v1 with no wood: the 8" screen on the long DSI cable (`/clock` kiosk + backlight schedule), the face on GPIO 13 through the level shifter, PRINT and the knob on the Pi's pins, and the 24 V brick running the printer and the amp together (listen for ticks). Read the printer brick's label for its current.
+3. Lay the real face, buttons and knob against the 15 mm in front of the printer; mock the paper path in a cardboard box; check the right-angle plugs fit the printer.
+4. Build the box (front wall cut last), fit v1, heat-soak with a long print job. The deck, voice and e-ink follow.
 
 ## The box ("steampunk appliance")
 
@@ -153,7 +154,5 @@ Every physical device is a dumb client of the chota server. No device-specific l
 
 ## Open questions
 
-- Pi arrival → when to start the parallel run against the X230.
-- Hostname: `chota` (plan) vs keeping `pop-os` (what the docs, Caddy and Telegram links use today).
 - Pots vs encoder for the WHAT dial (bake-off on the breadboard).
 - Printer bay dimensions: measure the real MUNBYN before cutting wood.

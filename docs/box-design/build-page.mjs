@@ -206,7 +206,7 @@ ${
 </section>
 
 <section id="equipment" role="tabpanel" aria-labelledby="tab-equipment" hidden>
-<p>Everything electronic that goes in the box. <b>About $${toBuy()} still to buy</b> (prices approximate, AUD); the Pi, printer and control parts are on hand.</p>
+<p>Everything electronic that goes in the box. <b>About $${toBuy()} to buy for v1</b> (prices approximate, AUD): the printer, the lid screen, sound out and the face, with PRINT and the volume knob on the Pi's pins. "Later" parts wait for the deck, voice and the e-ink (about $${equipment.filter((e) => e.status === 'later').reduce((n, e) => n + (e.aud ?? 0) * e.qty, 0)} priced, some not yet). The Pi, printer and control parts are on hand.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>A$</th><th>Why</th></tr></thead>
 <tbody>${eqRows}</tbody>

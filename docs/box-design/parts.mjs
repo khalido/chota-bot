@@ -1,5 +1,7 @@
 // The electronics and printer that go in the box: what's on hand, what to buy.
 // Prices are AUD, approximate (the source named); "have" rows carry no price.
+// v1 is the printer, the lid screen, the speaker and the face, with PRINT and the volume knob on the Pi's
+// pins; "later" marks what waits for the deck, voice and the e-ink. The box is cut for all of it.
 // The box's own fittings (hinges, magnets, feet) are `hardware` in box.mjs.
 
 export const equipment = [
@@ -65,7 +67,7 @@ export const equipment = [
 		group: 'Screen + camera',
 		item: 'Pi Camera Module 3 (standard)',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 50,
 		source: 'Core Electronics',
 		why: 'reads a flyer held up; autofocus up close. Behind a clear spot in the eye window'
@@ -74,7 +76,7 @@ export const equipment = [
 		group: 'Screen + camera',
 		item: 'Pi 5 camera ribbon, 300 mm',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 5,
 		source: 'Core Electronics',
 		why: 'the Pi 5 needs the narrow 22-pin end'
@@ -84,7 +86,7 @@ export const equipment = [
 		group: 'Screen + camera',
 		item: 'Waveshare 4.2" e-ink module, 400 × 300, black/white/red (WS-13454)',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 58,
 		source: 'Core Electronics (supplier stock, ~1–2 weeks)',
 		why: 'on the printer lid: the day, readable with the box shut, no power between updates; 103 × 78.5 board fits behind the slot. Bare SPI module on an 8-wire cable to the Pi’s pins; check its Pi 5 GPIO support'
@@ -93,7 +95,7 @@ export const equipment = [
 		group: 'Screen + camera',
 		item: 'Waveshare 2.42" OLED, 128 × 64 (yellow "(C)" if stocked)',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 24,
 		source: 'Core Electronics / Little Bird',
 		why: 'on the deck by PRINT: what chota is doing. Run by the Pico'
@@ -102,7 +104,7 @@ export const equipment = [
 		group: 'Screen + camera',
 		item: '1.3" OLED, 128 × 64, I2C (yellow if stocked)',
 		qty: 2,
-		status: 'buy',
+		status: 'later',
 		source: 'Core Electronics: price not checked',
 		why: 'behind WHO and WHAT: what each dial is set to, the instant it turns'
 	},
@@ -138,7 +140,7 @@ export const equipment = [
 		group: 'Voice + sound',
 		item: 'Seeed ReSpeaker Lite (2-mic, XU316, USB)',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 43,
 		source: 'Core Electronics (bare board, not the A$85 kit)',
 		why: 'hears you, behind the front rim. In v1 it only listens; TALK pauses all sound, so echo is no problem'
@@ -147,7 +149,7 @@ export const equipment = [
 		group: 'Voice + sound',
 		item: 'Momentary push button, 16–19 mm brass, short body (TALK)',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 8,
 		source: 'Jaycar',
 		why: 'hold: the box goes quiet and listens; under the face, wired to the Pico. Its body must fit the 15 mm in front of the printer: check the depth before buying'
@@ -165,7 +167,7 @@ export const equipment = [
 		group: 'Voice + sound',
 		item: 'Dayton Audio ND65-PR, 2.5" passive radiator',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 30,
 		source: 'Wagner / Parts Express: price not checked',
 		why: 'on the left end, into the speaker chamber: bass from ~150 Hz sealed down toward 80–90 Hz, no bigger box. Vd ~7.8 cm³, 1.5× the SB65 (the rule of thumb wants 2×, so the Pi’s EQ high-passes under the tuning). Tune with its 4.3 g mass disc: bare ~94 Hz, with the whole disc ~60 Hz (rough sums; model in WinISD first)'
@@ -227,7 +229,7 @@ export const equipment = [
 		item: 'Rotary encoder with button (EC11)',
 		qty: 1,
 		status: 'have',
-		why: 'the knob under the eye: volume; counterbored into the bay front'
+		why: 'the knob under the eye: volume; counterbored into the bay front; on the Pi’s pins in v1'
 	},
 	{
 		group: 'Controls',
@@ -236,12 +238,12 @@ export const equipment = [
 		status: 'have',
 		why: 'deck toggles; the chunky one under a cover'
 	},
-	{ group: 'Controls', item: '30 mm red LED arcade button', qty: 1, status: 'have', why: 'PRINT' },
+	{ group: 'Controls', item: '30 mm red LED arcade button', qty: 1, status: 'have', why: 'PRINT; on a Pi pin in v1' },
 	{
 		group: 'Controls',
 		item: 'Small momentary buttons, 6–8 mm brass',
 		qty: 3,
-		status: 'buy',
+		status: 'later',
 		aud: 5,
 		source: 'Jaycar / Altronics',
 		why: 'under the eye, beside TALK; jobs to settle'
@@ -250,7 +252,7 @@ export const equipment = [
 		group: 'Controls',
 		item: 'HLK-LD2450 24 GHz radar',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		source: 'AliExpress / Amazon AU: price not checked',
 		why: 'where people are, by angle and distance, up to 3 at once; wakes the screen and steers the light strip. On the Pico’s UART, behind a window with no metal'
 	},
@@ -258,7 +260,7 @@ export const equipment = [
 		group: 'Controls',
 		item: 'SK6812 strip, 5 mm wide, 60/m, ~0.4 m',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		source: 'Core Electronics: price not checked',
 		why: 'in an aluminium channel on the plinth, under the overhang: the LEDs facing whoever walks up wash the bench dimly. Run by the Pico'
 	},
@@ -267,7 +269,7 @@ export const equipment = [
 		group: 'Controls',
 		item: '220–470 Ω resistor assortment',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 8,
 		source: 'Jaycar',
 		why: 'one per LED'
@@ -276,7 +278,7 @@ export const equipment = [
 		group: 'Controls',
 		item: 'Analog panel meter, 0–1 mA',
 		qty: 1,
-		status: 'buy',
+		status: 'later',
 		aud: 15,
 		source: 'Jaycar / Altronics',
 		why: 'needle meter: minutes to the bus'
