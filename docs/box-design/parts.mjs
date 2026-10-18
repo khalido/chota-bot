@@ -108,12 +108,29 @@ export const equipment = [
 	},
 	{
 		group: 'Screen + camera',
+		item: 'GlowBit Matrix 8×8 (CE08033), WS2812B, 61 mm square',
+		qty: 1,
+		status: 'buy',
+		aud: 17,
+		source: 'Core Electronics (in stock)',
+		why: "the face, on the bay front: wake, listening, thinking, talking. The Pi drives it from one GPIO through Adafruit's Pi 5 PIO NeoPixel library (young; fallback: the Pico drives it)"
+	},
+	{
+		group: 'Screen + camera',
+		item: '74AHCT125 level shifter + 24 V → 5 V 3 A buck module',
+		qty: 1,
+		status: 'buy',
+		source: 'Core Electronics / Jaycar: price not checked',
+		why: "the LEDs want 5 V data and their own 5 V, off the 24 V lead rather than the Pi's supply"
+	},
+	{
+		group: 'Screen + camera',
 		item: 'Smoked acrylic, 2–3 mm offcut',
 		qty: 1,
 		status: 'buy',
 		aud: 10,
 		source: 'Bunnings / a plastics shop',
-		why: 'over the OLED windows: black until lit'
+		why: 'over the OLED and face windows: black until lit'
 	},
 
 	// audio
@@ -189,10 +206,10 @@ export const equipment = [
 	},
 	{
 		group: 'Controls',
-		item: 'Rotary encoder with button',
+		item: 'Rotary encoder with button (EC11)',
 		qty: 1,
 		status: 'have',
-		why: 'bake-off against the pots'
+		why: 'the knob under the face: volume; counterbored into the bay front'
 	},
 	{
 		group: 'Controls',
@@ -202,6 +219,31 @@ export const equipment = [
 		why: 'deck toggles; the chunky one under a cover'
 	},
 	{ group: 'Controls', item: '30 mm red LED arcade button', qty: 1, status: 'have', why: 'PRINT' },
+	{
+		group: 'Controls',
+		item: 'Small momentary buttons, 6–8 mm brass',
+		qty: 3,
+		status: 'buy',
+		aud: 5,
+		source: 'Jaycar / Altronics',
+		why: 'under the face; jobs to settle'
+	},
+	{
+		group: 'Controls',
+		item: 'HLK-LD2450 24 GHz radar',
+		qty: 1,
+		status: 'buy',
+		source: 'AliExpress / Amazon AU: price not checked',
+		why: 'where people are, by angle and distance, up to 3 at once; wakes the screen and steers the light strip. On the Pico’s UART, behind a window with no metal'
+	},
+	{
+		group: 'Controls',
+		item: 'SK6812 strip, 5 mm wide, 60/m, ~0.4 m',
+		qty: 1,
+		status: 'buy',
+		source: 'Core Electronics: price not checked',
+		why: 'in the base’s front edge; the LEDs facing whoever walks up glow dimly. Run by the Pico'
+	},
 	{ group: 'Controls', item: '10 mm diffused LEDs', qty: 25, status: 'have', why: 'status lights' },
 	{
 		group: 'Controls',
@@ -266,14 +308,6 @@ export const equipment = [
 		status: 'later',
 		aud: 10,
 		why: 'for the chunky toggle'
-	},
-	{
-		group: 'Later',
-		item: 'LD2410 mmWave sensor',
-		qty: 1,
-		status: 'later',
-		aud: 10,
-		why: 'wake the screen when someone walks up'
 	}
 ];
 

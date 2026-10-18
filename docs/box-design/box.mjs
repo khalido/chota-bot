@@ -48,6 +48,14 @@ const OLED = [
 	[208, 55, 30, 15, 'WEEKEND'],
 	[143, 143, 56, 28, 'LISTENING…'] // 2.42" status
 ];
+// The face on the bay front, centred on the bay: a GlowBit 8×8 (61 mm square, WS2812B) behind smoked acrylic,
+// the LD2450 radar behind a plain window under it, then the knob and three small buttons, two thin vents at the foot
+const FACE = { u: (bayU + W - t) / 2, z: 112, board: 61, n: 8 };
+const RADAR = { z: 64, w: 50, h: 12 }; // window: no metal in front of a 24 GHz radar
+const CTRL_Z = 38,
+	KNOB_U = FACE.u - 38,
+	BTN_U = [FACE.u + 4, FACE.u + 24, FACE.u + 44];
+const STRIP = { z: 3, h: 6, in: 16 }; // light strip groove in the base's front edge
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
 /** Air inside the speaker chamber, litres, before the drivers and wool take their share. */
@@ -60,27 +68,33 @@ export function cutList() {
 		gap = 1;
 	const svcW = W - lidW;
 	return [
-		{ part: 'Base', qty: 1, size: [W, D, t], mat: '12 mm birch ply' },
+		{
+			part: 'Base',
+			qty: 1,
+			size: [W, D, t],
+			mat: '12 mm birch ply',
+			note: `groove ${STRIP.h + 1} × 8 along the front edge, ${STRIP.in} mm in from each end, for the light strip under frosted acrylic`
+		},
 		{
 			part: 'Front and back walls',
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'front: two 85 mm holes, each in a 104.5 × 4 mm rebate (template from a driver in hand); rim: two mic holes, TALK, camera window. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, six 8 × 24 exhaust slots high on the right of the left zone. Cut before glue-up'
+			note: `front: two 85 mm holes, each in a 104.5 × 4 mm rebate (template from a driver in hand); rim: two mic holes, TALK, camera window; bay front: ${FACE.board + 3} mm square face window, ${RADAR.w} × ${RADAR.h} radar window, Ø7 knob hole counterbored Ø14 × 7 from inside, three Ø7 button holes, two 100 × 3 vent slots at the foot. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, six 8 × 24 exhaust slots high on the right of the left zone, the bay's vents across its back. Cut before glue-up`
 		},
 		{
 			part: 'Ends',
 			qty: 2,
 			size: [inner, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'between front and back; vents low on the left, high on the right'
+			note: 'between front and back; vents low on the left; on the right a styled vent beside the printer (brass mesh behind a routed pattern)'
 		},
 		{
 			part: 'Divider',
 			qty: 1,
 			size: [inner, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: "carries both lids' inner edges; 25 mm hole for USB"
+			note: "carries both lids' inner edges; 25 mm hole for USB; Ø10 hole low and behind the speaker chamber for the face, radar, light strip and button wires"
 		},
 		{
 			part: 'Hinge strip',
@@ -244,6 +258,11 @@ export const hardware = [
 		item: 'Closed-cell foam, 1–2 mm',
 		qty: '1 sheet',
 		note: 'gaskets: mic board, screen clips, driver frames'
+	},
+	{
+		item: 'Frosted acrylic strip, 3 mm',
+		qty: 1,
+		note: `over the light-strip groove, ${W - 2 * STRIP.in} mm long`
 	},
 	{ item: 'Polyfill (pillow stuffing)', qty: 'a handful', note: 'loosely in the speaker chamber' },
 	{
@@ -601,6 +620,26 @@ export function renderBox(state = {}) {
 			],
 			'ffc'
 		); // camera ribbon
+		// the face and radar behind the bay front; their leads cross the divider behind the chamber
+		s +=
+			bbox(
+				FACE.u - FACE.board / 2,
+				D - t - 3,
+				FACE.z - FACE.board / 2,
+				FACE.board,
+				2,
+				FACE.board,
+				'pcb'
+			) + bbox(FACE.u - 22, D - t - 3, RADAR.z - 7, 44, 2, 15, 'pcb');
+		s += path3(
+			[
+				[172, 76, t + 10],
+				[divU, 140, 30],
+				[bayU + 5, D - 30, 50],
+				[FACE.u - 20, D - t - 4, FACE.z - FACE.board / 2]
+			],
+			'cable'
+		);
 		s += path3(
 			[
 				[175, 100, t + 14],
@@ -718,13 +757,61 @@ export function renderBox(state = {}) {
 		`<rect class="face brass f" x="-16" y="-9" width="32" height="18" rx="9"/><circle class="glass" r="5"/><circle class="face dark s" r="2"/><rect class="face brass t" x="5" y="-7" width="9" height="14" rx="2"/><circle class="led on" cx="-11" cy="0" r="1.6"/>`
 	);
 	mark(15, Pt(CAM_U, D, CAM_Z), 'Camera', 'Pi Camera 3, brass shutter');
+	// the face: 8×8 pixels behind smoked acrylic, showing two eyes and a mouth; radar window, knob, buttons, foot vents
+	const fw = FACE.board + 3,
+		pitch = FACE.board / FACE.n;
+	const lit = (r, c) =>
+		((r === 2 || r === 3) && (c === 2 || c === 5)) || (r === 5 && c > 1 && c < 6);
 	s += g(
-		PLANE_AT_W(bayU + 30, D, 40),
-		Array.from(
-			{ length: 7 },
-			(_, i) => `<rect class="vent" x="${i * 15}" y="0" width="9" height="34" rx="4"/>`
-		).join('')
+		PLANE_AT_W(FACE.u - fw / 2, D, FACE.z + fw / 2),
+		`<rect class="face brass f" x="-4" y="-4" width="${fw + 8}" height="${fw + 8}" rx="3"/><rect class="glass" width="${fw}" height="${fw}" rx="2"/>${Array.from(
+			{ length: FACE.n * FACE.n },
+			(_, i) => {
+				const r = Math.floor(i / FACE.n),
+					c = i % FACE.n,
+					x = 1.5 + pitch * (c + 0.5),
+					y = 1.5 + pitch * (r + 0.5);
+				return lit(r, c)
+					? `<circle class="halo" cx="${f1(x)}" cy="${f1(y)}" r="${f1(pitch * 0.6)}"/><rect class="led on" x="${f1(x - 2.2)}" y="${f1(y - 2.2)}" width="4.4" height="4.4" rx="1"/>`
+					: `<rect class="led" x="${f1(x - 2.2)}" y="${f1(y - 2.2)}" width="4.4" height="4.4" rx="1" opacity=".35"/>`;
+			}
+		).join('')}`
 	);
+	s += g(
+		PLANE_AT_W(FACE.u - RADAR.w / 2, D, RADAR.z + RADAR.h / 2),
+		`<rect class="glass" width="${RADAR.w}" height="${RADAR.h}" rx="2"/>`
+	);
+	s += g(
+		PLANE_AT_W(KNOB_U, D, CTRL_Z),
+		`<circle class="face brass f" r="11"/><circle class="face brass t" r="8"/><line class="detail" x1="0" y1="0" x2="0" y2="-7" stroke-width="1.6"/>`
+	);
+	for (const u of BTN_U)
+		s += g(
+			PLANE_AT_W(u, D, CTRL_Z),
+			`<circle class="face brass f" r="6"/><circle class="face brass t" r="3.8"/>`
+		);
+	s += g(
+		PLANE_AT_W(FACE.u - 50, D, 22),
+		[0, 6]
+			.map((y) => `<rect class="vent" x="0" y="${y}" width="100" height="3" rx="1.5"/>`)
+			.join('')
+	);
+	mark(19, Pt(FACE.u, D, FACE.z), 'Face', '8×8 LEDs, radar under');
+	mark(21, Pt(KNOB_U, D, CTRL_Z), 'Knob + 3 buttons', 'to the Pico');
+	// light strip in the base's front edge: the LEDs facing whoever walks up glow dimly
+	const nLed = Math.floor((W - 2 * STRIP.in) / 16.7);
+	s += g(
+		PLANE_AT_W(STRIP.in, D, STRIP.z + STRIP.h),
+		`<rect class="face dark f" width="${W - 2 * STRIP.in}" height="${STRIP.h}" rx="1"/>${Array.from(
+			{ length: nLed },
+			(_, i) => {
+				const x = 8 + i * 16.7,
+					on = Math.abs(i - (nLed - 5)) < 3;
+				return `${on ? `<rect class="halo" x="${f1(x - 6)}" y="-2" width="12" height="${STRIP.h + 4}" rx="3"/>` : ''}<rect class="led${on ? ' on' : ''}" x="${f1(x - 1.5)}" y="1.5" width="3" height="3"/>`;
+			}
+		).join('')}`
+	);
+	mark(20, Pt(W - 80, D, STRIP.z + 3), 'Light strip', 'glows toward whoever is near');
 	s += g(
 		PLANE_AT_U(0, 70, 40),
 		Array.from(
@@ -810,11 +897,14 @@ export function renderBox(state = {}) {
 		5: [[R, 230], 'r'],
 		6: [[R, 320], 'r'],
 		12: [[R, 375], 'r'],
-		8: [[R, 510], 'r'],
-		7: [[R, 600], 'r'],
+		8: [[R, 495], 'r'],
+		7: [[R, 615], 'r'],
 		14: [[R, 690], 'r'],
 		17: [[R, 230], 'r'],
-		18: [[R, 780], 'r']
+		18: [[R, 780], 'r'],
+		19: [[R, 555], 'r'],
+		21: [[R, 855], 'r'],
+		20: [[R, 920], 'r']
 	};
 	const seen = parts.filter((q) => SLOTS[q.n]).sort((a, b) => a.n - b.n);
 	const calls = st.labels
