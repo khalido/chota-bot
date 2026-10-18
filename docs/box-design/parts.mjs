@@ -190,6 +190,15 @@ export const equipment = [
 	},
 	{
 		group: 'Voice + sound',
+		item: 'Panel-mount DC jack + inline blade fuse (7.5 A)',
+		qty: 1,
+		status: 'buy',
+		aud: 12,
+		source: 'Jaycar / Altronics',
+		why: 'the 24 V lead comes in through a proper socket and a fuse straight after it, before the Y-split: a short inside a wooden box blows the fuse, not the brick. Read the printer brick’s label for its rating first'
+	},
+	{
+		group: 'Voice + sound',
 		item: 'USB sound card (stereo out)',
 		qty: 1,
 		status: 'buy',

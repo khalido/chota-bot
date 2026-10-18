@@ -20,7 +20,7 @@ export const S = {
 	deck: 9
 };
 const t = S.t;
-const lidW = S.screen[0] + 2 * S.lip; // 203
+const lidW = S.screen[0] + 2 * S.lip; // 200
 const bayU = lidW; // no divider: the bay starts at the lid seam
 const bayIn = S.printer.pw + 2 * S.side; // 144
 export const W = Math.round(lidW + bayIn + t); // 356
