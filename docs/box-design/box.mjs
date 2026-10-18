@@ -7,70 +7,70 @@ export const S = {
 	t: 12, // wall and base thickness (birch ply)
 	lidT: 20, // lid and service-lid depth: 14 mm frame strips on edge + 6 mm ply skin
 	screen: [194, 119], // Waveshare 8" DSI LCD (C), from Waveshare's dimension drawing
-	lip: 4.5, // wood lip left round the screen glass
+	lip: 3, // hardwood left round the glass: the glass sits flush in a 9 mm rebate, a hairline gap all round
 	band: 50, // least plain band under the screen; the printer's depth usually makes it longer
-	driver: 64, // SB Acoustics SB65WBAC25-4, 64 mm square frame (retailer); the 56 mm cut-out is assumed: check the datasheet
+	driver: 64, // SB Acoustics SB65WBAC25-4, 64 mm square frame (retailer), mounted from inside; the 56 mm cut-out is assumed: check the datasheet
 	cut: 56,
-	strip: 42, // fixed hinge strip along the back
+	strip: 30, // fixed hinge strip along the back; concealed barrel hinges let it be narrow
 	printer: { pw: 140, pd: 175, ph: 130 }, // MUNBYN ITPP098P, measured 18 Oct 2026 (depth "about")
-	cableGap: 40, // behind the printer for its USB and power plugs
+	cableGap: 25, // behind the printer for its USB and power plugs: right-angle plugs (40 with straight ones)
 	frontGap: 15, // in front of the printer: the knob, buttons and radar behind the bay front
-	side: 3, // printer to the end wall and to the deck frame
+	side: 2, // printer to the end wall and to the deck frame
 	deckGap: 34, // deck top to the lid's inner face (knobs are 20, toggles 18)
 	deck: 9
 };
 const t = S.t;
 const lidW = S.screen[0] + 2 * S.lip; // 203
 const bayU = lidW; // no divider: the bay starts at the lid seam
-const bayIn = S.printer.pw + 2 * S.side; // 146
-export const W = Math.round(lidW + bayIn + t); // 361
+const bayIn = S.printer.pw + 2 * S.side; // 144
+export const W = Math.round(lidW + bayIn + t); // 356
 // depth: the larger of what the lid needs and what the printer needs
 export const D = Math.max(
 	S.strip + S.screen[1] + 2 * S.lip + S.band,
 	t + S.cableGap + S.printer.pd + S.frontGap + t
-); // 254
-const lidD = D - S.strip; // 212
+); // 239
+const lidD = D - S.strip; // 209
 const RIM = t + S.printer.ph + 3; // wall tops: printer + 3 mm clearance = 145
 export const H = RIM + S.lidT; // 165
 const DECK = RIM - S.deckGap; // deck top, 111
 const PR = { u: bayU + S.side, w: t + S.cableGap, z: t, ...S.printer };
 const exitW = PR.w + PR.pd - 10; // paper leaves ~10 mm behind the printer's front
-const POST = 20; // the deck frame: a 20 × 20 post at the back and a rail under the deck's right edge
+const POST = 15; // the deck frame: a 15 × 15 hardwood post at the back and a rail under the deck's right edge
 const CH_W = lidW - 2 * t; // chamber: left end to its own 12 mm end panel, which is the deck frame's front post
-const CH_D = 72; // chamber depth: the deck behind it keeps ~130 mm clear for deep controls
+const CH_D = 72; // chamber depth: the deck behind it keeps ~125 mm clear for deep controls
 const PLENUM = 4; // strips on the chamber top: the camera ribbon and mic lead run over it
 const CH_H = DECK - S.deck - PLENUM - t - 6; // chamber inside height, 80
-const SPK = [48]; // speaker centres: mono. A pair won't leave room for the face between them
+const SPK = [50, 150]; // speaker centres: a pair, now the face lives on the bay front
 const SPK_Z = 54; // frame clears the base; cut-out stays under the chamber top
-const MIC_U = 45,
-	MIC_Z = RIM - 17; // ReSpeaker Lite flat behind the front rim, above the deck
-const TALK_U = 105,
-	TALK_Z = RIM - 17; // on the rim between mic and camera
-const CAM_U = 160,
-	CAM_Z = RIM - 17; // front rim, above the deck
+const MIC_U = 100,
+	MIC_Z = RIM - 17; // ReSpeaker Lite flat behind the front rim, above the deck: two pinholes, centred over the speakers
 const svcW = W - lidW;
 const INK = { bw: 103, bd: 78.5, aw: 84.8, ad: 63.6, y: 28 }; // Waveshare 4.2" e-ink: board and active area, on the service lid (y from the hinge)
 INK.x = (svcW - INK.bw) / 2;
 const OLED = [
 	// [u, w, window w, window d, text]: amber OLEDs behind smoked acrylic, run by the Pico
-	[40, 54, 30, 15, 'KID2'],
-	[172, 54, 30, 15, 'WEEKEND'],
-	[122, 138, 56, 28, 'LISTENING…'] // 2.42" status
+	[40, 42, 30, 15, 'KID2'],
+	[166, 42, 30, 15, 'WEEKEND'],
+	[118, 126, 56, 28, 'LISTENING…'] // 2.42" status
 ];
 const KNOBS = [
-	[40, 92],
-	[172, 92]
+	[40, 80],
+	[166, 80]
 ];
-const PRINT_AT = [178, 140];
-// The face beside the speaker: a GlowBit 8×8 (61 mm square, WS2812B) inside the sealed chamber, behind smoked acrylic
-// glued over its window. The bay front carries the LD2450 radar window, the knob and three small buttons, two thin vents.
-const FACE = { u: 136, z: SPK_Z, board: 61, n: 8 };
-const BAY_C = bayU + bayIn / 2;
-const RADAR = { u: BAY_C, z: 112, w: 50, h: 12 }; // window: no metal in front of a 24 GHz radar
-const CTRL_Z = 72,
-	KNOB_U = BAY_C - 38,
-	BTN_U = [BAY_C + 4, BAY_C + 24, BAY_C + 44];
-const STRIP = { z: 3, h: 6, in: 16 }; // light strip groove in the base's front edge
+const PRINT_AT = [170, 128]; // its Ø24 body stays clear of the deck rail
+// The front is two panels, split by a 3 mm groove under the lid seam: the speakers on the left; on the right, over the
+// printer, one smoked-acrylic "eye" with the face (GlowBit 8×8, 61 mm, WS2812B), the LD2450 radar and the camera behind
+// it, and a row of controls under it: knob, TALK, three small buttons. All of it lives in the 15 mm in front of the printer.
+const PANEL_C = (lidW + W) / 2; // centre of the right panel
+const EYE = { u: PANEL_C, z: 100, w: 120, h: 70, r: 8 };
+const FACE = { u: EYE.u - EYE.w / 2 + 8 + 61 / 2, z: EYE.z, board: 61, n: 8 };
+const RADAR = { u: EYE.u + 34, z: EYE.z + 15 }; // 44 × 15 board: acrylic, never metal, in front of a 24 GHz radar
+const CAM = { u: EYE.u + 34, z: EYE.z - 14 }; // lens behind a clear Ø8 hole in the acrylic, brass slide over it
+const CTRL_Z = 40,
+	KNOB_U = PANEL_C - 43,
+	TALK_U = PANEL_C - 9,
+	BTN_U = [PANEL_C + 21, PANEL_C + 35, PANEL_C + 49];
+export const PLINTH = { h: 12, in: 10 }; // a dark plinth set 10 mm in under the base: the box floats; the light strip hides in it
 export const OPEN_AT = 110; // lid rotation: 70 deg from flat, leaning back
 
 /** Air inside the speaker chamber, litres, before the drivers and wool take their share. */
@@ -86,21 +86,35 @@ export function cutList() {
 			qty: 1,
 			size: [W, D, t],
 			mat: '12 mm birch ply',
-			note: `groove ${STRIP.h + 1} × 8 along the front edge, ${STRIP.in} mm in from each end, for the light strip under frosted acrylic`
+			note: 'sits on the plinth; 3 mm roundover on every outside edge of the box, walls and lids included'
+		},
+		{
+			part: 'Plinth, front and back',
+			qty: 2,
+			size: [W - 2 * PLINTH.in, PLINTH.h, t],
+			mat: 'hardwood, painted black',
+			note: `set ${PLINTH.in} mm in from every edge, so the box casts a shadow line and looks lifted. The light strip runs along the front piece's face, under the overhang, and washes the bench`
+		},
+		{
+			part: 'Plinth, ends',
+			qty: 2,
+			size: [D - 2 * PLINTH.in - 2 * t, PLINTH.h, t],
+			mat: 'hardwood, painted black',
+			note: 'between front and back; felt pads under the corners'
 		},
 		{
 			part: 'Front and back walls',
 			qty: 2,
 			size: [W, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: `front: one ${S.cut} mm hole in a ${S.driver + 1} mm square × 4 mm rebate for the SB65 (cut-out assumed: check its datasheet), a ${FACE.board + 3} mm square face window beside it (smoked acrylic glued over it from inside seals the chamber); rim: two mic holes, TALK, camera window; bay front: ${RADAR.w} × ${RADAR.h} radar window, Ø7 knob hole counterbored Ø14 × 7 from inside, three Ø7 button holes, two 100 × 3 vent slots at the foot. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, six 8 × 24 exhaust slots high in the left zone, the bay's vents across its back. Cut before glue-up`
+			note: `front: a 3 × 2 groove at u ${lidW}, under the lid seam, top to bottom, so the front reads as two panels. Left panel: two ${S.cut} mm holes (cut-out assumed: check the datasheet), the SB65s screwed on from inside, the holes chamfered 45° at the back; a Ø${S.cut + 10} × 2 rebate in front of each for a black mesh disc; two Ø1.5 mic pinholes and a Ø3 LED above. Right panel: one ${EYE.w} × ${EYE.h} window, ${EYE.r} mm corners, rebated 3 mm from inside for smoked acrylic (a clear Ø8 spot for the camera); under it Ø7 knob, Ø19 TALK and three Ø7 button holes, each counterbored from inside so the parts sit inside the 15 mm in front of the printer. Back: Ø22 for the Pi lead at the left, Ø16 for the 24 V lead at the right, a field of Ø4 holes high in the left zone and across the bay. Cut before glue-up`
 		},
 		{
 			part: 'Ends',
 			qty: 2,
 			size: [inner, RIM - t, t],
 			mat: '12 mm birch ply',
-			note: 'between front and back; vents low on the left; on the right a styled vent beside the printer (brass mesh behind a routed pattern)'
+			note: 'between front and back; a 7 × 5 field of Ø4 holes at 10 mm pitch low on the left, and one on the right beside the printer, black mesh behind'
 		},
 		{
 			part: 'Hinge strip',
@@ -121,14 +135,14 @@ export function cutList() {
 			qty: 1,
 			size: [CH_W, CH_H, 6],
 			mat: '6 mm ply',
-			note: `the base, front wall, left end and the chamber end are its other sides; ~${chamberL()} L inside for one SB65; glue + silicone every seam, wool inside. The face board sits in the chamber; its wires leave through one hole in the top, sealed`
+			note: `the base, front wall, left end and the chamber end are its other sides; ~${chamberL()} L inside, shared by the two SB65s; glue + silicone every seam, wool inside`
 		},
 		{
 			part: 'Speaker chamber, end',
 			qty: 1,
 			size: [CH_D, CH_H + 6, t],
 			mat: '12 mm birch ply',
-			note: 'at the lid seam: closes the chamber and is the front post of the deck frame'
+			note: "at the lid seam: closes the chamber and is the deck frame's front post. The bay front's wires cross over its top, in the plenum under the deck"
 		},
 		{
 			part: 'Speaker chamber, top',
@@ -170,14 +184,14 @@ export function cutList() {
 			qty: 1,
 			size: [lidW - gap, S.lidT - 6, t],
 			mat: 'hardwood',
-			note: '7.5 mm rebate for the screen glass, all four rails'
+			note: `${t - S.lip} mm rebate for the screen glass, all four rails: the glass sits flush with the wood, a hairline gap all round, no lip over its edge`
 		},
 		{
 			part: 'Lid frame, back',
 			qty: 1,
 			size: [lidW - gap, S.lidT - 6, 20],
 			mat: 'hardwood',
-			note: 'hinges and chain screw into this, never the ply'
+			note: 'barrel hinges and the chain go into this, never the ply'
 		},
 		{
 			part: 'Lid frame, sides',
@@ -218,7 +232,7 @@ export function cutList() {
 			qty: 1,
 			size: [svcW - gap, S.lidT - 6, 20],
 			mat: 'hardwood',
-			note: 'hinges screw into this'
+			note: 'barrel hinges go into this'
 		},
 		{
 			part: 'Service lid frame, sides',
@@ -245,9 +259,9 @@ export function cutList() {
 // The box's own fittings; electronics are in parts.mjs.
 export const hardware = [
 	{
-		item: 'Brass butt hinges, 40 mm',
-		qty: '2 pairs',
-		note: 'mortised into the hardwood back rails and hinge strip'
+		item: 'Barrel hinges, 10 mm',
+		qty: 4,
+		note: 'two per lid, drilled into the lid back rails and the hinge strip: nothing shows when shut'
 	},
 	{
 		item: 'Brass chain, about 150 mm',
@@ -255,14 +269,14 @@ export const hardware = [
 		note: 'on screw eyes in hardwood; stops the lid 20° past upright'
 	},
 	{
-		item: 'Brass mesh',
-		qty: '1 sheet',
-		note: 'two speaker grilles and the mic grille; 3–4 mm clear of the cones, held so it can’t rattle'
+		item: 'Black steel mesh',
+		qty: '1 small sheet',
+		note: `two Ø${S.cut + 10} speaker discs and the vents; the cones sit 12 mm back, so no rattle. Brass is kept for what you touch`
 	},
 	{
 		item: 'Brass slide for the camera shutter',
 		qty: 1,
-		note: 'in a routed groove over the camera window'
+		note: 'over the clear spot in the eye window'
 	},
 	{
 		item: 'Brass tear bar, 90 mm',
@@ -277,9 +291,9 @@ export const hardware = [
 		note: 'deck down onto its cleats; it lifts out as one harness'
 	},
 	{
-		item: 'Rubber feet, 8–10 mm',
+		item: 'Felt pads',
 		qty: 4,
-		note: `airflow under the box; ${H + 8}–${H + 10} mm tall overall`
+		note: `under the plinth; ${H + PLINTH.h} mm tall overall`
 	},
 	{
 		item: 'Closed-cell foam, 1–2 mm',
@@ -287,9 +301,9 @@ export const hardware = [
 		note: 'gaskets: mic board, screen clips, driver frames'
 	},
 	{
-		item: 'Frosted acrylic strip, 3 mm',
+		item: 'Aluminium LED channel with diffuser, 10 mm',
 		qty: 1,
-		note: `over the light-strip groove, ${W - 2 * STRIP.in} mm long`
+		note: `on the plinth's front, ${W - 2 * PLINTH.in - 20} mm long, holding the light strip`
 	},
 	{ item: 'Polyfill (pillow stuffing)', qty: 'a handful', note: 'loosely in the speaker chamber' },
 	{
@@ -395,17 +409,12 @@ export function renderBox(state = {}) {
 	let s = '';
 
 	// ---- shell, back first ----
+	s += bbox(PLINTH.in, PLINTH.in, -PLINTH.h, W - 2 * PLINTH.in, D - 2 * PLINTH.in, PLINTH.h, 'dark'); // plinth
 	s += bbox(0, 0, 0, W, D, t, 'wood'); // base
 	s += bbox(0, 0, t, W, t, RIM - t, 'wood'); // back wall
 	s += bbox(W - t, t, t, t, D - 2 * t, RIM - t, 'wood'); // right end (inner face shows)
 	s += bbox(0, t, t, t, S.strip - t, RIM - t, 'wood'); // left end under the strip
-	s += bbox(0, 0, RIM, W, S.strip, S.lidT, 'wood'); // hinge strip
-	for (const u of [24, lidW - 54, lidW + 24, W - 54])
-		// fixed hinge leaves
-		s += g(
-			BTOP(u, S.strip - 7, H),
-			`<rect class="face brass t" width="30" height="7"/><circle class="detail" cx="8" cy="3.5" r="1.2"/><circle class="detail" cx="22" cy="3.5" r="1.2"/>`
-		);
+	s += bbox(0, 0, RIM, W, S.strip, S.lidT, 'wood'); // hinge strip: barrel hinges, nothing shows
 
 	// ---- service lid over the printer bay ----
 	const flapA = st.flap;
@@ -546,8 +555,7 @@ export function renderBox(state = {}) {
     <text class="screen-text" x="${lp + sw / 2}" y="${lp + sh * 0.55}" text-anchor="middle" font-size="${Math.round(sh * 0.32)}">06:52</text>
     <text class="screen-text" x="${lp + sw / 2}" y="${lp + sh * 0.72}" text-anchor="middle" font-size="9" opacity=".8">the literary clock</text>
     <text class="screen-text" x="${lp + sw / 2}" y="${lp + sh * 0.84}" text-anchor="middle" font-size="7" opacity=".6">dims at 9 pm, off at night</text>
-    <rect class="face brass f" x="${lidW / 2 - 30}" y="${lp + sh + 16}" width="60" height="20" rx="2"/>
-    <text class="face-text" x="${lidW / 2}" y="${lp + sh + 30}" text-anchor="middle" font-size="10" font-weight="600">CHOTA</text>`;
+    <text class="face-text" x="${lidW / 2}" y="${lp + sh + 30}" text-anchor="middle" font-size="10" font-weight="600" letter-spacing="3">CHOTA</text>`;
 	const lidOuter = `<rect class="hair" x="${t}" y="${t}" width="${lidW - 2 * t}" height="${lidD - 2 * t}"/>
     <rect class="face brass t" x="${lidW / 2 - 14}" y="${lidD - 6}" width="28" height="4" rx="2"/>`;
 	const lid = () =>
@@ -578,7 +586,7 @@ export function renderBox(state = {}) {
 	const lidSvg = () => {
 		const L0 = lid();
 		if (lidA > 60) {
-			mark(1, Pt(...L0.p(lidD * 0.55, S.lidT, lidW * 0.3)), 'Lid screen', '8" DSI, edge to edge');
+			mark(1, Pt(...L0.p(lidD * 0.55, S.lidT, lidW * 0.3)), 'Lid screen', '8" glass, flush in the wood');
 			mark(3, Pt(...L0.p(lidD - 2, 0, 0)), 'Lid', 'stops 20° past upright');
 		}
 		return L0.svg;
@@ -623,8 +631,8 @@ export function renderBox(state = {}) {
 		s += bbox(18, 128, t, 45, 20, 12, 'plain', 3);
 		s += bbox(MIC_U - 43, D - t - 3, MIC_Z - 16, 86, 2, 32, 'pcb'); // ReSpeaker Lite
 		// Pico under the deck, clear of the meter and the dial pots
-		s += bbox(95, 134, t, 51, 21, 1.2, 'pcb');
-		mark(14, Pt(120, 144, t + 1), 'Pico 2 WH', 'on the floor');
+		s += bbox(95, 128, t, 51, 21, 1.2, 'pcb');
+		mark(14, Pt(120, 138, t + 1), 'Pico 2 WH', 'on the floor');
 		// display ribbons
 		s += path3(
 			[
@@ -635,31 +643,37 @@ export function renderBox(state = {}) {
 			],
 			'ffc'
 		);
-		s += path3(
-			[
-				[154, 72, t + 10],
-				[120, 150, 60],
-				[CAM_U, D - t - 6, CAM_Z]
-			],
-			'ffc'
-		); // camera ribbon
-		// the face board inside the chamber, the radar behind the bay front
+		// the eye's boards in the 15 mm in front of the printer: face, radar, camera
 		s +=
 			bbox(
 				FACE.u - FACE.board / 2,
-				D - t - 3,
+				D - t - 4,
 				FACE.z - FACE.board / 2,
 				FACE.board,
-				2,
+				3,
 				FACE.board,
 				'pcb'
-			) + bbox(RADAR.u - 22, D - t - 3, RADAR.z - 7, 44, 2, 15, 'pcb');
+			) +
+			bbox(RADAR.u - 22, D - t - 4, RADAR.z - 7, 44, 3, 15, 'pcb') +
+			bbox(CAM.u - 12, D - t - 10, CAM.z - 12, 25, 9, 24, 'pcb');
+		// camera ribbon and the face, radar and controls leads: over the chamber in the plenum, across its end, down the bay front
+		s += path3(
+			[
+				[154, 72, t + 10],
+				[150, D - t - CH_D - 6, DECK - S.deck - 2],
+				[lidW - 6, D - t - 30, DECK - S.deck - 2],
+				[lidW + 14, D - t - 8, DECK - S.deck - 6],
+				[CAM.u, D - t - 10, CAM.z + 12]
+			],
+			'ffc'
+		);
 		s += path3(
 			[
 				[172, 76, t + 10],
-				[FACE.u, D - t - CH_D - 10, DECK - S.deck - 4],
-				[FACE.u, D - t - CH_D / 2, t + CH_H + 2],
-				[FACE.u - 20, D - t - 4, FACE.z + FACE.board / 2]
+				[160, D - t - CH_D - 10, DECK - S.deck - 2],
+				[lidW - 4, D - t - 20, DECK - S.deck - 2],
+				[lidW + 8, D - t - 6, DECK - S.deck - 10],
+				[FACE.u - 20, D - t - 5, FACE.z + FACE.board / 2]
 			],
 			'cable'
 		);
@@ -681,9 +695,9 @@ export function renderBox(state = {}) {
 	// deck controls
 	let dk = '';
 	// analog needle meter where the deck screen was: minutes to the bus, today's max
-	dk += bbox(66, 50, DECK, 80, 52, 4, 'brass', 6);
+	dk += bbox(66, 38, DECK, 80, 52, 4, 'brass', 6);
 	dk += g(
-		BTOP(70, 54, DECK + 4),
+		BTOP(70, 42, DECK + 4),
 		`<rect class="face paper t" width="72" height="44" rx="4"/>${Array.from(
 			{ length: 11 },
 			(_, i) => {
@@ -713,17 +727,17 @@ export function renderBox(state = {}) {
 	// LEDs
 	[75, 92, 109, 126, 143].forEach((u, i) => {
 		dk +=
-			bcyl(u, 112, DECK, 5, 3, 'dark') +
-			circTop(u, 112, DECK + 3, 4, i === 1 || i === 3 ? 'led on' : 'led');
+			bcyl(u, 100, DECK, 5, 3, 'dark') +
+			circTop(u, 100, DECK + 3, 4, i === 1 || i === 3 ? 'led on' : 'led');
 	});
 	// toggles and the covered toggle
 	for (const u of [22, 38, 54]) {
-		dk += bcyl(u, 140, DECK, 6, 2, 'brass') + rod(Pt(u, 140, DECK + 2), Pt(u, 134, DECK + 18), 3.2);
+		dk += bcyl(u, 128, DECK, 6, 2, 'brass') + rod(Pt(u, 128, DECK + 2), Pt(u, 122, DECK + 18), 3.2);
 	}
 	dk +=
-		bcyl(74, 140, DECK, 7, 2, 'brass') +
-		rod(Pt(74, 140, DECK + 2), Pt(74, 134, DECK + 16), 4) +
-		bbox(66, 122, DECK, 16, 34, 9, 'brass', 2);
+		bcyl(74, 128, DECK, 7, 2, 'brass') +
+		rod(Pt(74, 128, DECK + 2), Pt(74, 122, DECK + 16), 4) +
+		bbox(66, 110, DECK, 16, 34, 9, 'brass', 2);
 	// amber OLEDs: what each dial is set to, and what chota is doing
 	for (const [u, w, ow, od, txt] of OLED)
 		dk += g(
@@ -732,15 +746,15 @@ export function renderBox(state = {}) {
 		);
 	// PRINT
 	dk +=
-		bcyl(...PRINT_AT, DECK, 20, 3, 'brass') +
+		bcyl(...PRINT_AT, DECK, 18, 3, 'brass') +
 		bcyl(...PRINT_AT, DECK + 3, 15, 8, 'accent') +
 		circTop(...PRINT_AT, DECK + 11, 9, 'accent-hi');
 	s += `<g${see}>${dk}</g>`;
 	if (lidA > 60) {
 		mark(7, Pt(...PRINT_AT, DECK + 11), 'PRINT', '30 mm red arcade');
-		mark(8, Pt(106, 76, DECK + 4), 'Needle meter', 'minutes to the bus');
+		mark(8, Pt(106, 64, DECK + 4), 'Needle meter', 'minutes to the bus');
 		mark(9, Pt(...KNOBS[1], DECK + 20), 'WHO + WHAT', 'two dials, wooden knobs');
-		mark(10, Pt(54, 134, DECK + 16), 'Toggles', '3 mini + 1 covered');
+		mark(10, Pt(54, 122, DECK + 16), 'Toggles', '3 mini + 1 covered');
 		mark(18, Pt(OLED[2][0], OLED[2][1], DECK), 'OLEDs', '3 amber: dials + status');
 	}
 
@@ -750,96 +764,84 @@ export function renderBox(state = {}) {
 		bbox(0, S.strip, t, t, D - t - S.strip, RIM - t, 'wood') +
 		bbox(0, D - t, t, W, t, RIM - t, 'wood') +
 		`</g>`;
-	// front: the speaker and the face under the mic, TALK and camera; left end: vents by the Pi
-	const grille = (r) =>
-		`<rect class="face brass f" x="${-S.driver / 2}" y="${-S.driver / 2}" width="${S.driver}" height="${S.driver}" rx="5"/><circle class="mesh" r="${r}"/>${Array.from(
-			{ length: 60 },
-			(_, i) => {
-				const rr = 3 + Math.floor(i / 6) * 3,
-					th = i * 2.4;
-				return rr < r - 1
-					? `<circle class="face dark s" cx="${f1(rr * Math.cos(th))}" cy="${f1(rr * Math.sin(th))}" r=".9"/>`
-					: '';
-			}
-		).join('')}`;
-	for (const u of SPK) s += g(PLANE_AT_W(u, D, SPK_Z), grille(S.cut / 2 - 2));
-	mark(2, Pt(SPK[0], D, SPK_Z), 'Speaker', `SB65 2.5", mono, ${chamberL()} L`);
+	// front: the seam groove; speakers and mic on the left panel; the eye and its controls on the right; left-end vents
+	s += g(PLANE_AT_W(lidW - 1.5, D, RIM), `<rect class="cut-fill" width="3" height="${RIM}"/>`);
+	const holes = (r) =>
+		Array.from({ length: 80 }, (_, i) => {
+			const rr = 3 + Math.floor(i / 8) * 3,
+				th = i * 2.4;
+			return rr < r - 1
+				? `<circle class="face wood s" cx="${f1(rr * Math.cos(th))}" cy="${f1(rr * Math.sin(th))}" r=".7" opacity=".5"/>`
+				: '';
+		}).join('');
+	const R0 = (S.cut + 10) / 2;
+	for (const u of SPK)
+		s += g(
+			PLANE_AT_W(u, D, SPK_Z),
+			`<circle class="face dark f" r="${R0}"/><circle class="hair" r="${R0 - 2}"/>${holes(R0 - 2)}`
+		);
+	mark(2, Pt(SPK[0], D, SPK_Z), 'Speakers', `SB65 ×2, ${chamberL()} L shared`);
 	s += g(
 		PLANE_AT_W(MIC_U, D, MIC_Z),
-		`<rect class="face brass f" x="-30" y="-9" width="60" height="18" rx="9"/>${[-20, 20].map((x) => `<circle class="mesh" cx="${x}" r="6"/><circle class="face dark s" cx="${x}" r="1.4"/>`).join('')}<circle class="led on" cx="0" cy="0" r="2"/>`
+		`${[-20, 20].map((x) => `<circle class="face dark f" cx="${x}" r="1.6"/>`).join('')}<circle class="led on" r="1.8"/>`
 	);
-	s += g(
-		PLANE_AT_W(TALK_U, D, TALK_Z),
-		`<circle class="face brass f" r="13"/><circle class="face brass t" r="9"/><text class="face-text" y="26" text-anchor="middle" font-size="7">TALK</text>`
-	);
-	mark(11, Pt(MIC_U, D, MIC_Z), 'Mic', 'ReSpeaker Lite, 2 mics');
-	mark(16, Pt(TALK_U, D, TALK_Z), 'TALK', 'hold: hushes, then listens');
-	s += g(
-		PLANE_AT_W(CAM_U, D, CAM_Z),
-		`<rect class="face brass f" x="-16" y="-9" width="32" height="18" rx="9"/><circle class="glass" r="5"/><circle class="face dark s" r="2"/><rect class="face brass t" x="5" y="-7" width="9" height="14" rx="2"/><circle class="led on" cx="-11" cy="0" r="1.6"/>`
-	);
-	mark(15, Pt(CAM_U, D, CAM_Z), 'Camera', 'Pi Camera 3, brass shutter');
-	// the face: 8×8 pixels behind smoked acrylic, showing two eyes and a mouth; radar window, knob, buttons, foot vents
-	const fw = FACE.board + 3,
-		pitch = FACE.board / FACE.n;
+	mark(11, Pt(MIC_U - 20, D, MIC_Z), 'Mic', 'two pinholes, ReSpeaker Lite');
+	// the eye: one smoked window holding the face (8×8, two eyes and a mouth), the radar and the camera
+	const pitch = FACE.board / FACE.n;
 	const lit = (r, c) =>
 		((r === 2 || r === 3) && (c === 2 || c === 5)) || (r === 5 && c > 1 && c < 6);
+	const ex = EYE.u - EYE.w / 2,
+		fx = FACE.u - FACE.board / 2 - ex,
+		fy = EYE.h / 2 - FACE.board / 2;
 	s += g(
-		PLANE_AT_W(FACE.u - fw / 2, D, FACE.z + fw / 2),
-		`<rect class="face brass f" x="-4" y="-4" width="${fw + 8}" height="${fw + 8}" rx="3"/><rect class="glass" width="${fw}" height="${fw}" rx="2"/>${Array.from(
+		PLANE_AT_W(ex, D, EYE.z + EYE.h / 2),
+		`<rect class="glass" width="${EYE.w}" height="${EYE.h}" rx="${EYE.r}"/>${Array.from(
 			{ length: FACE.n * FACE.n },
 			(_, i) => {
 				const r = Math.floor(i / FACE.n),
 					c = i % FACE.n,
-					x = 1.5 + pitch * (c + 0.5),
-					y = 1.5 + pitch * (r + 0.5);
+					x = fx + pitch * (c + 0.5),
+					y = fy + pitch * (r + 0.5);
 				return lit(r, c)
 					? `<circle class="halo" cx="${f1(x)}" cy="${f1(y)}" r="${f1(pitch * 0.6)}"/><rect class="led on" x="${f1(x - 2.2)}" y="${f1(y - 2.2)}" width="4.4" height="4.4" rx="1"/>`
-					: `<rect class="led" x="${f1(x - 2.2)}" y="${f1(y - 2.2)}" width="4.4" height="4.4" rx="1" opacity=".35"/>`;
+					: `<rect class="led" x="${f1(x - 2.2)}" y="${f1(y - 2.2)}" width="4.4" height="4.4" rx="1" opacity=".25"/>`;
 			}
-		).join('')}`
+		).join(
+			''
+		)}<circle class="face dark s" cx="${CAM.u - ex}" cy="${EYE.z + EYE.h / 2 - CAM.z}" r="4"/><circle class="glass" cx="${CAM.u - ex}" cy="${EYE.z + EYE.h / 2 - CAM.z}" r="2"/><rect class="face brass t" x="${CAM.u - ex + 6}" y="${EYE.z + EYE.h / 2 - CAM.z - 5}" width="8" height="10" rx="2"/>`
 	);
-	s += g(
-		PLANE_AT_W(RADAR.u - RADAR.w / 2, D, RADAR.z + RADAR.h / 2),
-		`<rect class="glass" width="${RADAR.w}" height="${RADAR.h}" rx="2"/>`
-	);
+	mark(19, Pt(FACE.u, D, FACE.z), 'Eye', 'face, radar, camera');
 	s += g(
 		PLANE_AT_W(KNOB_U, D, CTRL_Z),
 		`<circle class="face brass f" r="11"/><circle class="face brass t" r="8"/><line class="detail" x1="0" y1="0" x2="0" y2="-7" stroke-width="1.6"/>`
 	);
+	s += g(
+		PLANE_AT_W(TALK_U, D, CTRL_Z),
+		`<circle class="face brass f" r="11"/><circle class="face brass t" r="8"/><circle class="led on" r="2"/>`
+	);
 	for (const u of BTN_U)
 		s += g(
 			PLANE_AT_W(u, D, CTRL_Z),
-			`<circle class="face brass f" r="6"/><circle class="face brass t" r="3.8"/>`
+			`<circle class="face brass f" r="5.5"/><circle class="face brass t" r="3.6"/>`
 		);
+	mark(21, Pt(TALK_U, D, CTRL_Z), 'Knob, TALK, 3 buttons', 'in one row under the eye');
+	// light strip on the plinth's front, under the overhang: it washes the bench toward whoever is near
+	const nLed = Math.floor((W - 2 * PLINTH.in - 20) / 16.7);
 	s += g(
-		PLANE_AT_W(BAY_C - 50, D, 22),
-		[0, 6]
-			.map((y) => `<rect class="vent" x="0" y="${y}" width="100" height="3" rx="1.5"/>`)
-			.join('')
-	);
-	mark(19, Pt(FACE.u, D, FACE.z), 'Face', '8×8 LEDs, by the speaker');
-	mark(21, Pt(KNOB_U, D, CTRL_Z), 'Knob + 3 buttons', 'radar window above');
-	// light strip in the base's front edge: the LEDs facing whoever walks up glow dimly
-	const nLed = Math.floor((W - 2 * STRIP.in) / 16.7);
-	s += g(
-		PLANE_AT_W(STRIP.in, D, STRIP.z + STRIP.h),
-		`<rect class="face dark f" width="${W - 2 * STRIP.in}" height="${STRIP.h}" rx="1"/>${Array.from(
+		PLANE_AT_W(PLINTH.in + 10, D - PLINTH.in, -2),
+		`<rect class="face dark f" width="${W - 2 * PLINTH.in - 20}" height="6" rx="1"/>${Array.from(
 			{ length: nLed },
 			(_, i) => {
 				const x = 8 + i * 16.7,
 					on = Math.abs(i - (nLed - 5)) < 3;
-				return `${on ? `<rect class="halo" x="${f1(x - 6)}" y="-2" width="12" height="${STRIP.h + 4}" rx="3"/>` : ''}<rect class="led${on ? ' on' : ''}" x="${f1(x - 1.5)}" y="1.5" width="3" height="3"/>`;
+				return `${on ? `<ellipse class="halo" cx="${f1(x)}" cy="9" rx="12" ry="6"/>` : ''}<rect class="led${on ? ' on' : ''}" x="${f1(x - 1.5)}" y="1.5" width="3" height="3"/>`;
 			}
 		).join('')}`
 	);
-	mark(20, Pt(W - 80, D, STRIP.z + 3), 'Light strip', 'glows toward whoever is near');
+	mark(20, Pt(W - 80, D - PLINTH.in, -6), 'Light strip', 'in the plinth');
 	s += g(
-		PLANE_AT_U(0, 70, 40),
-		Array.from(
-			{ length: 6 },
-			(_, i) => `<rect class="vent" x="${i * 14}" y="0" width="8" height="34" rx="4"/>`
-		).join('')
+		PLANE_AT_U(0, 70, 50),
+		Array.from({ length: 35 }, (_, i) => `<circle class="vent" cx="${(i % 7) * 10}" cy="${Math.floor(i / 7) * 10}" r="2"/>`).join('')
 	);
 
 	// ---- closed lids last ----
@@ -889,7 +891,7 @@ export function renderBox(state = {}) {
 		ext(Pt(0, 0, 0), Pt(-44, 0, 0)) + dim(Pt(-36, 0, 0), Pt(-36, D, 0), `${D}`, [-10, 26], 'end');
 	dims +=
 		ext(Pt(W, D, H), Pt(W + 40, D, H)) +
-		dim(Pt(W + 32, D, 0), Pt(W + 32, D, H), `${H}`, [10, 6], 'start');
+		dim(Pt(W + 32, D, -PLINTH.h), Pt(W + 32, D, H), `${H + PLINTH.h}`, [10, 6], 'start');
 	if (lidA > 60) {
 		const top = Math.max(
 			...[0, S.lidT].map(
@@ -908,13 +910,11 @@ export function renderBox(state = {}) {
 	const SLOTS = {
 		3: [[L, 90], 'l'],
 		1: [[L, 180], 'l'],
-		15: [[L, 270], 'l'],
 		9: [[L, 430], 'l'],
 		10: [[L, 520], 'l'],
 		13: [[L, 610], 'l'],
 		2: [[L, 700], 'l'],
 		11: [[L, 790], 'l'],
-		16: [[L, 870], 'l'],
 		4: [[R, 120], 'r'],
 		5: [[R, 230], 'r'],
 		6: [[R, 320], 'r'],

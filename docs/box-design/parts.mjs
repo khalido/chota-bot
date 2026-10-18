@@ -50,7 +50,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 125,
 		source: 'Waveshare US$79 (AU stockist and price not checked)',
-		why: 'the lid screen; dimmable from software (0–255 in sysfs). Remove its Pi-mounting standoffs: the lid has ~9 mm behind the glass'
+		why: 'the lid screen: toughened, optically bonded glass, so it sits flush in the wood like a tablet, not a bezelled monitor; dimmable from software (0–255 in sysfs). Remove its Pi-mounting standoffs: the lid has ~9 mm behind the glass'
 	},
 	{
 		group: 'Screen + camera',
@@ -68,7 +68,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 50,
 		source: 'Core Electronics',
-		why: 'reads a flyer held up; autofocus up close'
+		why: 'reads a flyer held up; autofocus up close. Behind a clear spot in the eye window'
 	},
 	{
 		group: 'Screen + camera',
@@ -113,7 +113,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 17,
 		source: 'Core Electronics (in stock)',
-		why: "the face, on the bay front: wake, listening, thinking, talking. The Pi drives it from one GPIO through Adafruit's Pi 5 PIO NeoPixel library (young; fallback: the Pico drives it)"
+		why: "the face, in the eye window over the printer: wake, listening, thinking, talking. The Pi drives it from one GPIO through Adafruit's Pi 5 PIO NeoPixel library (young; fallback: the Pico drives it)"
 	},
 	{
 		group: 'Screen + camera',
@@ -130,7 +130,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 10,
 		source: 'Bunnings / a plastics shop',
-		why: 'over the OLED and face windows: black until lit'
+		why: 'the eye window and the OLED windows: black until lit'
 	},
 
 	// audio
@@ -145,21 +145,21 @@ export const equipment = [
 	},
 	{
 		group: 'Voice + sound',
-		item: 'Momentary push button, ~22 mm brass (TALK)',
+		item: 'Momentary push button, 16–19 mm brass, short body (TALK)',
 		qty: 1,
 		status: 'buy',
 		aud: 8,
 		source: 'Jaycar',
-		why: 'hold: the box goes quiet and listens; wired to the Pico'
+		why: 'hold: the box goes quiet and listens; under the face, wired to the Pico. Its body must fit the 15 mm in front of the printer: check the depth before buying'
 	},
 	{
 		group: 'Voice + sound',
 		item: 'SB Acoustics SB65WBAC25-4, 2.5" full-range',
-		qty: 1,
+		qty: 2,
 		status: 'buy',
 		aud: 60,
 		source: 'Wagner Electronics (Sydney): price not checked',
-		why: 'mono: clear voice and mids, smooth to the top and wide off-axis (audioXpress bench); ~0.9 L sealed, bass EQ on the Pi to ~90–100 Hz at full kitchen volume. A second channel of the amp is spare for a tweeter later'
+		why: 'a pair sharing ~0.9 L sealed: clear voice and mids, smooth to the top and wide off-axis (audioXpress bench). Twice the cone area of one gives ~6 dB more headroom for the bass EQ on the Pi; each sees ~0.45 L (Qtc ~0.95, Fc ~160 Hz), flattened by the same EQ. 10 cm apart, so play them as mono'
 	},
 	{
 		group: 'Voice + sound',
@@ -168,7 +168,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 30,
 		source: 'Altronics / Jaycar / Amazon AU',
-		why: 'the SB65 is ~82 dB/2.83 V and the bass EQ eats headroom; runs on 12–24 V'
+		why: 'one channel per SB65 (~82 dB/2.83 V); the bass EQ eats headroom; runs on 12–24 V'
 	},
 	{
 		group: 'Voice + sound',
@@ -209,7 +209,7 @@ export const equipment = [
 		item: 'Rotary encoder with button (EC11)',
 		qty: 1,
 		status: 'have',
-		why: 'the knob under the face: volume; counterbored into the bay front'
+		why: 'the knob under the eye: volume; counterbored into the bay front'
 	},
 	{
 		group: 'Controls',
@@ -226,7 +226,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 5,
 		source: 'Jaycar / Altronics',
-		why: 'under the face; jobs to settle'
+		why: 'under the eye, beside TALK; jobs to settle'
 	},
 	{
 		group: 'Controls',
@@ -242,7 +242,7 @@ export const equipment = [
 		qty: 1,
 		status: 'buy',
 		source: 'Core Electronics: price not checked',
-		why: 'in the base’s front edge; the LEDs facing whoever walks up glow dimly. Run by the Pico'
+		why: 'in an aluminium channel on the plinth, under the overhang: the LEDs facing whoever walks up wash the bench dimly. Run by the Pico'
 	},
 	{ group: 'Controls', item: '10 mm diffused LEDs', qty: 25, status: 'have', why: 'status lights' },
 	{
@@ -281,7 +281,7 @@ export const equipment = [
 		status: 'buy',
 		aud: 4,
 		source: 'Amazon AU',
-		why: 'the plugs on the Pi face the back wall with 45 mm to spare'
+		why: 'the Pi’s plugs, and the printer’s: right-angle plugs at its back take 15 mm off the box’s depth. Check they fit its sockets'
 	},
 	{
 		group: 'Wiring',
