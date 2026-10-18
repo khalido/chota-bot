@@ -167,10 +167,10 @@ export const equipment = [
 		group: 'Voice + sound',
 		item: 'Dayton Audio ND65-PR, 2.5" passive radiator',
 		qty: 1,
-		status: 'later',
+		status: 'buy',
 		aud: 30,
 		source: 'Wagner / Parts Express: price not checked',
-		why: 'on the left end, into the speaker chamber: bass from ~150 Hz sealed down toward 80–90 Hz, no bigger box. Vd ~7.8 cm³, 1.5× the SB65 (the rule of thumb wants 2×, so the Pi’s EQ high-passes under the tuning). Tune with its 4.3 g mass disc: bare ~94 Hz, with the whole disc ~60 Hz (rough sums; model in WinISD first)'
+		why: 'on the left end, into the speaker chamber: bass from ~150 Hz sealed down toward 80–90 Hz, no bigger box. Vd ~7.8 cm³, 1.5× the SB65 (the rule of thumb wants 2×, so the Pi’s EQ high-passes under the tuning). Tune with its 4.3 g mass disc: bare ~94 Hz, with the whole disc ~60 Hz (rough sums; model in WinISD first). Bought with the SB65 so its real cut-out templates the hole; fit a blanking plate first and compare sealed against radiator'
 	},
 	{
 		group: 'Voice + sound',
