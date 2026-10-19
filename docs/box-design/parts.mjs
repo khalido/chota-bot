@@ -24,11 +24,10 @@ export const equipment = [
 	},
 	{
 		group: 'Core',
-		item: 'microSD, A2, 32–64 GB',
+		item: 'microSD, 64 GB',
 		qty: 1,
-		status: 'buy',
-		aud: 20,
-		source: 'Core Electronics',
+		status: 'have',
+		source: 'flashed 17 Oct (hostname chota)',
 		why: "the Pi won't boot without it"
 	},
 	{
@@ -53,16 +52,16 @@ export const equipment = [
 		qty: 1,
 		status: 'buy',
 		aud: 125,
-		source: 'Waveshare US$79 (AU stockist and price not checked)',
+		source: 'Waveshare direct, US$79 (not stocked at Core; Core’s WS-24483 is the HDMI 8")',
 		why: 'the lid screen: toughened, optically bonded glass, so it sits flush in the wood like a tablet, not a bezelled monitor; dimmable from software (0–255 in sysfs). Remove its Pi-mounting standoffs: the lid has ~9 mm behind the glass'
 	},
 	{
 		group: 'Screen + camera',
-		item: 'DSI cable for Pi 5, 22-pin, 300–500 mm',
+		item: 'DSI cable, 22-pin to 22-pin, for the 8" (C) on the Pi 5',
 		qty: 1,
 		status: 'buy',
 		aud: 8,
-		source: 'Core Electronics (match the panel end; the official Pi display cable comes in 500 mm)',
+		source: 'check what ships with the (C) first; Core’s CE09797 is 22-to-15, the wrong one',
 		why: 'the Pi sits on the floor, so the 12–20 cm cable in the box is too short; bench-test the long one'
 	},
 	{
@@ -70,8 +69,9 @@ export const equipment = [
 		item: 'Pi Camera Module 3 (standard)',
 		qty: 1,
 		status: 'later',
-		aud: 50,
-		source: 'Core Electronics',
+		aud: 49,
+		source: 'Core Electronics, in stock; comes with a 200 mm Pi 5 cable',
+		url: 'https://core-electronics.com.au/raspberry-pi-camera-3.html',
 		why: 'reads a flyer held up; autofocus up close. Behind a clear spot in the eye window'
 	},
 	{
@@ -79,8 +79,9 @@ export const equipment = [
 		item: 'Pi 5 camera ribbon, 300 mm',
 		qty: 1,
 		status: 'later',
-		aud: 5,
-		source: 'Core Electronics',
+		aud: 4,
+		source: 'Core CE09776. Not the 457 mm flex: that is the old 15-pin cable, which doesn’t fit the Pi 5',
+		url: 'https://core-electronics.com.au/raspberry-pi-camera-fpc-adapter-cable-300mm.html',
 		why: 'the Pi 5 needs the narrow 22-pin end'
 	},
 
@@ -90,7 +91,8 @@ export const equipment = [
 		qty: 1,
 		status: 'later',
 		aud: 58,
-		source: 'Core Electronics (supplier stock, ~1–2 weeks)',
+		source: 'Core Electronics, dispatch 2–9 Nov',
+		url: 'https://core-electronics.com.au/400x300-42inch-e-ink-display-module-three-color-1.html',
 		why: 'on the printer lid: the day, readable with the box shut, no power between updates; 103 × 78.5 board fits behind the slot. Bare SPI module on an 8-wire cable to the Pi’s pins; check its Pi 5 GPIO support'
 	},
 	{
@@ -99,7 +101,8 @@ export const equipment = [
 		qty: 1,
 		status: 'later',
 		aud: 24,
-		source: 'Core Electronics / Little Bird',
+		source: 'Core Electronics WS-25742, in stock',
+		url: 'https://core-electronics.com.au/242inch-oled-display-module-128x64px.html',
 		why: 'on the deck by PRINT: what chota is doing. Run by the Pico'
 	},
 	{
@@ -116,16 +119,29 @@ export const equipment = [
 		qty: 1,
 		status: 'buy',
 		aud: 17,
-		source: 'Core Electronics (in stock)',
+		source: 'Core Electronics, in stock',
+		url: 'https://core-electronics.com.au/glowbit-matrix-8x8.html',
 		why: "the face, in the eye window over the printer: wake, listening, thinking, talking. The Pi drives it from one GPIO through Adafruit's Pi 5 PIO NeoPixel library (young; fallback: the Pico drives it)"
 	},
 	{
 		group: 'Screen + camera',
-		item: '74AHCT125 level shifter + 24 V → 5 V 3 A buck module',
+		item: 'Adafruit Pixel Shifter (ADA6066), 3.3 → 5 V for the LED data',
 		qty: 1,
 		status: 'buy',
-		source: 'Core Electronics / Jaycar: price not checked',
-		why: "the LEDs want 5 V data and their own 5 V, off the 24 V lead rather than the Pi's supply"
+		source: 'Core Electronics, in stock (the bare 74AHCT125 is out of stock)',
+		aud: 8,
+		url: 'https://core-electronics.com.au/adafruit-pixel-shifter-addressable-leds-neopixels.html',
+		why: 'the LEDs want 5 V data; the Pi\'s pins give 3.3 V',
+	},
+	{
+		group: 'Screen + camera',
+		item: 'DFRobot buck 8–28 V → 5 V 3 A (DFR0571)',
+		qty: 1,
+		status: 'buy',
+		aud: 6,
+		source: 'Core Electronics, 5 in stock',
+		url: 'https://core-electronics.com.au/dc-dc-buck-mode-power-module-8-28v-to-5v-3a.html',
+		why: "the LEDs' own 5 V off the 24 V lead, not the Pi's supply. Rated to 28 V in: fine on a regulated 24 V brick"
 	},
 	{
 		group: 'Screen + camera',
@@ -144,7 +160,8 @@ export const equipment = [
 		qty: 1,
 		status: 'later',
 		aud: 43,
-		source: 'Core Electronics (bare board, not the A$85 kit)',
+		source: 'Core Electronics, in stock (bare board, not the A$85 kit)',
+		url: 'https://core-electronics.com.au/respeaker-lite-usb-2-mic-array-seeed-studio.html',
 		why: 'hears you, behind the front rim. In v1 it only listens; TALK pauses all sound, so echo is no problem'
 	},
 	{
@@ -179,17 +196,19 @@ export const equipment = [
 		item: 'Small class-D amp board, 2 channel (TPA3116 / TPA3118 mini)',
 		qty: 1,
 		status: 'buy',
-		aud: 30,
-		source: 'Altronics / Jaycar / Amazon AU',
+		aud: 15,
+		source: 'Amazon AU ECSiNG TPA3116, no reviews yet: check it has screw terminals. Core has none that runs on 24 V',
+		url: 'https://www.amazon.com.au/dp/B0H7L64S4C',
 		why: 'a separate module on the floor: line in from the sound card, speaker out on screw terminals, power off the 24 V lead, so it swaps without touching the Pi. One channel drives the SB65 (~82 dB/2.83 V; the bass EQ eats headroom, and a limiter keeps it under 20 W); the other is spare for tinkering'
 	},
 	{
 		group: 'Voice + sound',
-		item: '24 V 5 A brick + DC Y-splitter + 2200 µF capacitor',
+		item: '24 V 5 A brick (ALITOVE, 5.5 × 2.1/2.5 mm) + DC Y-splitter + 2200 µF capacitor',
 		qty: 1,
 		status: 'buy',
-		aud: 55,
-		source: 'Jaycar / Altronics (match the printer’s DC plug)',
+		aud: 40,
+		source: 'Amazon AU A$33 for the brick; splitter and capacitor about A$7 (match the printer’s DC plug)',
+		url: 'https://www.amazon.com.au/dp/B0CRDWLDJ5',
 		why: "outside the box, one lead in: feeds the printer and the amp, and retires the printer's own brick. The capacitor sits at the amp. If prints tick in the music, give the amp its own 24 V 3 A pack (A$35)"
 	},
 	{
@@ -197,17 +216,19 @@ export const equipment = [
 		item: 'Panel-mount DC jack + inline blade fuse (7.5 A)',
 		qty: 1,
 		status: 'buy',
-		aud: 12,
-		source: 'Jaycar / Altronics',
+		aud: 22,
+		source: 'Core ADA5607 jack with 30 cm lead A$12; Amazon AU ATC fuse holder 2-pack A$10',
+		url: 'https://core-electronics.com.au/round-panel-mount-55mm21mm-dc-barrel-jack-extension-cable-30cm-long.html',
 		why: 'the 24 V lead comes in through a proper socket and a fuse straight after it, before the Y-split: a short inside a wooden box blows the fuse, not the brick. Read the printer brick’s label for its rating first'
 	},
 	{
 		group: 'Voice + sound',
-		item: 'USB sound card (stereo out)',
+		item: 'USB sound card, Adafruit ADA1475',
 		qty: 1,
 		status: 'buy',
-		aud: 15,
-		source: 'Core Electronics / Jaycar',
+		aud: 11,
+		source: 'Core Electronics, in stock',
+		url: 'https://core-electronics.com.au/usb-audio-adapter-works-with-raspberry-pi.html',
 		why: 'all playback, full quality; the Lite tops out at 16 kHz'
 	},
 
@@ -286,28 +307,40 @@ export const equipment = [
 		item: 'JST-XH pre-crimped leads + housings',
 		qty: 1,
 		status: 'buy',
-		aud: 40,
-		source: 'Jaycar / Amazon AU',
+		aud: 20,
+		source: 'Amazon AU elechawk kit (Core’s DFRobot kit is A$11 but needs crimping)',
+		url: 'https://www.amazon.com.au/dp/B08G188ZQ8',
 		why: 'Dupont loosens in a box that moves'
 	},
 	{
 		group: 'Wiring',
 		item: 'Right-angle USB-A and USB-C adapters',
-		qty: 3,
+		qty: 1,
 		status: 'buy',
-		aud: 4,
-		source: 'Amazon AU',
+		aud: 18,
+		source: 'Core ADA4432 right-angle USB-C A$7.50; USB-A from Amazon AU (2-pack A$10, not at Core)',
+		url: 'https://core-electronics.com.au/right-angle-usb-type-c-adapter-usb-3-1-gen-4-compatible.html',
 		why: 'the Pi’s plugs, and the printer’s: right-angle plugs at its back take 15 mm off the box’s depth. Check they fit its sockets'
 	},
 	{
 		group: 'Tools',
-		item: 'Pinecil soldering iron (TOL-23913)',
+		item: 'Pinecil V2 soldering iron',
 		qty: 1,
 		status: 'buy',
-		aud: 150,
-		source: 'Core Electronics, in stock (Pine64 sells the V2 direct for much less, plus shipping)',
-		url: 'https://core-electronics.com.au/pinecil-smart-mini-portable-soldering-iron.html',
+		aud: 99,
+		source: 'Amazon AU (Core has the original at A$150)',
+		url: 'https://www.amazon.com.au/dp/B096X6SG13',
 		why: 'the buck, GlowBit, amp leads, pots and meter. USB-C PD at 12–24 V'
+	},
+	{
+		group: 'Tools',
+		item: 'Soldering iron stand, spring type',
+		qty: 1,
+		status: 'buy',
+		aud: 10,
+		source: 'Amazon AU, delivery ~3 Nov (Hakko FH300 A$22, Pinecil fit unchecked)',
+		url: 'https://www.amazon.com.au/dp/B08JLJLX4D',
+		why: 'somewhere safe to put a hot iron down'
 	},
 	{
 		group: 'Tools',
@@ -331,12 +364,12 @@ export const equipment = [
 	},
 	{
 		group: 'Tools',
-		item: 'Multimeter, autoranging, continuity beep',
+		item: 'AstroAI multimeter, 4000-count, autoranging',
 		qty: 1,
 		status: 'buy',
-		aud: 45,
-		source: 'Jaycar QM1321 (stock not checked); Core’s Basic TOL-12966 is A$44, not autoranging',
-		url: 'https://www.jaycar.com.au/economy-true-rms-autorange-multimeter/p/QM1321',
+		aud: 30,
+		source: 'Amazon AU (Jaycar QM1321 A$51)',
+		url: 'https://www.amazon.com.au/dp/B0DKXTR485',
 		why: 'voltages, continuity and shorts before anything powers up'
 	},
 	{
@@ -361,12 +394,12 @@ export const equipment = [
 	},
 	{
 		group: 'Tools',
-		item: 'Brass tip cleaner (Hakko)',
+		item: 'Brass tip cleaner with holder (Weller)',
 		qty: 1,
 		status: 'buy',
-		aud: 29,
-		source: 'Core Electronics',
-		url: 'https://core-electronics.com.au/hakko-brass-sponge-solder-tip-cleaner.html',
+		aud: 17,
+		source: 'Amazon AU',
+		url: 'https://www.amazon.com.au/dp/B08FQBS97L',
 		why: 'keeps the tip tinned; a damp sponge works too'
 	},
 	{
@@ -401,22 +434,22 @@ export const equipment = [
 	},
 	{
 		group: 'Tools',
-		item: '22 AWG solid hook-up wire, 6 × 25 ft',
+		item: '22 AWG solid hook-up wire, 6 colours',
 		qty: 1,
 		status: 'buy',
-		aud: 45,
-		source: 'Core Electronics',
-		url: 'https://core-electronics.com.au/hook-up-wire-spool-set-22awg-solid-core-6-x-25-ft.html',
+		aud: 28,
+		source: 'Amazon AU TUOFENG (Core set A$45)',
+		url: 'https://www.amazon.com.au/dp/B07TX6BX47',
 		why: 'sits neatly in the breadboard'
 	},
 	{
 		group: 'Tools',
-		item: '22 AWG silicone stranded wire, 6 colours',
+		item: '22 AWG silicone stranded wire, 10 colours',
 		qty: 1,
 		status: 'buy',
-		aud: 30,
-		source: 'Core Electronics',
-		url: 'https://core-electronics.com.au/silicone-hookup-wire-kit-6-colours-stranded.html',
+		aud: 20,
+		source: 'Amazon AU BNTECHGO (Core kit A$30)',
+		url: 'https://www.amazon.com.au/dp/B01M0O1NXM',
 		why: 'flexible leads for power and anything that moves'
 	},
 	{
@@ -484,10 +517,40 @@ export const equipment = [
 		item: 'USB logic analyser, 24 MHz 8-ch (TOL-18627), optional',
 		qty: 1,
 		status: 'later',
-		aud: 49,
-		source: 'Core Electronics; works with PulseView',
-		url: 'https://core-electronics.com.au/usb-logic-analyzer-24mhz-8-channel.html',
+		aud: 30,
+		source: 'Amazon AU Lonely Binary kit; works with PulseView (Core A$49)',
+		url: 'https://www.amazon.com.au/dp/B0FKGN3JMZ',
 		why: 'shows the signals on a wire when something won’t talk'
+	},
+	{
+		group: 'Tools',
+		item: 'Raspberry Pi 5 bumper (CE09979)',
+		qty: 1,
+		status: 'buy',
+		aud: 5,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/raspberry-pi-5-bumper-case.html',
+		why: 'the bare Pi on the desk without shorting on anything; comes off for the box'
+	},
+	{
+		group: 'Tools',
+		item: 'Raspberry Pi Pico 2 WH, a spare for the bench',
+		qty: 1,
+		status: 'buy',
+		aud: 14,
+		source: 'Core Electronics CE10155',
+		url: 'https://core-electronics.com.au/raspberry-pi-pico-2-wh-with-headers.html',
+		why: 'try deck ideas (dials, OLEDs, meter) on the breadboard while the first stays with the box'
+	},
+	{
+		group: 'Tools',
+		item: 'USB-C power meter (Adafruit ADA4232), optional',
+		qty: 1,
+		status: 'later',
+		aud: 47,
+		source: 'Core Electronics',
+		url: 'https://core-electronics.com.au/multifunctional-usb-digital-tester-usb-a-and-c.html',
+		why: 'what the Pi and screen really draw'
 	},
 	{
 		group: 'Tools',
