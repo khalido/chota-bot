@@ -34,6 +34,18 @@ The look comes from two things: a short **`chota-design.md`** (warm paper colour
 - **Sharing outside the family (later).** A page someone wants public is copied, never served in place: it goes to a privacy checker first, then to its own subdomain (`share.<domain>`), a separate origin from the app, so it can never see a family session. The checker: code first (family names and numbers from `chota.config.ts`, addresses, school names, phone and email patterns, photos), then an agent pass for what code can't catch (routines, places, a kid's full name in a sentence). It returns pass or the lines to fix; a parent approves before it goes live. The shared copy is static: no login, no calls back to chota.
 - Build order: the kit and `publish_page` (links over Tailscale to test) → WhatsApp OTP and private pages → the domain and the tunnel.
 
+## Builder: an fx agent in a SvelteKit artifacts repo (KO, 20 Oct 2026)
+
+For anything bigger than a one-turn page or picture. Supersedes the Railway sandbox as the leading shape; that stays below for reference.
+
+- **The repo:** one SvelteKit app, each artifact a route (`/bhalu`), shared components in `$lib` (a countdown, a checklist, a quiz shell, a scoreboard, the explainer frame). The kit grows as artifacts need pieces, so later artifacts are faster to build. KO works on it from the Mac too. Its `AGENTS.md` and skills set the agent up for success: the stack, the kit, phone-first rules, the privacy rules, the drawing skill.
+- **The agent: the [fx](https://github.com/vercel-labs/fx) CLI** (Apache-2.0; `linux-aarch64` builds, so it runs on the Pi). No libfx: chota runs `fx ask --json --resume-id <id> "<brief>"` in the repo and reads the JSON result. `fx ask` can replace the system prompt (`--system`), pick the model and effort, and saves a session per run.
+- **One session per artifact**, not one long-running agent for all of them. A single agent would carry every artifact's context, grow without bound and mix one family chat's details into another's work. What's shared lives in the repo (kit, `AGENTS.md`, skills), not in a session. A follow-up the same day resumes that artifact's session; an older one starts fresh from the artifact's `brief.md` and `notes.md` (the agent updates `notes.md` at the end of each build) plus its code, which does the job of stripping old tool calls without editing fx's session files (their format changes between versions: `fx session migrate`).
+- **Publish early, then keep going.** The first build publishes a working page fast, a quick explainer drawing included, and chota sends the link; the agent keeps improving it (a better SVG, the extra buttons) and each later publish sends "updated". Nobody waits for the slow part.
+- **Drawing skill for the builder:** a small one, between the chat tool's cartoon rules (above) and KO's full `iso-figures` draft (`~/code/dotfiles/claude/drafts/iso-figures/`), which is too slow and costly here. Cartoon-plus: recognisable whole object first, a cutaway or pulled-apart view, labels ≥ 38 px on a phone, one wobble filter, a few reference drawings in the repo. Write it after the first few artifacts show what's needed.
+- **Our own Svelte version of fx0's loop:** the brief in, a preview and versions out, follow-ups as edits. fx0 is the reference for the prompt and the safe preview (see Resources).
+- **Sandbox:** fx can't run under srt yet: it ignores `HTTPS_PROXY` ([fx#1344](https://github.com/vercel-labs/fx/issues/1344), tracked in the handover). Until then, jail the filesystem only (nono's Landlock rules, or a container with the repo mounted) and keep the agent's network to the AI Gateway by its tools, not by a proxy.
+
 ## Shape
 
 ```

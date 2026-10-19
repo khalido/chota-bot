@@ -32,4 +32,5 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 - **Sentral portal:** two GETs change state (`markNewsletterAsRead`, `markHomeworkCompleted`) — never call them.
 - **`scripts/whatsapp-spike.mjs`** works for one-off sends (`--send <file>`); stop the app first (one login, one connection).
 - **Private, gitignored:** `chota.config.ts`, `.env`, `data/whatsapp-auth/`, `data/files/`; KO decides backups.
+- **Artifact builder → track [vercel-labs/fx#1344](https://github.com/vercel-labs/fx/issues/1344)** (open; KO commented 18 Oct): fx 0.0.14 ignores `HTTPS_PROXY`, so it can't run inside srt, whose only egress is its proxy. The plan is an fx agent building in a SvelteKit artifacts repo on the Pi (`docs/artifacts.md` §Builder); until this is fixed, sandbox it another way (filesystem jail only, or a container).
 - **`docs/page-watch.md`** is a kotools draft, uncommitted on purpose. The laundry and bins TickTick tasks are real.
