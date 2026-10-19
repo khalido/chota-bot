@@ -11,7 +11,7 @@ A stopgap before the builder below: the chat agent makes these itself, in one tu
 **Explainer pictures — `draw_explainer({ title, svg, caption })`.** "Draw me how a toaster works": a cartoon cutaway or pulled-apart drawing for an 8–10-year-old, plus the explanation as the caption. The agent writes only the drawing; the server adds the frame and renders a PNG with `@napi-rs/canvas` (already used for prints), then sends it to WhatsApp or Telegram, or the printer. The rules, much looser than KO's `iso-figures` skill for real objects:
 
 - Cartoon, simplified, not to scale; pull parts apart where it helps. What it explains must be true.
-- Portrait 800 × 1000. Title ~48 px, labels ~40 px (a phone shows the image ~380 pt wide), at most 6 labels of one or two words, each with a leader line ending in a dot. The renderer drops SVG `marker`s, so no arrowheads.
+- Portrait 800 × 1000. Title ~48 px, labels ~38 px (a phone shows the image ~380 pt wide), at most 6 labels of one or two words, each with a leader line ending in a dot. The renderer drops SVG `marker`s, so no arrowheads.
 - The "why" goes in the caption, not the picture: 2–4 short sentences.
 - The frame supplies the paper background, the colours and one `feTurbulence` + `feDisplacementMap` filter that makes plain shapes look hand-drawn, so the agent draws ordinary rects and paths and stays fast. Bundle a hand font (Patrick Hand, OFL) with `GlobalFonts.registerFromPath`; the system fallback is a plain sans.
 - **Recognisable first** (KO, 19 Oct, on the toaster test): the first try was too abstract to read as a toaster. Show the whole thing, assembled and recognisable, then the pulled-apart or cutaway view beside or below it. Simple, not abstract.
