@@ -48,20 +48,21 @@ export const equipment = [
 	// screen and camera
 	{
 		group: 'Screen + camera',
-		item: 'Waveshare 8" DSI LCD (C), 1280×800, 194 × 119 mm',
+		item: 'Waveshare 8" DSI touch, 8-DSI-TOUCH-A, 800×1280, 194 × 119 mm',
+		url: 'https://www.amazon.com.au/dp/B0F48FTNTN',
 		qty: 1,
 		status: 'buy',
-		aud: 125,
-		source: 'Waveshare direct, US$79 (not stocked at Core; Core’s WS-24483 is the HDMI 8")',
-		why: 'the lid screen: toughened, optically bonded glass, so it sits flush in the wood like a tablet, not a bezelled monitor; dimmable from software (0–255 in sysfs). Remove its Pi-mounting standoffs: the lid has ~9 mm behind the glass'
+		aud: 132,
+		source: 'Amazon AU, sold by Waveshare (or Waveshare direct, US$55 + shipping); same outline as the (C), which Core doesn’t stock',
+		why: 'the lid screen: toughened, optically bonded glass, so it sits flush in the wood like a tablet, not a bezelled monitor; dimmable from software (0–255 in sysfs). Portrait-native, rotated in software. Takes 5 V from the Pi’s pins. 11.6 mm deep with its Pi-mounting bosses; check against the lid’s ~9 mm behind the glass'
 	},
 	{
 		group: 'Screen + camera',
-		item: 'DSI cable, 22-pin to 22-pin, for the 8" (C) on the Pi 5',
+		item: 'DSI cable, 22-pin to 22-pin, 300–500 mm, for the 8" on the Pi 5',
 		qty: 1,
 		status: 'buy',
 		aud: 8,
-		source: 'check what ships with the (C) first; Core’s CE09797 is 22-to-15, the wrong one',
+		source: 'the screen ships with two 200 mm 22-pin cables; Core’s CE09797 is 22-to-15, the wrong one',
 		why: 'the Pi sits on the floor, so the 12–20 cm cable in the box is too short; bench-test the long one'
 	},
 	{
