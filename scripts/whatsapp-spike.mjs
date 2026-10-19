@@ -82,11 +82,18 @@ async function connect() {
 		if (connection) say('connection', connection);
 		if (connection === 'open') {
 			say('linked as', JSON.stringify(sock.user));
-			if (sendFile?.endsWith('.html')) {
+			if (sendFile?.endsWith('.png')) {
+				await sock.sendMessage(toJid, { image: await readFile(sendFile) });
+				say('sent image to', toJid);
+				setTimeout(() => process.exit(0), 3_000);
+				return;
+			}
+			if (/\.(html|svg)$/.test(sendFile ?? '')) {
 				// As a document: does the phone open it, and does its JS run?
 				const document = await readFile(sendFile);
 				const fileName = sendFile.split('/').pop();
-				await sock.sendMessage(toJid, { document, mimetype: 'text/html', fileName });
+				const mimetype = sendFile.endsWith('.svg') ? 'image/svg+xml' : 'text/html';
+				await sock.sendMessage(toJid, { document, mimetype, fileName });
 				say('sent', fileName, 'to', toJid);
 				setTimeout(() => process.exit(0), 3_000);
 				return;
