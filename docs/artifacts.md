@@ -1,6 +1,27 @@
 # Artifacts — quick phone-friendly pages from chat
 
-**Status: idea (2026-10-16).** Someone in the family asks in chat — "make a countdown to the Japan trip", "a tip splitter", "a packing checklist for camp", "a times-tables game for Kid3" — and chota builds a small page and replies with a link like `bhalu.chotabot.com`. Opens on any phone, nothing to install.
+**Status: idea (2026-10-16); a v0 from the chat agent is planned below (19 Oct).** Someone in the family asks in chat — "make a countdown to the Japan trip", "a tip splitter", "a packing checklist for camp", "a times-tables game for Kid3" — and chota builds a small page and replies with a link like `bhalu.chotabot.com`. Opens on any phone, nothing to install.
+
+## v0 — pictures and pages from the chat agent (planned, 19 Oct 2026)
+
+A stopgap before the builder below: the chat agent makes these itself, in one turn, no sandbox.
+
+**What WhatsApp does (tested 19 Oct from the bot number):** a PNG shows inline and takes a caption. An `.html` document opens in Chrome on Android with JavaScript working; WhatsApp on the Mac previews it with no JavaScript. An `.svg` arrives as a download link. So: pictures as PNG, interactive pages as links. `scripts/whatsapp-spike.mjs --send <file> [--caption "…"]` sends any of these.
+
+**Explainer pictures — `draw_explainer({ title, svg, caption })`.** "Draw me how a toaster works": a cartoon cutaway or pulled-apart drawing for an 8–10-year-old, plus the explanation as the caption. The agent writes only the drawing; the server adds the frame and renders a PNG with `@napi-rs/canvas` (already used for prints), then sends it to WhatsApp or Telegram, or the printer. The rules, much looser than KO's `iso-figures` skill for real objects:
+
+- Cartoon, simplified, not to scale; pull parts apart where it helps. What it explains must be true.
+- Portrait 800 × 1000. Title ~58 px, labels ≥ 40 px (a phone shows the image ~380 pt wide), at most 6 labels of one or two words, each with a leader line ending in a dot. The renderer drops SVG `marker`s, so no arrowheads.
+- The "why" goes in the caption, not the picture: 2–4 short sentences.
+- The frame supplies the paper background, the colours and one `feTurbulence` + `feDisplacementMap` filter that makes plain shapes look hand-drawn, so the agent draws ordinary rects and paths and stays fast. Bundle a hand font (Patrick Hand, OFL) with `GlobalFonts.registerFromPath`; the system fallback is a plain sans.
+- Open: which model draws. The chat model may be weak at SVG; a stronger model behind the tool (the book-agent pattern) costs a few seconds.
+
+**Pages — `publish_page({ title, summary, body })`.** For a write-up with a bit more in it (compare three options, a weekend plan, a packing checklist). The agent writes the `<main>` body from a small kit of classes; the server wraps it in the house shell (kit CSS, light and dark, og tags for the link card, footer). Kit v0: `callout`, `cards`/`card`, `tags`, `pro`/`con`, `scroll` + table, `check` (ticks saved on that phone), `tabs`, `btn`. A new piece joins the kit when a page needs it.
+
+- **Served by chota itself**, at `/p/<random>`, with `Content-Security-Policy: sandbox allow-scripts`: the page's script runs in an opaque origin, so it can't use a signed-in session or reach `/api` on the same host.
+- **Login: OTP over WhatsApp.** better-auth's `phone-number` plugin (installed): `sendOTP` sends the code from the bot number, `phoneNumberValidator` allows only numbers in `chota.config.ts > family[]`, `signUpOnVerification` creates accounts for kids with no email. SMS as a later fallback inside `sendOTP`. Pages from family chats need the login; harmless ones (a countdown) can be public.
+- **Reach from outside the house:** the box is LAN and Tailscale only. Tailscale Funnel on the page path first; a domain and Cloudflare Tunnel later.
+- Build order: the kit and `publish_page` (links over Tailscale) → OTP login → Funnel.
 
 ## Shape
 

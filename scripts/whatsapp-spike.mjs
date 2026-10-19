@@ -83,7 +83,10 @@ async function connect() {
 		if (connection === 'open') {
 			say('linked as', JSON.stringify(sock.user));
 			if (sendFile?.endsWith('.png')) {
-				await sock.sendMessage(toJid, { image: await readFile(sendFile) });
+				const caption = process.argv.includes('--caption')
+					? process.argv[process.argv.indexOf('--caption') + 1]
+					: undefined;
+				await sock.sendMessage(toJid, { image: await readFile(sendFile), caption });
 				say('sent image to', toJid);
 				setTimeout(() => process.exit(0), 3_000);
 				return;
