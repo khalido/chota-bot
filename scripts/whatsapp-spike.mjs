@@ -82,6 +82,15 @@ async function connect() {
 		if (connection) say('connection', connection);
 		if (connection === 'open') {
 			say('linked as', JSON.stringify(sock.user));
+			if (sendFile?.endsWith('.html')) {
+				// As a document: does the phone open it, and does its JS run?
+				const document = await readFile(sendFile);
+				const fileName = sendFile.split('/').pop();
+				await sock.sendMessage(toJid, { document, mimetype: 'text/html', fileName });
+				say('sent', fileName, 'to', toJid);
+				setTimeout(() => process.exit(0), 3_000);
+				return;
+			}
 			if (sendFile) {
 				const text = (await readFile(sendFile, 'utf8')).trim();
 				await sock.sendMessage(toJid, { text });
