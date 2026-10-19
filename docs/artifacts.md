@@ -44,7 +44,7 @@ For anything bigger than a one-turn page or picture. Supersedes the Railway sand
 - **Publish early, then keep going.** The first build publishes a working page fast, a quick explainer drawing included, and chota sends the link; the agent keeps improving it (a better SVG, the extra buttons) and each later publish sends "updated". Nobody waits for the slow part.
 - **Drawing skill for the builder:** a small one, between the chat tool's cartoon rules (above) and KO's full `iso-figures` draft (`~/code/dotfiles/claude/drafts/iso-figures/`), which is too slow and costly here. Cartoon-plus: recognisable whole object first, a cutaway or pulled-apart view, labels ≥ 38 px on a phone, one wobble filter, a few reference drawings in the repo. Write it after the first few artifacts show what's needed.
 - **Our own Svelte version of fx0's loop:** the brief in, a preview and versions out, follow-ups as edits. fx0 is the reference for the prompt and the safe preview (see Resources).
-- **Sandbox:** fx can't run under srt yet: it ignores `HTTPS_PROXY` ([fx#1344](https://github.com/vercel-labs/fx/issues/1344), tracked in the handover). Until then, jail the filesystem only (nono's Landlock rules, or a container with the repo mounted) and keep the agent's network to the AI Gateway by its tools, not by a proxy.
+- **Sandbox:** fx can't run under srt yet: it ignores `HTTPS_PROXY` ([fx#1344](https://github.com/vercel-labs/fx/issues/1344), tracked in the handover). Until then, jail the filesystem only (nono's Landlock rules, or a container with just the repo mounted) and accept open network: the agent's environment holds nothing but a spend-capped AI Gateway key and the repo, so there is little to leak.
 
 ## Shape
 
