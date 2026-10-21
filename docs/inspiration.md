@@ -223,3 +223,8 @@ No build found that pairs a thermal printer with a screen in a wooden box. Worth
 - **thermal-mcp** ([glama](https://glama.ai/mcp/servers/EthanPany/thermal-mcp)), **shortorder** ([site](https://shortorder.dev/)): a printer exposed as MCP; same Chromium → 1-bit path chota already uses.
 
 Screens: the official Touch Display 2 now comes in 10.1" (portrait-native 1200×1920, plastic bezel), still not our look. Colour e-ink (Spectra 6) refreshes in 15–30 s, still no good for a per-minute clock.
+
+## Links to look through
+
+- **[AI HardWare](https://josephzhou.me/ai/)** (Joseph Zhou): a directory of about 127 AI gadgets with photos and Chinese/English write-ups, filterable by brand and price. Ideas for the box's form, controls and screens.
+- **[Claude Duet](https://claude.com/product/claude-duet)** ([HN](https://news.ycombinator.com/item?id=50186037), Oct 2026): Anthropic's always-on phone assistant, US only. Worth taking: a "needs your attention" list with the next step drafted; "on it… done" for long tasks; a page showing what the agent is doing and what waits for approval; scoped, short-lived credentials (1Password CLI) for agent tools; a monthly forgotten-subscriptions check. One HN commenter runs our setup on an old MacBook: iMessage, a family group chat and a Skylight frame.
