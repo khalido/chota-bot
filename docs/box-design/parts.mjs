@@ -24,10 +24,10 @@ export const equipment = [
 	},
 	{
 		group: 'Core',
-		item: 'microSD, 64 GB',
+		item: 'microSD, 64 GB, A2-rated',
 		qty: 1,
-		status: 'have',
-		source: 'flashed 17 Oct (hostname chota)',
+		status: 'buy',
+		source: 'any shop: SanDisk Extreme or the Raspberry Pi card',
 		why: "the Pi won't boot without it"
 	},
 	{
