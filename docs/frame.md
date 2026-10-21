@@ -23,20 +23,28 @@ Frameo is the app on most cheap 10.1" Wi-Fi frames. Under it is a stripped-down 
 - Install apps: a current Android System WebView (the stock one is too old for modern pages) and a client app.
 - Make that app the one that opens at boot, so Frameo's own app stays out of the way.
 - Turn the screen on and off from chota on a schedule (`adb shell input keyevent`), and take screenshots to check what it shows.
-- Over Wi-Fi: connect by USB once, run `adb tcpip 5555`, then `adb connect <frame-ip>:5555` from the Pi. Give the frame a fixed IP in the router. The Wi-Fi route is from user reports, not Frameo's docs, and may not survive a reboot.
+- Over Wi-Fi: connect by USB once, run `adb tcpip 5555`, then `adb connect <frame-ip>:5555` from the Pi. Give the frame a fixed IP in the router. This resets on reboot unless the ADB setting is made persistent (the Immich Kiosk guide has the commands).
 
 Frameo warns that ADB can brick the frame if misused. Stick to installing apps and settings.
 
-**Browser: [kiFOSSk](https://github.com/ShinyDiscoBallsDev/kiFOSSk)** (MIT, F-Droid or APK over `adb install`, v1.1.3 Oct 2026, a solo developer). A full-screen WebView made for dashboards on dedicated hardware: it sets itself as the home launcher so it opens at boot instead of Frameo (no device-owner setup), skips the lock screen, retries with a waiting screen when the Pi is down, can auto-refresh, and has settings behind a long-press. Android 7+, with fixes for old WebViews. It renders with the system WebView, so still update that over ADB first. It has no screen schedule; chota does that over ADB. Fallback if it misbehaves: the ImmichFrame client, as Lucas did.
+**Most cheap Frameo frames run Android 6.0.1.** Wes Bos's [device index](https://github.com/wesbos/photo-frame-dashboard/blob/main/docs/devices.md) (Oct 2026): 28 of its rows are Android 6.0.1 (Allwinner A33 or Rockchip RK3126, 512 MB to 1 GB RAM, WebView 44 to 107), 8 are Android 8.1 (RK3326), 6 are Android 10 (Allwinner A133 and others), none are Android 7. Units built in 2026 still ship on 6.0.1. Frameo itself promises security updates to the end of 2028 for Android 6 to 8. The Amazon listing names neither the board nor the Android version.
+
+**The browser depends on what turns up:**
+- **Android 8.1 or 10: [kiFOSSk](https://github.com/ShinyDiscoBallsDev/kiFOSSk)** (MIT, F-Droid or `adb install`, v1.1.3 Oct 2026, one developer). A full-screen WebView for dashboards: it makes itself the home app so it opens at boot instead of Frameo, skips the lock screen, shows a waiting screen and retries when the Pi is down, and hides settings behind a long-press. Its minimum is Android 7 (minSdk 24).
+- **Android 6.0.1: kiFOSSk won't install.** Use the [ImmichFrame](https://immichframe.dev/docs/getting-started/apps) client (Lucas's choice, tested on Android 6.0.1 10.1" frames) or Fully Kiosk 1.57.1, as in the [Immich Kiosk Frameo guide](https://docs.immichkiosk.app/misc/frameo/). The stock WebView is often too old; that guide swaps in WebView 106, which needs root and can break the Frameo app if it goes wrong ([ImmichFrame #495](https://github.com/immichFrame/ImmichFrame/discussions/495)). Check the swap in logcat, not just the version number: Android 6 can report 106 and still fail to render.
+- Either way, keep `/frame` plain: server-rendered HTML and CSS, no client JavaScript needed, so a 2022 WebView (or older) draws it. That may avoid the WebView swap altogether.
+- None of them turns the screen off at night; chota does that over ADB.
+
+**Security.** Some firmware runs a vendor agent (AiMOR) that connects out to the maker's server and can run root commands ([Wes's notes](https://github.com/wesbos/photo-frame-dashboard/blob/main/docs/allwinner-a33-pf1007l.md)). Block the frame from the internet in the router, and treat its old WebView as unfit for anything but our own page on the home network.
 
 **What others found.**
 - [Lucas Costi](https://lucascosti.com/blog/2026/02/using-an-even-cheaper-android-thing-as-a-digital-photo-frame/): an A$70-ish Amazon Frameo frame, in Australia. He used ADB to update WebView and runs the ImmichFrame client against an Immich Kiosk server. Fully Kiosk Browser was too finicky on it (he couldn't get out of its menus). The frame is "decently responsive".
 - [Wes Bos](https://wesbos.com/hacking-smart-photo-frames): rooted a Skylight and a cheap Amazon frame for a family dashboard, added a motion sensor to dim the screen. The same Amazon listing can ship different boards; Allwinner PF1007L boards took extra work. Use a USB-A to USB-C data cable: USB-C to USB-C gave no power or data.
 
 **On arrival, before adding photos:**
-1. Settings → About: note the Android version, board and RAM. Android 10+ and 2 GB is comfortable; Android 6 or 1 GB will struggle.
-2. Join the Beta Program, turn on ADB Access, check `adb devices` from the Mac.
-3. Install a current WebView and a full-screen browser app; open `http://pop-os/clock` as a stand-in.
+1. Before it joins Wi-Fi, block it from the internet in the router (allow only the Pi).
+2. Help → Support shows the Android version. Then join the Beta Program, turn on ADB Access, and from the Mac: `adb shell getprop ro.build.version.release`, `getprop ro.board.platform`, `dumpsys webviewupdate`, and RAM from `cat /proc/meminfo`. If `adb devices` stays `unauthorized`, toggle the Beta Program off and on and replug (a USB-A to USB-C data cable).
+3. Join Wi-Fi in Android's own settings, not Frameo's (Frameo can take its Wi-Fi with it when it's disabled). Install the browser that fits the version (above) and open `http://pop-os/clock` as a stand-in.
 4. Leave it overnight. Smooth and still up: keep it. If not, return it within 30 days and try a Galaxy Tab A9+ in a stand (Samsung's battery protection caps charging at 85%).
 
 **Power from the Pi?** It can, but shouldn't by default. A second frame lives in another room with its own plug. If one ever sits beside the box, power it from the box's 5 V buck (about 1.6 A spare after the face) rather than the Pi's USB ports, whose 1.6 A is shared with the sound card, Pico and mic. Measure the frame's draw first; a 10" panel is roughly 1 A at 5 V. A USB data cable from the Pi would also give wired ADB.
@@ -58,6 +66,6 @@ The Pico can't run a browser, so chota does the drawing: it renders a PNG at the
 
 ## Open
 
-- Does B0F61WL5GD's board open up with ADB (Android version, RAM)? Only knowable once it's here.
+- Does B0F61WL5GD arrive on Android 6.0.1 (likely) or 8.1/10? That decides the browser and whether the WebView swap is needed.
 - ImmichFrame client or a plain full-screen WebView on `/frame`.
 - Which e-ink panel for the Pico, and where it hangs.
