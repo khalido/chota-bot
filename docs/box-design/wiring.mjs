@@ -1,5 +1,5 @@
 // The wiring data for the box: the Pi 5 header, the Pico 2 W pinout, and every part wired to them.
-// One source of truth: build-wiring.mjs inlines this into wiring.html, and the page's checks run on it.
+// One source of truth: build-page.mjs inlines this into the Wiring tab, and the checks (wiring-checks.mjs) run on it.
 // Wiring facts that box.md decides are status 'decided'; every pin picked here is 'proposed' with a reason.
 // Part ids are new (parts.mjs has none); `item` names the matching row in parts.mjs.
 
@@ -139,6 +139,12 @@ export const limits = {
 		note: 'Core Electronics lists the DFR0571 at 5 V 3 A; some retailers list 1.6 A for the same SKU. Unconfirmed: read the board before loading it.',
 		url: 'https://core-electronics.com.au/dc-dc-buck-mode-power-module-8-28v-to-5v-3a.html'
 	},
+	v24: {
+		label: '24 V brick',
+		mA: 5000,
+		note: 'The ALITOVE brick is 24 V 5 A (parts.mjs); the fuse is 7.5 A. Printer (2000) and amp (1200) are estimates; the buck\'s share is worked out from its 5 V loads at 90% efficiency (assumed).',
+		url: 'https://www.amazon.com.au/dp/B0CRDWLDJ5'
+	},
 	pico3v3: { label: 'Pico 3V3(OUT)', mA: null, note: 'Sum only. The Pico 2 W datasheet limit was not read; keep this small.', url: 'https://datasheets.raspberrypi.com/picow/pico-2-w-pinout.pdf' },
 	picoVbus: { label: 'Pico VBUS / 5 V', mA: null, note: 'Sum only. It all comes from the Pi USB port and counts against the USB total.', url: 'https://datasheets.raspberrypi.com/picow/pico-2-w-pinout.pdf' }
 };
@@ -164,7 +170,7 @@ export const parts = [
 		currentMa: 800,
 		docsUrl: 'https://www.waveshare.com/wiki/8-DSI-TOUCH-A',
 		pins: [
-			{ partPin: 'DSI ribbon', to: null, ext: 'Pi 5 DSI1 port (22-pin FFC)', wire: 'ribbon', status: D, dir: 'bi', note: 'Waveshare: 22-pin FFC to the Pi 5; DSI1 is the default. Overlay dtoverlay=vc4-kms-dsi-waveshare-panel-v2,8_0_inch_a.' },
+			{ partPin: 'DSI ribbon', to: null, wire: 'ribbon', status: D, dir: 'bi', note: 'Waveshare: 22-pin FFC to the Pi 5; DSI1 is the default. Overlay dtoverlay=vc4-kms-dsi-waveshare-panel-v2,8_0_inch_a.' },
 			pwr('5V', 4, 'red', P, 'Waveshare: 5 V and GND come from the header through its GPIO cable; it gives no pin numbers. Any 5 V pin works; pin 4 sits beside the GND on pin 6.'),
 			pwr('GND', 6, 'black', P, 'Next to pin 4, so the two wires run together.')
 		],
@@ -180,8 +186,12 @@ export const parts = [
 		logic: '3v3',
 		currentMa: 0,
 		docsUrl: null,
-		pins: [{ partPin: 'USB-B', to: null, ext: 'Pi USB port', wire: 'ribbon', status: D, dir: 'bi', note: 'Data only; it runs off the 24 V brick, not from USB.' }],
-		note: 'Right-angle USB-B lead (see parts.mjs).'
+		draw: [{ rail: 'v24', mA: 2000 }],
+		pins: [
+			{ partPin: 'USB-B', to: null, wire: 'ribbon', status: D, dir: 'bi', note: 'Data only; it runs off the 24 V brick, not from USB.' },
+			{ partPin: 'DC in', to: null, wire: 'red', status: D, dir: 'pwr', note: '24 V from the Y-splitter; this replaces the printer\'s own brick (box.md).' }
+		],
+		note: 'Right-angle USB-B and DC plugs (see parts.mjs). The 2000 mA at 24 V is a guess: read the printer brick\'s label (box.md says to).'
 	},
 	{
 		id: 'sound-card',
@@ -193,7 +203,10 @@ export const parts = [
 		logic: '3v3',
 		currentMa: 100,
 		docsUrl: 'https://core-electronics.com.au/usb-audio-adapter-works-with-raspberry-pi.html',
-		pins: [{ partPin: 'USB-A', to: null, ext: 'Pi USB port', wire: 'ribbon', status: D, dir: 'bi', note: 'All playback goes through it.' }],
+		pins: [
+			{ partPin: 'USB-A', to: null, wire: 'ribbon', status: D, dir: 'bi', note: 'All playback goes through it.' },
+			{ partPin: 'line out', to: null, wire: 'green', status: D, dir: 'out', note: 'Line out to the amp\'s input (parts.mjs: "line in from the sound card").' }
+		],
 		note: 'Current is an estimate (about 100 mA); the ADA1475 draw was not found.'
 	},
 	{
@@ -210,8 +223,8 @@ export const parts = [
 		pins: [
 			{ partPin: 'DAT in', to: 33, wire: 'green', status: D, dir: 'out', note: 'Face data on GPIO 13 (box.md). The Pi 5 NeoPixel library drives it through the PIO block, so any GPIO would do.' },
 			pwr('G', 34, 'black', P, 'Ties the shifter, the face and the buck to one ground. Pin 34 is next to pin 33, so the signal and its ground run together.'),
-			{ partPin: 'V', to: null, ext: 'buck 5 V out', wire: 'red', status: P, dir: 'pwr', note: 'Power it from 5 V so the output swings to 5 V. Adafruit says "give it the same power as the logic level of your microcontroller" and also 3 to 5 V; the wiki leaves this unclear, so check the output with a meter.' },
-			{ partPin: 'D5 out', to: null, ext: 'GlowBit data in', wire: 'green', status: D, dir: 'out', note: 'The ADA6066 is a 74HCT2G34, not the 74AHCT125 box.md names. It still lifts 3.3 V to 5 V. Its CLK channel is spare.' }
+			{ partPin: 'V', to: null, wire: 'red', status: P, dir: 'pwr', note: 'Power it from 5 V so the output swings to 5 V. Adafruit says "give it the same power as the logic level of your microcontroller" and also 3 to 5 V; the wiki leaves this unclear, so check the output with a meter.' },
+			{ partPin: 'D5 out', to: null, wire: 'green', status: D, dir: 'out', note: 'The ADA6066 is a 74HCT2G34, not the 74AHCT125 box.md names. It still lifts 3.3 V to 5 V. Its CLK channel is spare.' }
 		],
 		note: 'Adafruit lists the pins as DAT and CLK in, D5, !D5 and C5 out, V and G for power.'
 	},
@@ -227,9 +240,9 @@ export const parts = [
 		supply: 'buck',
 		docsUrl: 'https://core-electronics.com.au/glowbit-matrix-8x8.html',
 		pins: [
-			{ partPin: 'DIN', to: null, ext: 'shifter D5 out', wire: 'green', status: D, dir: 'out', via: 'face-shifter', note: 'Pin names are unconfirmed: Core\'s page only says one data pin, WS2812B-compatible. Read the silkscreen.' },
-			{ partPin: '5V', to: null, ext: 'buck 5 V out', wire: 'red', status: D, dir: 'pwr', note: '5 V from the 24 to 5 V buck, not the Pi (box.md).' },
-			{ partPin: 'GND', to: null, ext: 'buck GND', wire: 'black', status: D, dir: 'pwr', note: 'Common with the Pi through the shifter ground on pin 34.' }
+			{ partPin: 'DIN', to: null, wire: 'green', status: D, dir: 'out', via: 'face-shifter', note: 'Pin names are unconfirmed: Core\'s page only says one data pin, WS2812B-compatible. Read the silkscreen.' },
+			{ partPin: '5V', to: null, wire: 'red', status: D, dir: 'pwr', note: '5 V from the 24 to 5 V buck, not the Pi (box.md).' },
+			{ partPin: 'GND', to: null, wire: 'black', status: D, dir: 'pwr', note: 'Common with the Pi through the shifter ground on pin 34.' }
 		],
 		note: '64 WS2812B draw about 3.8 A at full white (general figure, not a GlowBit spec). 1000 mA assumes brightness capped in software to about a quarter.'
 	},
@@ -244,8 +257,8 @@ export const parts = [
 		currentMa: 0,
 		docsUrl: 'https://core-electronics.com.au/dc-dc-buck-mode-power-module-8-28v-to-5v-3a.html',
 		pins: [
-			{ partPin: 'VIN+/VIN-', to: null, ext: '24 V brick', wire: 'red', status: D, dir: 'pwr', note: 'On the 24 V lead (box.md). Terminal labels not confirmed: the DFRobot wiki was unreachable.' },
-			{ partPin: 'VOUT+/VOUT-', to: null, ext: 'face, shifter, strip', wire: 'red', status: D, dir: 'pwr', note: 'Powers the face and its shifter (and the light strip later). Not connected to the Pi.' }
+			{ partPin: 'VIN', to: null, wire: 'red', status: D, dir: 'pwr', note: 'On the 24 V lead (box.md). Terminal labels not confirmed: the DFRobot wiki was unreachable.' },
+			{ partPin: 'VOUT', to: null, wire: 'red', status: D, dir: 'pwr', note: 'Powers the face and its shifter (and the light strip later). Not connected to the Pi.' }
 		],
 		note: 'Shown so the 5 V load on it gets checked.'
 	},
@@ -315,7 +328,7 @@ export const parts = [
 		logic: '3v3',
 		currentMa: 25,
 		docsUrl: 'https://www.seeed.cc/product/respeaker-lite-2-mic-array-voice-kit-compatible-with-esphome',
-		pins: [{ partPin: 'USB-C', to: null, ext: 'Pi USB port', wire: 'ribbon', status: D, dir: 'bi', note: 'Draws about 19 to 22 mA (Seeed spec sheet, via a summary).' }],
+		pins: [{ partPin: 'USB-C', to: null, wire: 'ribbon', status: D, dir: 'bi', note: 'Draws about 19 to 22 mA (Seeed spec sheet, via a summary).' }],
 		note: 'Mic only; it records at up to 16 kHz.'
 	},
 	{
@@ -328,7 +341,7 @@ export const parts = [
 		logic: '3v3',
 		currentMa: 0,
 		docsUrl: 'https://www.raspberrypi.com/documentation/accessories/camera.html',
-		pins: [{ partPin: 'CSI ribbon', to: null, ext: 'Pi 5 CAM/DISP port 0', wire: 'ribbon', status: D, dir: 'bi', note: 'Takes the Pi 5\'s other ribbon port, since the lid screen is on DSI1. Powered from the port.' }],
+		pins: [{ partPin: 'CSI ribbon', to: null, wire: 'ribbon', status: D, dir: 'bi', note: 'Takes the Pi 5\'s other ribbon port, since the lid screen is on DSI1. Powered from the port.' }],
 		note: 'Pi 5 cable, 300 mm.'
 	},
 	{
@@ -341,7 +354,7 @@ export const parts = [
 		logic: '3v3',
 		currentMa: 50,
 		docsUrl: 'https://datasheets.raspberrypi.com/picow/pico-2-w-pinout.pdf',
-		pins: [{ partPin: 'micro-USB', to: null, ext: 'Pi USB port', wire: 'ribbon', status: D, dir: 'bi', note: 'Power and JSON-lines serial in one lead (box.md).' }],
+		pins: [{ partPin: 'micro-USB', to: null, wire: 'ribbon', status: D, dir: 'bi', note: 'Power and JSON-lines serial in one lead (box.md).' }],
 		note: 'About 50 mA for the board (box.md). What hangs off its pins is added on the Pico tab and counts against the Pi USB total.'
 	},
 
@@ -521,11 +534,184 @@ export const parts = [
 		docsUrl: null,
 		pins: [
 			{ partPin: 'DIN', to: 27, wire: 'purple', status: P, dir: 'out', via: 'face-shifter', note: 'GP21. 5 V data from a 3.3 V pin needs a level shifter: the spare CLK channel on the face\'s Pixel Shifter (CLK in, C5 out) would do. That channel is on the Pi side of the board; confirm the grounds are common.' },
-			{ partPin: '5V', to: null, ext: 'buck 5 V out', wire: 'red', status: P, dir: 'pwr', note: 'From the buck, not the Pico.' },
-			{ partPin: 'GND', to: null, ext: 'buck GND', wire: 'black', status: P, dir: 'pwr', note: '' }
+			{ partPin: '5V', to: null, wire: 'red', status: P, dir: 'pwr', note: 'From the buck, not the Pico.' },
+			{ partPin: 'GND', to: null, wire: 'black', status: P, dir: 'pwr', note: '' }
 		],
 		note: '24 pixels at 60 mA is 1.4 A at full white; 400 mA assumes it is capped dim. Price and pin labels not checked.'
+	},
+	// ---- Whole-box view only: power, sound and cabling parts with no header pin ----
+	{
+		id: 'psu-pi',
+		item: 'Official 27 W USB-C power supply',
+		name: 'Pi power supply (27 W)',
+		short: 'Pi PSU 27 W',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: 'https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#recommended-power-supplies',
+		pins: [{ partPin: 'USB-C', to: null, wire: 'red', status: D, dir: 'pwr', note: '5 V, 5 A. The Pi\'s own lead comes in at the left of the back wall (box.md).' }],
+		note: 'Raspberry Pi recommends it for the Pi 5; it is what allows 1.6 A to USB.'
+	},
+	{
+		id: 'brick',
+		item: '24 V 5 A brick (ALITOVE, 5.5 × 2.1/2.5 mm)',
+		name: '24 V 5 A brick',
+		short: '24 V brick',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: 'https://www.amazon.com.au/dp/B0CRDWLDJ5',
+		pins: [{ partPin: 'DC out', to: null, wire: 'red', status: D, dir: 'pwr', note: 'Outside the box, one lead in (box.md). Match its plug to the printer\'s.' }],
+		note: 'Rated 5 A at 24 V; the page sums the 24 V loads against that.'
+	},
+	{
+		id: 'jack',
+		item: 'Panel-mount DC jack + inline blade fuse (7.5 A)',
+		name: 'Panel DC jack + 7.5 A fuse',
+		short: 'DC jack + fuse',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: 'https://core-electronics.com.au/round-panel-mount-55mm21mm-dc-barrel-jack-extension-cable-30cm-long.html',
+		pins: [
+			{ partPin: 'in', to: null, wire: 'red', status: D, dir: 'pwr', note: 'The 24 V lead comes in through the socket.' },
+			{ partPin: 'out (fused)', to: null, wire: 'red', status: D, dir: 'pwr', note: 'The fuse sits straight after the jack, before the Y-split (parts.mjs).' }
+		],
+		note: 'A short inside the wooden box blows the fuse, not the brick.'
+	},
+	{
+		id: 'splitter',
+		item: '24 V 5 A brick (ALITOVE, 5.5 × 2.1/2.5 mm) + DC Y-splitter + 2200 µF capacitor',
+		name: 'DC Y-splitter',
+		short: 'Y-splitter',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: null,
+		pins: [
+			{ partPin: 'in', to: null, wire: 'red', status: D, dir: 'pwr', note: 'From the fused jack.' },
+			{ partPin: 'out A', to: null, wire: 'red', status: D, dir: 'pwr', note: 'To the printer (box.md: split to the printer and, through the divider, the amp).' },
+			{ partPin: 'out B', to: null, wire: 'red', status: D, dir: 'pwr', note: 'To the amp, through the divider. The buck taps the same lead.' }
+		],
+		note: 'Match the printer\'s DC plug (parts.mjs).'
+	},
+	{
+		id: 'cap',
+		item: '24 V 5 A brick (ALITOVE, 5.5 × 2.1/2.5 mm) + DC Y-splitter + 2200 µF capacitor',
+		name: '2200 µF capacitor',
+		short: '2200 µF cap',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: null,
+		pins: [
+			{ partPin: '+', to: null, wire: 'red', status: D, dir: 'pwr', note: 'Across the amp\'s 24 V input (box.md: 2200 µF at the amp).' },
+			{ partPin: '−', to: null, wire: 'black', status: D, dir: 'pwr', note: 'Mind the polarity. Voltage rating: use 35 V or more (my pick, not in parts.mjs).' }
+		],
+		note: 'Smooths the amp\'s bass peaks so the printer doesn\'t tick. If it still does, give the amp its own 24 V pack.'
+	},
+	{
+		id: 'amp',
+		item: 'Small class-D amp board, 2 channel (TPA3116 / TPA3118 mini)',
+		name: 'Class-D amp (TPA3116 mini)',
+		short: 'Amp',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		draw: [{ rail: 'v24', mA: 1200 }],
+		docsUrl: 'https://www.amazon.com.au/dp/B0H7L64S4C',
+		pins: [
+			{ partPin: 'IN (line)', to: null, wire: 'green', status: D, dir: 'in', note: 'Line in from the sound card (parts.mjs).' },
+			{ partPin: 'DC 24 V', to: null, wire: 'red', status: D, dir: 'pwr', note: 'Off the 24 V lead; the 2200 µF cap sits here.' },
+			{ partPin: 'OUT (one ch)', to: null, wire: 'green', status: D, dir: 'out', note: 'One channel drives the SB65; the other is spare (parts.mjs). Screw terminals: check the board has them.' }
+		],
+		note: '1200 mA at 24 V is an estimate: about 20 W into the SB65 plus idle. The board listing has no reviews yet.'
+	},
+	{
+		id: 'speaker',
+		item: 'SB Acoustics SB65WBAC25-4, 2.5" full-range',
+		name: 'SB65 speaker',
+		short: 'SB65 speaker',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: null,
+		pins: [{ partPin: '+/−', to: null, wire: 'green', status: D, dir: 'in', note: '4 Ω, 20 W rated (parts.mjs). Terminal polarity: check the driver.' }],
+		note: 'Mono, in the ~0.9 L chamber with the radiator. No datasheet link found.'
+	},
+	{
+		id: 'radiator',
+		item: 'Dayton Audio ND65-PR, 2.5" passive radiator',
+		name: 'ND65-PR passive radiator',
+		short: 'ND65-PR radiator',
+		phase: 'v1',
+		board: 'usb',
+		view: 'box',
+		logic: '3v3',
+		currentMa: 0,
+		docsUrl: null,
+		pins: [],
+		note: 'Passive: no wires. It shares the speaker chamber (box.md).'
 	}
 ];
 
 export const wireColours = ['red', 'black', 'yellow', 'green', 'blue', 'white', 'orange', 'purple', 'grey', 'brown', 'ribbon'];
+
+// Pi 5 board connectors for the Whole-box view. Positions are drawn from the Pi 5 layout: only the fan connector's
+// place ("upper right, between the 40-pin header and the USB 2.0 ports") is stated in Raspberry Pi's docs; the rest
+// is from board photos, so check it against the board.
+export const piPorts = [
+	{ id: 'usbc', label: 'USB-C power' },
+	{ id: 'hdmi0', label: 'micro-HDMI 0' },
+	{ id: 'hdmi1', label: 'micro-HDMI 1' },
+	{ id: 'cam0', label: 'CAM/DISP 0' },
+	{ id: 'cam1', label: 'CAM/DISP 1' },
+	{ id: 'usb2a', label: 'USB 2 (a)' },
+	{ id: 'usb2b', label: 'USB 2 (b)' },
+	{ id: 'usb3a', label: 'USB 3 (a)' },
+	{ id: 'usb3b', label: 'USB 3 (b)' },
+	{ id: 'eth', label: 'Ethernet' },
+	{ id: 'fan', label: 'Fan' },
+	{ id: 'header', label: '40-pin header' }
+];
+
+// Cables between things that are not header pins. Endpoints are 'partId:partPin' or 'pi:portId'.
+// kind sets the colour in the Whole-box view: usb, ribbon, power5, power24, audio, signal.
+export const links = [
+	{ a: 'printer:USB-B', b: 'pi:usb3b', kind: 'usb', status: P, note: 'Any USB port works; the printer is slow.' },
+	{ a: 'pico:micro-USB', b: 'pi:usb2a', kind: 'usb', status: P, note: 'Any USB port works.' },
+	{ a: 'respeaker:USB-C', b: 'pi:usb2b', kind: 'usb', status: P, note: 'Any USB port works.' },
+	{ a: 'sound-card:USB-A', b: 'pi:usb3a', kind: 'usb', status: P, note: 'Any USB port works.' },
+	{ a: 'lid-screen:DSI ribbon', b: 'pi:cam1', kind: 'ribbon', status: D, note: 'Waveshare: DSI1 is the default.' },
+	{ a: 'camera:CSI ribbon', b: 'pi:cam0', kind: 'ribbon', status: D, note: 'The Pi 5\'s other ribbon port (box.md).' },
+	{ a: 'psu-pi:USB-C', b: 'pi:usbc', kind: 'power5', status: D, note: 'The Pi\'s own lead.' },
+	{ a: 'brick:DC out', b: 'jack:in', kind: 'power24', status: D, note: '' },
+	{ a: 'jack:out (fused)', b: 'splitter:in', kind: 'power24', status: D, note: '' },
+	{ a: 'splitter:out A', b: 'printer:DC in', kind: 'power24', status: D, note: '' },
+	{ a: 'splitter:out B', b: 'amp:DC 24 V', kind: 'power24', status: D, note: '' },
+	{ a: 'cap:+', b: 'amp:DC 24 V', kind: 'power24', status: D, note: '2200 µF at the amp (box.md).' },
+	{ a: 'cap:−', b: 'amp:DC 24 V', kind: 'power24', status: D, note: '' },
+	{ a: 'splitter:out B', b: 'buck:VIN', kind: 'power24', status: P, note: 'box.md says "on the 24 V lead" without naming the spot; tapping the amp\'s lead keeps the printer\'s clear.' },
+	{ a: 'buck:VOUT', b: 'face:5V', kind: 'power5', status: D, note: '' },
+	{ a: 'buck:VOUT', b: 'face:GND', kind: 'power5', status: D, note: '' },
+	{ a: 'buck:VOUT', b: 'face-shifter:V', kind: 'power5', status: P, note: '' },
+	{ a: 'buck:VOUT', b: 'strip:5V', kind: 'power5', status: P, note: '' },
+	{ a: 'buck:VOUT', b: 'strip:GND', kind: 'power5', status: P, note: '' },
+	{ a: 'face-shifter:D5 out', b: 'face:DIN', kind: 'signal', status: D, note: '' },
+	{ a: 'sound-card:line out', b: 'amp:IN (line)', kind: 'audio', status: D, note: '' },
+	{ a: 'amp:OUT (one ch)', b: 'speaker:+/−', kind: 'audio', status: D, note: '' }
+];

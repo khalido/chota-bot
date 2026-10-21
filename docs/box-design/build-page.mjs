@@ -18,6 +18,8 @@ const bundle = (file, name, deps) => {
 };
 const common = bundle('common.mjs', 'Common');
 const box = bundle('box.mjs', 'Box', 'kernel, frame, callout, svgOpen, dim');
+const wData = bundle('wiring.mjs', 'WData');
+const wCheck = bundle('wiring-checks.mjs', 'WCheck');
 const wall = hasWall ? bundle('wall.mjs', 'Wall', 'kernel, frame, callout, svgOpen, dim') : '';
 
 const BOX0 = { lid: 110, flap: 0, plid: 0, xray: false };
@@ -74,6 +76,7 @@ const page = `<title>Chota Box Designs</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>
 ${rd('figure.css')}
+${rd('wiring.css')}
 * { box-sizing: border-box; }
 body {
   margin: 0; background: var(--bg); color: var(--ink-hi);
@@ -142,6 +145,7 @@ tr[data-status="skip"] .it { text-decoration: line-through; color: var(--ink); }
 <div class="tabs" role="tablist">
 <button role="tab" id="tab-design" aria-controls="design" aria-selected="true">Design</button>
 <button role="tab" id="tab-equipment" aria-controls="equipment" aria-selected="false">Equipment</button>
+<button role="tab" id="tab-wiring" aria-controls="wiring" aria-selected="false">Wiring</button>
 <button role="tab" id="tab-build" aria-controls="build" aria-selected="false">Box build</button>
 </div>
 
@@ -235,6 +239,38 @@ ${
 ${shopTables}
 </section>
 
+<section id="wiring" role="tabpanel" aria-labelledby="tab-wiring" hidden>
+<p>Which wire goes where. Solid wires are settled in box.md; dashed ones are picked here, each with a reason. Tick a wire once it is on the board. The ticks save to this page for everyone who opens it.</p>
+<div class="wctl">
+  <div class="wseg" role="group" aria-label="View">
+    <button type="button" data-wtab="pi" aria-pressed="true">Pi 5</button>
+    <button type="button" data-wtab="pico" aria-pressed="false">Pico</button>
+    <button type="button" data-wtab="box" aria-pressed="false">Whole box</button>
+  </div>
+  <div class="wseg" role="group" aria-label="Phase">
+    <button type="button" data-wphase="v1" aria-pressed="true">v1</button>
+    <button type="button" data-wphase="later" aria-pressed="false">later</button>
+    <button type="button" data-wphase="all" aria-pressed="false">all</button>
+  </div>
+  <label class="chk w-free-wrap"><input type="checkbox" class="w-free"> Show free pins</label>
+  <span class="prog w-prog"></span>
+  <button class="wbtn w-reset" type="button">Reset ticks</button>
+</div>
+<div class="wlayout">
+  <div class="wcard w-plan"></div>
+  <div class="side">
+    <section class="wcard"><div class="w-pininfo"></div></section>
+    <section class="wcard"><div class="w-partinfo"></div></section>
+    <section class="wcard"><h2>Checks</h2><div class="w-checks"></div></section>
+    <section class="wcard"><h2>Parts shown</h2><div class="checklist w-checklist"></div></section>
+  </div>
+</div>
+<section class="wcard" style="margin-top:16px">
+  <div class="tablehead"><h2 style="margin:0">Wiring table</h2><button class="wbtn w-copy" type="button">Copy table</button></div>
+  <div class="wrap w-fulltable"></div>
+</section>
+</section>
+
 <section id="build" role="tabpanel" aria-labelledby="tab-build" hidden>
 <h2 style="margin-top:0">Cut list</h2>
 <p>${pieces} pieces from about half a sheet of 12 mm birch ply, a 9 mm offcut, 6 mm ply for the lid skins, and one length of hardwood for the hinge strip and lid frames. Sizes are length × width × thickness in mm, worked out from the same numbers as the drawing.</p>
@@ -252,6 +288,11 @@ ${notes}
 </section>
 </main>
 <script>
+(() => {
+${wData}
+${wCheck}
+${rd('wiring-client.js')}
+})();
 ${common}
 ${box}
 ${wall}

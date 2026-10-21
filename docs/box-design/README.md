@@ -19,19 +19,18 @@ docs/box-design/pageshot.sh           # screenshot the whole page at 1500 and 40
 
 Generated files (`index.html`, `*.svg`, `shots/`) are gitignored.
 
-## Wiring planner
+## Wiring tab
 
-A bench page for wiring parts to the Pi 5 header and the Pico 2 W: pins drawn as they sit on the board, a wire per part pin, checks, and a ✓ per wire (saved in the browser).
+The "Wiring" tab of `index.html` is a bench planner: the Pi 5 header and the Pico drawn as they sit on the board, a wire per part pin, a "Whole box" block diagram (Pi 5 ports, USB, ribbons, the 24 V tree, sound chain), checks, and a ✓ per wire. Ticks save to the page's shared db (doc `wiring/ticks`), so ones made on the phone show on the laptop; a local file with no db falls back to localStorage. It is built by `build-page.mjs` with the rest of the page.
 
 ```bash
-node docs/box-design/build-wiring.mjs   # → wiring.html, one self-contained page
-node docs/box-design/build-wiring.mjs some-data.mjs   # same page from another data file (to test the checks)
+node docs/box-design/test-wiring.mjs   # the checks: real data clean for v1 and all, broken copies trip them
 ```
 
-- `wiring.mjs`: the data. Both pinouts, the limits the checks use (each with a source and a note on how sure it is), and every part with its pins. Pins box.md settles are `decided`; every other pin is `proposed` with a one-line reason. Change a pin here and the drawing, tables and checks follow.
-- `wiring-client.js` draws and checks; `wiring.css` has the page styles (pin, bus and wire colours, light and dark). `build-wiring.mjs` inlines both with `figure.css`.
-- Checks (computed, never typed in): two wires on one pin, a bus pin used as plain GPIO while its bus is in use (Pi only), a signal on a power pin or the HAT ID pins, 5 V and 3.3 V rail, USB and buck current against their limits, a 5 V part driven from a 3.3 V GPIO with no shifter. They cover what the phase filter and the parts list show.
-- `wiring.html` is gitignored.
+- `wiring.mjs`: the data. Both pinouts, the limits the checks use (each with a source and how sure it is), every part with its pins, the `links` between parts and Pi ports, and `piPorts`. Pins box.md settles are `decided`; every other pin is `proposed` with a one-line reason. Change a pin here and the drawing, tables and checks follow. Parts with `view: 'box'` show only in the Whole-box view.
+- `wiring-checks.mjs`: the checks as plain functions (shared by the page and the test). `wiring-client.js` draws everything; `wiring.css` is scoped under `#wiring`.
+- Checks (computed, never typed in): two wires on one pin, a bus pin used as plain GPIO while its bus is in use (Pi only), a signal on a power or HAT ID pin, 5 V and 3.3 V rails, USB, the buck and the 24 V brick against their limits, a 5 V part driven from a 3.3 V GPIO with no shifter, a cable that goes nowhere. They cover what the phase filter and the parts list show.
+- The Whole-box view's port positions on the Pi 5 are from photos; only the fan connector's place is in Raspberry Pi's docs.
 
 ## Open
 
