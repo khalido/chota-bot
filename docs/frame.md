@@ -27,6 +27,8 @@ Frameo is the app on most cheap 10.1" Wi-Fi frames. Under it is a stripped-down 
 
 Frameo warns that ADB can brick the frame if misused. Stick to installing apps and settings.
 
+**Browser: [kiFOSSk](https://github.com/ShinyDiscoBallsDev/kiFOSSk)** (MIT, F-Droid or APK over `adb install`, v1.1.3 Oct 2026, a solo developer). A full-screen WebView made for dashboards on dedicated hardware: it sets itself as the home launcher so it opens at boot instead of Frameo (no device-owner setup), skips the lock screen, retries with a waiting screen when the Pi is down, can auto-refresh, and has settings behind a long-press. Android 7+, with fixes for old WebViews. It renders with the system WebView, so still update that over ADB first. It has no screen schedule; chota does that over ADB. Fallback if it misbehaves: the ImmichFrame client, as Lucas did.
+
 **What others found.**
 - [Lucas Costi](https://lucascosti.com/blog/2026/02/using-an-even-cheaper-android-thing-as-a-digital-photo-frame/): an A$70-ish Amazon Frameo frame, in Australia. He used ADB to update WebView and runs the ImmichFrame client against an Immich Kiosk server. Fully Kiosk Browser was too finicky on it (he couldn't get out of its menus). The frame is "decently responsive".
 - [Wes Bos](https://wesbos.com/hacking-smart-photo-frames): rooted a Skylight and a cheap Amazon frame for a family dashboard, added a motion sensor to dim the screen. The same Amazon listing can ship different boards; Allwinner PF1007L boards took extra work. Use a USB-A to USB-C data cable: USB-C to USB-C gave no power or data.
@@ -49,7 +51,8 @@ The Pico can't run a browser, so chota does the drawing: it renders a PNG at the
 
 ## Chota side
 
-- `/frame` (for the Frameo) and `/api/frame.png?w=…&h=…` (for the Pico): one page, rendered live or to a PNG.
+- `/frame` (for the Frameo) and `/api/frame.png?w=…&h=…` (for the Pico): one page, rendered live or to a PNG. Served by the Pi on the home network only, open without login like `/clock`. The frame's browser points at the Pi by a fixed IP (a DHCP reservation in the router): Android often can't resolve `.local` names, and Tailscale names don't reach it.
+- **Only chosen photos.** `data/files/` holds everything sent to the bot, private things included, so `/frame` serves only photos picked for it (sent with "frame", or a 👍 from a parent), never the folder.
 - **Where photos come from:** the family's WhatsApp sends to the bot, already saved to `data/files/`, are the easy start: send a photo to chota and it joins the frame. Google Photos is no use here: since March 2025 its API only reads photos the app itself uploaded. Immich, self-hosted on the Pi, if we ever want a whole library.
 - Screen schedule: off overnight, through the same job system as the box's backlight.
 
