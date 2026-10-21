@@ -19,6 +19,20 @@ docs/box-design/pageshot.sh           # screenshot the whole page at 1500 and 40
 
 Generated files (`index.html`, `*.svg`, `shots/`) are gitignored.
 
+## Wiring planner
+
+A bench page for wiring parts to the Pi 5 header and the Pico 2 W: pins drawn as they sit on the board, a wire per part pin, checks, and a ✓ per wire (saved in the browser).
+
+```bash
+node docs/box-design/build-wiring.mjs   # → wiring.html, one self-contained page
+node docs/box-design/build-wiring.mjs some-data.mjs   # same page from another data file (to test the checks)
+```
+
+- `wiring.mjs`: the data. Both pinouts, the limits the checks use (each with a source and a note on how sure it is), and every part with its pins. Pins box.md settles are `decided`; every other pin is `proposed` with a one-line reason. Change a pin here and the drawing, tables and checks follow.
+- `wiring-client.js` draws and checks; `wiring.css` has the page styles (pin, bus and wire colours, light and dark). `build-wiring.mjs` inlines both with `figure.css`.
+- Checks (computed, never typed in): two wires on one pin, a bus pin used as plain GPIO while its bus is in use (Pi only), a signal on a power pin or the HAT ID pins, 5 V and 3.3 V rail, USB and buck current against their limits, a 5 V part driven from a 3.3 V GPIO with no shifter. They cover what the phase filter and the parts list show.
+- `wiring.html` is gitignored.
+
 ## Open
 
 - **Measure the MUNBYN.** The printer is drawn from a generic 80 mm printer's listing (140×180×125 mm); its buttons and cover release are guesses. The 10.1" screen module (235×161) is assumed too.
