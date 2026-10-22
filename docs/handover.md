@@ -24,6 +24,8 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 
 ## Notes
 
+- **AI calls go through Vercel AI Gateway only** (`AI_GATEWAY_API_KEY`, ids like `anthropic/…`, `google/…`); the code never used OpenRouter. KO deleted the OpenRouter key on 21 Oct and the dead line is gone from the Mac `.env`. Still to do, with KO's OK: a dedicated chota gateway key with a budget (`vercel ai-gateway api-keys`, `vercel ai-gateway budgets`), and checking the box's `.env` for an `OPENROUTER_API_KEY` line.
+
 - **Sentral portal:** two GETs change state (`markNewsletterAsRead`, `markHomeworkCompleted`) — never call them.
 - **WhatsApp rules:** never restart on a long `connecting`; 401 = re-pair; the WA Web version is fetched at connect. `scripts/whatsapp-spike.mjs` for one-off sends (stop the app first).
 - **Artifact builder → track [vercel-labs/fx#1344](https://github.com/vercel-labs/fx/issues/1344)**: fx ignores `HTTPS_PROXY`, so it can't run inside srt.
