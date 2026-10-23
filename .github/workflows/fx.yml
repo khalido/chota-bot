@@ -89,14 +89,14 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           # Full history, so `git log -S` and `git blame` answer "this used
           # to work". A second or two on a normal repo; set a depth on a huge one.
           fetch-depth: 0
 
-      - uses: khalido/fx-agent-action@0f1493a47d83150d5c55c8fb6522441f699f7e47 # main, 23 Oct 2026
+      - uses: khalido/fx-agent-action@main
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         with:
