@@ -26,6 +26,7 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 
 - **AI calls go through Vercel AI Gateway only** (`AI_GATEWAY_API_KEY`, ids like `anthropic/…`, `google/…`); the code never used OpenRouter. KO deleted the OpenRouter key on 21 Oct and the dead line is gone from the Mac `.env`. Still to do, with KO's OK: a dedicated chota gateway key with a budget (`vercel ai-gateway api-keys`, `vercel ai-gateway budgets`), and checking the box's `.env` for an `OPENROUTER_API_KEY` line.
 
+- **Agent shape (checked 25 Oct against the svelte skill's `agent-sidepanel.md`):** one ToolLoopAgent, 15 tools, no subagents; the only other model calls are pre-filters before the agent (Jev group triage, the Flash Lite photo gate in `channels/triage.ts`). Keep it that way: new abilities (school news, reserve) are tools on the same loop. Missing: an eval of ~10 golden questions run 2–3 times; build it before the next big prompt or tool change.
 - **Sentral portal:** two GETs change state (`markNewsletterAsRead`, `markHomeworkCompleted`) — never call them.
 - **WhatsApp rules:** never restart on a long `connecting`; 401 = re-pair; the WA Web version is fetched at connect. `scripts/whatsapp-spike.mjs` for one-off sends (stop the app first).
 - **Artifact builder → track [vercel-labs/fx#1344](https://github.com/vercel-labs/fx/issues/1344)**: fx ignores `HTTPS_PROXY`, so it can't run inside srt.
