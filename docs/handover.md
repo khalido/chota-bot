@@ -27,7 +27,7 @@ All three say: deploy what's built before adding more (box still on `4eaa7f0`), 
 - Smaller: drop empty tool args (everx `dropUnsetArgs`), prune old tool results on threads idle 8 h+ (`pruneMessages`), no backup job yet, `/api/print` is LAN-open by choice.
 
 - **Fixed 28 Oct (69bf265, not deployed):** the 20-step cap with a last step that answers, failure messages that say what to do (a dead key says "tell a parent", checked live), one error message on Telegram instead of a partial answer plus "snag", WhatsApp redelivery dedupe.
-- **From yaad (28 Oct), for KO personally:** forward a link → save it with a summary and tags (yaad `api/links.py:337` `save_link`: Exa contents with a summary schema, YouTube via Gemini, a `Content` table); then `saved_search`; then read-later / to-watch status. Smallest chota build: a Drizzle `saved` table, `tools/saved.ts` + `agent/tools/saved.ts`, and a prompt rule that a bare URL means save it. Reminders as DB-backed user jobs are already planned (`next.md`).
+- **Saved content (e1fa14e, 28 Oct, not deployed):** save + saved tools, `content` table, Telegram photos/voice/documents, WhatsApp documents. DM saves are private to the sender. Next from yaad: read-later / to-watch status, resending a saved file ("send me that PDF"), YouTube summaries via Gemini, reminders as DB-backed user jobs (`next.md`).
 
 ## Next, in order
 
