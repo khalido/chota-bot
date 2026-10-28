@@ -20,6 +20,7 @@
  */
 import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
 import { event } from '$lib/server/log';
+import { answerWhenDone, STOP_WHEN } from './loop';
 import { buildSystemPrompt } from './prompts';
 import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
@@ -31,6 +32,8 @@ import { bookTool } from './tools/books';
 import { titleInfoTool, watchIdeasTool } from './tools/tmdb';
 import { volleyballTool } from './tools/volleyball';
 import { webFetchTool, webSearchTool } from './tools/web';
+
+export { describeChatError, EMPTY_REPLY } from './errors';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
@@ -51,6 +54,9 @@ export const chotaAgent = new ToolLoopAgent({
 		...settings,
 		instructions: await buildSystemPrompt()
 	}),
+	// A hard step cap, and the last step answers without tools (see ./loop.ts).
+	stopWhen: STOP_WHEN,
+	prepareStep: answerWhenDone,
 	tools: {
 		weather: weatherTool,
 		calendar: calendarTool,

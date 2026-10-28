@@ -28,7 +28,6 @@ const SCOPE = 'telegram';
 /** Min gap between draft updates. Tokens arrive every few ms; sending each
  *  would be dozens of API calls a second and hit Telegram's rate limits. */
 const DRAFT_GAP_MS = 300;
-const EMPTY_REPLY = "I didn't have anything to say to that.";
 
 /** Friendly "thinking" status per tool name. Falls back to a generic line. */
 const TOOL_STATUS: Record<string, string> = {
@@ -152,6 +151,11 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 						flush();
 					}
 					break;
+				// ai v7 puts a provider failure in the stream instead of throwing:
+				// throw it, so no partial answer is posted and the router gets the
+				// real error for its message.
+				case 'error':
+					throw part.error;
 			}
 		}
 	} finally {
@@ -162,7 +166,11 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 		await inFlight;
 	}
 
-	const text = acc.trim() || EMPTY_REPLY;
+	// The last step's text, the same text the router keeps and checks: an empty
+	// one sends nothing here, and the router says so once. Rejects if the run
+	// failed, so the router's error message is the only one.
+	const text = (await result.text).trim();
+	if (!text) return;
 	if (richOk) {
 		try {
 			await ctx.api.sendRichMessage(chatId, { markdown: text });

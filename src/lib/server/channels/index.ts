@@ -5,13 +5,14 @@
  * keeps history, runs the agent and hands the stream back to the adapter.
  * Design: docs/agent.md §Channels.
  */
-import { runAgentStream } from '$lib/server/agent';
+import { describeChatError, EMPTY_REPLY, runAgentStream } from '$lib/server/agent';
 import {
 	appendMessage,
 	loadHistory,
 	migrateThreadKeys,
 	newTurnId
 } from '$lib/server/agent/history';
+import { LRUCache } from 'lru-cache';
 import { event, logErr } from '$lib/server/log';
 import { transcribeAudio } from '$lib/server/transcribe';
 import { saveFile } from './files';
@@ -93,7 +94,18 @@ function accept(channel: Channel, m: Incoming): Promise<void> {
 	return Promise.resolve();
 }
 
+/** Message ids seen lately, in memory. WhatsApp can deliver a message again
+ *  after a reconnect; without this the same "print …" could run twice. (A
+ *  process restart empties it; the catch-up window covers that case.) */
+const seen = new LRUCache<string, true>({ max: 2000, ttl: 6 * 60 * 60_000 });
+
 async function route(channel: Channel, incoming: Incoming): Promise<void> {
+	// An id-less message can't be told apart from the next one, so it isn't deduped.
+	if (incoming.messageId) {
+		const key = `${incoming.channel}:${incoming.threadId}:${incoming.messageId}`;
+		if (seen.has(key)) return;
+		seen.set(key, true);
+	}
 	let m = incoming;
 	const addressed = shouldAnswer(m);
 	const triaged = !addressed && triages(m);
@@ -185,17 +197,16 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		// turns don't think they said it to anyone.
 		if (reply)
 			appendMessage(m.threadId, turnId, 'assistant', m.triage ? `(quietly) ${reply}` : reply);
+		// Nothing came back (the model stopped without text): say so rather than go silent.
+		else if (!m.triage) await channel.send(m.threadId, { markdown: EMPTY_REPLY }).catch(() => {});
 		if (reply && !m.triage && !m.isDM) remember(m.threadId, botLine(reply));
 		ev.done();
 	} catch (err) {
-		logErr(SCOPE, `agent turn failed (${m.threadId})`, err);
-		ev.fail(err);
+		const failure = describeChatError(err);
+		logErr(SCOPE, `agent turn failed (${m.threadId}, ${failure.kind})`, err);
+		ev.fail(err, { kind: failure.kind });
 		// A quiet (triaged) turn fails silently — nobody asked.
-		if (!m.triage) {
-			await channel
-				.send(m.threadId, { markdown: "Sorry, I hit a snag and couldn't answer that one." })
-				.catch(() => {});
-		}
+		if (!m.triage) await channel.send(m.threadId, { markdown: failure.message }).catch(() => {});
 	} finally {
 		stopTyping();
 	}

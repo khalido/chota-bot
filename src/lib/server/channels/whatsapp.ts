@@ -245,6 +245,9 @@ export function whatsappChannel(): Channel | null {
 			try {
 				let wrote: string | undefined;
 				for await (const part of result.fullStream) {
+					// ai v7 streams a provider failure as a part; throw it so the
+					// router sees the real error.
+					if (part.type === 'error') throw part.error;
 					if (part.type !== 'tool-input-start') continue;
 					if (WRITE_TOOLS.has(part.toolName)) wrote = part.toolName;
 					if (!m.triage || WRITE_TOOLS.has(part.toolName)) await react(toolEmoji(part.toolName));
