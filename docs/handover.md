@@ -16,6 +16,16 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 - **Printing plan (KO, 28 Oct):** the receipt printer stays chota's own code; the Brother laser (AirPrint) prints through `@khalido/home` once it has a print action. With the home library's `health`, treat printers separately: a printer off at night reads as `down` after about 6 minutes.
 - **Deps (23 Oct):** `bunfig.toml` has `minimumReleaseAge` = 2 days (KO's choice). Updated within ranges; majors held per CLAUDE.md. `googleapis` 187 is a new major, left on 186. Audit: nothing fixable without breaking majors.
 
+## Reviews, 28 Oct (Fable, Gemini, everx/syntechfibres comparison)
+
+All three say: deploy what's built before adding more (box still on `4eaa7f0`), then WhatsApp on the box, then the school news watch with a ~10-question eval first. Park box design, frames and artifacts until then. Confirmed in code:
+- **Agent turns are unbounded:** no `stopWhen`, no timeout in `agent/index.ts` (SDK default 20 steps); only triage has one. Fix: `isStepCount(8)` + a last-step `prepareStep` with `toolChoice: 'none'` (syntechfibres `loop-guard.ts` `answerWhenDone`), a wall-clock cap, a repeat-call guard.
+- **One error message for everything** (`channels/index.ts:196`); port everx `errors.ts` `describeChatError` so a key or billing failure says so.
+- **Untagged group voice notes and photos leave the house:** voice notes are transcribed and saved (`channels/index.ts:101`), photos go to Gemini Flash Lite (`triage.ts`). Built on purpose 16 Oct, but `whatsapp.md:132` and `:155` still say DMs/addressed only. KO decides; then align the doc and tell the family.
+- **No WhatsApp message-id dedupe** (planned at `whatsapp.md:114`); a restart inside the 10-minute catch-up could repeat a print.
+- **No prompt caching** (`prompts.ts:17`); put stable prompt blocks first.
+- Smaller: drop empty tool args (everx `dropUnsetArgs`), prune old tool results on threads idle 8 h+ (`pruneMessages`), no backup job yet, `/api/print` is LAN-open by choice.
+
 ## Next, in order
 
 1. **School news watch (test on the Mac, no Pi needed).** KO forgets what's in the school portal. Per kid, once a day: read the Sentral school calendar (`calendar/getCalendar/<year>/<term>`) and newsletters (`news/getNewsletters/`) with the cookie we already keep (`tools/sentral.ts`), keep the ids already seen, and hand new or upcoming items to the agent, which decides whether to message the family ("Parent-teacher night Thursday, book here: <link>") or stay quiet. Probed 28 Oct (`tools.md` §Sentral, "Probe, 28 Oct 2026"): the calendar is the useful feed, school-wide, with times, notes and schoolbytes links; newsletters are only Sway links. Next: each kid's year group in config, dedupe by event id, lead times, then the job. One kid's cookie was failing (403); check that first. Rules from `tools.md` §Sentral beyond the timetable: GETs only, never `markNewsletterAsRead` or `markHomeworkCompleted`, check for JSON (a failure can be a 200 HTML page), school-written text and links are untrusted. Our logins are student accounts, so the parent bulletin returns 403; if KO wants more feeds, check the portal JS for read-only endpoints first, don't crawl.
