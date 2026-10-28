@@ -94,6 +94,12 @@ The portal is an AngularJS app over undocumented JSON at `{SENTRAL_BASE_URL}/por
 
 Rules: GETs only, each confirmed read-only in the portal JS first. `news/markNewsletterAsRead/<id>` and `markHomeworkCompleted` are **GETs that change state** — never call them, never crawl unknown endpoints. A failed call can return a 200 HTML shell, so check for JSON. Calendar notes and links are school-written, untrusted text: the agent doesn't follow them on its own.
 
+**Probe, 28 Oct 2026** (one kid's cookie, GETs only). `calendar/getCalendar/<year>/<term>` returns `events` (keyed by date: title, date, recurring) and `weeks` (per day, with `start_time`, `end_time`, `notes` and `link`). Term 4 had 87 events, school-wide: excursions, incursions, assemblies, year-group weeks (exams, work experience, camp), parent nights (information session, enrolment night, P&C). Most `link`s are schoolbytes excursion pages (permission and payment); `notes` repeat the date and a description. A multi-week event appears on every day it spans, so dedupe by `id`. `news/getNewsletters` returns six items (two per term, weeks 4 and 9): name, term, week, `upload_date`, a Sway `link`, and `read` (ours: false; leave it alone). The newsletter text lives in Sway, a JS page; not read yet.
+
+For a school news watch: the calendar is the useful feed. It needs each kid's year group (not in config yet) to drop other years' events, a "seen" set by event id, and a lead time (a camp or parent night a week or two out, an excursion a few days out). The agent then picks what to send. A newsletter is just "new newsletter: <link>" until we can read Sway.
+
+One kid's stored cookie returned 403 for both the API and the `.ics` export on 28 Oct although the 08:30 refresh had written it; the other worked. Check `sentral-refresh` for that kid before relying on it.
+
 - `screen-time` — query router / Family Link API — probably requires Google Workspace admin, defer
 
 ## API keys checklist
