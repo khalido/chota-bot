@@ -68,3 +68,26 @@ describe('content privacy', () => {
 		);
 	});
 });
+
+describe('content search matching', () => {
+	beforeAll(async () => {
+		await db.insert(schema.content).values([
+			{ ...row('Kid1', 'family', 'Book list'), tags: 'to-read', text: 'novels' },
+			{ ...row('Kid1', 'family', 'Score 100% sure'), tags: 'school', text: 'quiz' }
+		]);
+	});
+
+	it('matches a whole tag, not part of one', async () => {
+		const asker = { sender: 'Kid1', isDM: false };
+		expect(await searchContent('', asker, { tag: 'read' })).toEqual([]);
+		expect((await searchContent('', asker, { tag: 'to-read' })).map((r) => r.title)).toEqual([
+			'Book list'
+		]);
+	});
+
+	it('treats % and _ as plain characters', async () => {
+		const asker = { sender: 'Kid1', isDM: false };
+		expect((await searchContent('100%', asker)).map((r) => r.title)).toEqual(['Score 100% sure']);
+		expect(await searchContent('Sc_re', asker)).toEqual([]);
+	});
+});

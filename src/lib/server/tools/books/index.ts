@@ -111,9 +111,11 @@ const JUNK =
 export function pickBook(query: string, hits: BookHit[]): BookHit | null {
 	const q = norm(query);
 	const real = hits.filter((h) => !JUNK.test(`${h.title} ${h.subtitle ?? ''}`) && h.authors.length);
+	// An empty normalised string (a title in another script) would "match" any query.
+	const named = (s: string | undefined) => !!s && q.includes(s);
 	const score = (h: BookHit) =>
-		(q.includes(norm(h.title)) ? 2 : 0) +
-		(h.authors.some((a) => q.includes(norm(a).split(' ').at(-1) ?? '~')) ? 1 : 0) +
+		(named(norm(h.title)) ? 2 : 0) +
+		(h.authors.some((a) => named(norm(a).split(' ').at(-1))) ? 1 : 0) +
 		(h.pages && h.description ? 0.5 : 0);
 	let best: BookHit | null = null;
 	for (const h of real) {

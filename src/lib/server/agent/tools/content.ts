@@ -10,6 +10,7 @@
  */
 import { tool } from 'ai';
 import { z } from 'zod';
+import { sydneyYMD } from '$lib/time';
 import { saveContent, searchContent, TAG_NAMES, type Asker } from '$lib/server/tools/content';
 
 export const AskerSchema = z.object({
@@ -40,9 +41,6 @@ const askerOf = (c: ContentContext | undefined): Asker => ({
 	attachment: c?.attachment,
 	quiet: c?.quiet
 });
-
-const day = (d: Date) =>
-	d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export const saveTool = tool({
 	description:
@@ -99,7 +97,7 @@ export const savedTool = tool({
 				url: r.url,
 				tags: r.tags,
 				savedBy: r.sender,
-				saved: day(r.createdAt),
+				saved: sydneyYMD(r.createdAt),
 				private: r.scope === 'private',
 				hasFile: !!r.file
 			}))

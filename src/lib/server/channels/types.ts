@@ -35,6 +35,8 @@ export interface Incoming {
 		kind: 'image' | 'audio' | 'document';
 		mimetype: string;
 		fileName?: string;
+		/** Bytes, when the platform says. */
+		size?: number;
 		download: () => Promise<Buffer>;
 	};
 	/** The file kept from this message (set by the router once saved), for

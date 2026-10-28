@@ -99,7 +99,27 @@ describe('defineJob alerts', () => {
 });
 
 describe('defineJob timeout', () => {
-	it('fails a hung run and alerts, then the next tick runs', async () => {
+	it('skips the next fire while a timed-out run is still going', async () => {
+		vi.useFakeTimers({ now: new Date('2026-10-16T09:00:30+11:00') });
+		let calls = 0;
+		defineJob(
+			'test-stuck',
+			'*/5 * * * *',
+			() => {
+				calls++;
+				return new Promise<void>(() => {}); // never settles
+			},
+			{ timeoutMs: 2 * 60_000 }
+		);
+		await vi.advanceTimersByTimeAsync(10 * 60_000); // 09:05 hangs, 09:07 times out, 09:10
+		expect(calls).toBe(1);
+		expect(recentRuns('test-stuck')[0]).toMatchObject({
+			status: 'skipped',
+			error: 'skipped: the previous run is still going after its timeout'
+		});
+	});
+
+	it('fails a hung run and alerts, then runs again once it has settled', async () => {
 		vi.useFakeTimers({ now: new Date('2026-10-16T09:00:30+11:00') });
 		vi.mocked(raiseAlert).mockClear();
 		let calls = 0;
@@ -108,7 +128,8 @@ describe('defineJob timeout', () => {
 			'*/5 * * * *',
 			() => {
 				calls++;
-				if (calls === 1) return new Promise<void>(() => {}); // never settles
+				// The first run hangs past its timeout but finishes at 09:09.
+				if (calls === 1) return new Promise<void>((r) => setTimeout(r, 4 * 60_000));
 			},
 			{ timeoutMs: 2 * 60_000 }
 		);

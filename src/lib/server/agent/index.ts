@@ -132,6 +132,24 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 	}
 }
 
+/**
+ * The reply to show and keep: the last step's text, or, when the last step
+ * wrote nothing (it ended on tools), what earlier steps wrote. Every channel
+ * and the router use this, so "empty" means the same everywhere. Rejects if
+ * the run failed.
+ */
+export async function finalText(result: {
+	text: PromiseLike<string>;
+	steps: PromiseLike<readonly { text: string }[]>;
+}): Promise<string> {
+	const last = (await result.text).trim();
+	if (last) return last;
+	return (await result.steps)
+		.map((s) => s.text.trim())
+		.filter(Boolean)
+		.join('\n\n');
+}
+
 /** The resolved result of `chotaAgent.stream(...)` — exposes `fullStream`
  *  (typed tool-call + text-delta parts), `textStream`, `usage`, `steps`. */
 export type ChotaStreamResult = Awaited<ReturnType<typeof chotaAgent.stream>>;

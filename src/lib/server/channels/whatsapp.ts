@@ -27,6 +27,7 @@ import makeWASocket, {
 import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
 import { clearAlert, raiseAlert, registerAlertChannel } from '$lib/server/alerts';
+import { finalText } from '$lib/server/agent';
 import { recordSent } from '$lib/server/agent/history';
 import { errorMessage, log, logErr } from '$lib/server/log';
 import { mediaOf, toIncoming, userOf, type WaMessage } from './whatsapp-message';
@@ -262,7 +263,7 @@ export function whatsappChannel(): Channel | null {
 					if (!wrote) await react('');
 					return;
 				}
-				const text = (await result.text).trim();
+				const text = await finalText(result);
 				if (!text) {
 					await react('');
 					return;

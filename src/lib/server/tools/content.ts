@@ -16,7 +16,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, like, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { generateText, Output } from 'ai';
 import Exa from 'exa-js';
 import { extractText, getDocumentProxy } from 'unpdf';
@@ -260,6 +260,9 @@ export async function saveContent(input: SaveInput, asker: Asker): Promise<Conte
 	return row;
 }
 
+/** `%` and `_` in what someone typed are literal, not wildcards. */
+const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 /** Items `asker` may see that match every word of `query`, newest first. */
 export async function searchContent(
 	query: string,
@@ -272,19 +275,25 @@ export async function searchContent(
 		.filter((w) => w.length > 1)
 		.slice(0, 6);
 	const matches = words.map((w) => {
-		const p = `%${w}%`;
+		const p = `%${escapeLike(w)}%`;
 		return or(
-			like(content.title, p),
-			like(content.summary, p),
-			like(content.text, p),
-			like(content.tags, p),
-			like(content.note, p),
-			like(content.url, p)
+			...[
+				content.title,
+				content.summary,
+				content.text,
+				content.tags,
+				content.note,
+				content.url
+			].map((col) => sql`${col} LIKE ${p} ESCAPE '\\'`)
 		)!;
 	});
 	const filters = [visibleTo(asker), ...matches];
 	if (opts.kind) filters.push(eq(content.kind, opts.kind));
-	if (opts.tag) filters.push(like(content.tags, `%${opts.tag}%`));
+	// A whole tag, not part of one ("read" must not match "to-read").
+	if (opts.tag) {
+		const p = `%,${escapeLike(opts.tag.trim().toLowerCase())},%`;
+		filters.push(sql`(',' || ${content.tags} || ',') LIKE ${p} ESCAPE '\\'`);
+	}
 	return db
 		.select()
 		.from(content)

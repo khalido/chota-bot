@@ -21,7 +21,7 @@
  * text — the family always gets an answer.
  */
 import type { Context } from 'grammy';
-import type { ChotaStreamResult } from '$lib/server/agent';
+import { finalText, type ChotaStreamResult } from '$lib/server/agent';
 import { logErr } from '$lib/server/log';
 
 const SCOPE = 'telegram';
@@ -171,7 +171,7 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 	// The last step's text, the same text the router keeps and checks: an empty
 	// one sends nothing here, and the router says so once. Rejects if the run
 	// failed, so the router's error message is the only one.
-	const text = (await result.text).trim();
+	const text = await finalText(result);
 	if (!text) return;
 	if (richOk) {
 		try {

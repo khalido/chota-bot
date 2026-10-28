@@ -92,6 +92,10 @@ export function defineJob(
 
 	let due: Date | null = null;
 	let failStreak = 0;
+	// A run that timed out keeps going (JS can't stop it). Until it settles, the
+	// next fire skips: croner's `protect` only covers the run it awaited, and
+	// two morning prints racing for the printer is worse than one late skip.
+	let straggler: Promise<unknown> | undefined;
 	const cron = new Cron(
 		pattern,
 		{
@@ -119,12 +123,21 @@ export function defineJob(
 				jobLog.warning('job {job} {error}', { job: name, error });
 				return;
 			}
+			if (straggler) {
+				const error = 'skipped: the previous run is still going after its timeout';
+				recordRun(name, { at, status: 'skipped', durationMs: 0, error });
+				jobLog.warning('job {job} {error}', { job: name, error });
+				return;
+			}
 			// One wide `job.run` event per fire — see docs/logging.md. `runId` is
 			// the `job_run` row.
 			const ev = event('jobs', 'job {job} ran', { job: name });
 			let error: string | undefined;
 			try {
-				const out = await withTimeout(fn, timeoutMs);
+				const work = Promise.resolve().then(fn);
+				const out = await withTimeout(work, timeoutMs, () => {
+					straggler = work.catch(() => {}).finally(() => (straggler = undefined));
+				});
 				const summary = typeof out === 'string' && out.length > 0 ? out : undefined;
 				const durationMs = Date.now() - start;
 				ev.set('runId', recordRun(name, { at, status: 'ok', durationMs, summary }));
@@ -196,17 +209,17 @@ export function stopJobs(): void {
 	jobLog.info('jobs stopped — {count} job(s)', { count: JOBS.length });
 }
 
-/** Run `fn`, failing if it takes longer than `ms`. */
-async function withTimeout<T>(fn: () => T | Promise<T>, ms: number): Promise<T> {
+/** Wait for `work`, failing if it takes longer than `ms` (`onTimeout` runs then). */
+async function withTimeout<T>(work: Promise<T>, ms: number, onTimeout: () => void): Promise<T> {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const timeout = new Promise<never>((_, reject) => {
-		timer = setTimeout(
-			() => reject(new Error(`timed out after ${Math.round(ms / 60_000)} min`)),
-			ms
-		);
+		timer = setTimeout(() => {
+			onTimeout();
+			reject(new Error(`timed out after ${Math.round(ms / 60_000)} min`));
+		}, ms);
 	});
 	try {
-		return await Promise.race([Promise.resolve().then(fn), timeout]);
+		return await Promise.race([work, timeout]);
 	} finally {
 		clearTimeout(timer);
 	}

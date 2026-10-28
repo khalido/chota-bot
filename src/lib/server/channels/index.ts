@@ -8,6 +8,7 @@
 import {
 	describeChatError,
 	EMPTY_REPLY,
+	finalText,
 	runAgentStream,
 	type ContentContext
 } from '$lib/server/agent';
@@ -107,11 +108,25 @@ const seen = new LRUCache<string, true>({ max: 2000, ttl: 6 * 60 * 60_000 });
 
 async function route(channel: Channel, incoming: Incoming): Promise<void> {
 	// An id-less message can't be told apart from the next one, so it isn't deduped.
-	if (incoming.messageId) {
-		const key = `${incoming.channel}:${incoming.threadId}:${incoming.messageId}`;
-		if (seen.has(key)) return;
-		seen.set(key, true);
+	const key = incoming.messageId
+		? `${incoming.channel}:${incoming.threadId}:${incoming.messageId}`
+		: undefined;
+	if (key && seen.has(key)) return;
+	if (key) seen.set(key, true);
+	try {
+		await routeOnce(channel, incoming);
+	} catch (err) {
+		// A message that failed before it was queued (a download or transcription
+		// blip) may come again after a reconnect: let it through then.
+		if (key) seen.delete(key);
+		throw err;
 	}
+}
+
+/** Largest document read (the file is fetched whole and parsed in-process). */
+const MAX_DOC_BYTES = 20 * 1024 * 1024;
+
+async function routeOnce(channel: Channel, incoming: Incoming): Promise<void> {
 	// Changed in place, never copied: Telegram finds its reply context by this
 	// object (a WeakMap in telegram.ts), so a copy would lose it.
 	const m = incoming;
@@ -130,10 +145,22 @@ async function route(channel: Channel, incoming: Incoming): Promise<void> {
 	// A document is read only when sent to the bot: kept, and the file left for
 	// the save tool. History keeps a short line; the text rides on this turn only.
 	if (addressed && m.media?.kind === 'document') {
+		if ((m.media.size ?? 0) > MAX_DOC_BYTES) {
+			await channel.send(m.threadId, {
+				markdown: 'That file is over 20 MB, too big for me to open.'
+			});
+			return;
+		}
 		const data = await m.media.download();
 		const { mimetype, fileName } = m.media;
 		const path = await saveFile(m.threadId, m.messageId, mimetype, data, fileName);
-		const text = mimetype === 'application/pdf' ? await pdfText(data).catch(() => '') : '';
+		const text =
+			mimetype === 'application/pdf'
+				? await pdfText(data).catch((err) => {
+						logErr(SCOPE, `couldn't read PDF ${fileName ?? ''} (${m.threadId})`, err);
+						return '';
+					})
+				: '';
 		const attachment = { kind: 'document' as const, path, mimetype, fileName, text };
 		const line = `[document: ${fileName ?? 'file'}]`;
 		Object.assign(m, { text: m.text ? `${m.text}\n${line}` : line, media: undefined, attachment });
@@ -202,7 +229,10 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		// and the photo itself. History keeps the text line.
 		const last = messages.at(-1);
 		const hint = m.triage?.hint ?? (m.isDM ? undefined : GROUP_HINT);
-		const doc = m.attachment?.kind === 'document' ? docText(m.attachment.text) : '';
+		// A file sent just before (and merged into this turn) still counts.
+		const merged = [...skipped].reverse().find((t) => t.m.attachment)?.m.attachment;
+		const attached = m.attachment ?? merged;
+		const doc = attached?.kind === 'document' ? docText(attached.text) : '';
 		if (last?.role === 'user' && (hint || doc || m.media?.kind === 'image')) {
 			const text = [String(last.content), doc, hint].filter(Boolean).join('\n\n');
 			if (m.media?.kind === 'image') {
@@ -228,14 +258,14 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 			channel: m.channel,
 			threadId: m.threadId,
 			messageId: m.messageId,
-			attachment: m.attachment,
+			attachment: m.attachment ?? attached,
 			// A quiet (untagged) turn only acts on lists; it never saves on its own.
 			quiet: !!m.triage
 		};
 		const result = await runAgentStream({ messages, options: { asker } }, (r) =>
 			channel.reply(m, r)
 		);
-		const reply = (await result.text).trim();
+		const reply = await finalText(result);
 		// A quiet turn's reply was never shown: keep it as a note, so later
 		// turns don't think they said it to anyone.
 		if (reply)

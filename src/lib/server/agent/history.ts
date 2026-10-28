@@ -61,9 +61,19 @@ export function loadHistory(chatId: string, limit = HISTORY_LIMIT): ModelMessage
 		.limit(limit)
 		.all();
 	const msgs = rows.reverse().map((r) => ({ role: r.role, content: r.content }) as ModelMessage);
-	// A turn whose reply was empty stores only a user row, so the limit window can
-	// start on an 'assistant' message — which some models reject. History must
-	// begin with a user message.
-	while (msgs.length && msgs[0].role === 'assistant') msgs.shift();
-	return msgs;
+	// History must begin with a user message (some models reject anything
+	// else), but the window can start on assistant rows: a turn cut by the
+	// limit, or an alert the bot sent first (recordSent). Fold those into one
+	// leading user note rather than drop them — a reply to an alert needs it.
+	let lead = 0;
+	while (lead < msgs.length && msgs[lead].role === 'assistant') lead++;
+	if (lead === 0) return msgs;
+	const earlier = msgs
+		.slice(0, lead)
+		.map((x) => String(x.content))
+		.join('\n');
+	return [
+		{ role: 'user', content: `[Earlier, chota sent:]\n${earlier}` },
+		...msgs.slice(lead)
+	] as ModelMessage[];
 }

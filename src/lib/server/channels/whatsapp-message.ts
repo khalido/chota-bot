@@ -64,14 +64,20 @@ function textAndContext(raw: Record<string, unknown>): { text: string; ctx?: Con
 /** Which attachment, if any, a message carries (photo, voice note, document). */
 export function mediaOf(
 	raw: Record<string, unknown>
-): { kind: 'image' | 'audio' | 'document'; mimetype: string; fileName?: string } | undefined {
+):
+	| { kind: 'image' | 'audio' | 'document'; mimetype: string; fileName?: string; size?: number }
+	| undefined {
 	const message = unwrapDocument(raw);
-	const doc = message.documentMessage as { mimetype?: string; fileName?: string } | undefined;
+	const doc = message.documentMessage as
+		| { mimetype?: string; fileName?: string; fileLength?: number | { toNumber(): number } }
+		| undefined;
 	if (doc) {
+		const len = doc.fileLength;
 		return {
 			kind: 'document',
 			mimetype: doc.mimetype ?? 'application/octet-stream',
-			fileName: doc.fileName ?? undefined
+			fileName: doc.fileName ?? undefined,
+			...(len != null && { size: typeof len === 'number' ? len : len.toNumber() })
 		};
 	}
 	const image = message.imageMessage as { mimetype?: string } | undefined;
