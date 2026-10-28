@@ -7,8 +7,7 @@
  * an `outputSchema` too, read from `output.content`. `numResults` is capped
  * at 5 to keep a lookup cheap. Key: EXA_API_KEY.
  */
-import Exa from 'exa-js';
-import { env } from '$env/dynamic/private';
+import { exa } from '$lib/server/exa';
 import { log } from '$lib/server/log';
 
 export interface BookBlurb {
@@ -43,12 +42,8 @@ const SCHEMA = {
 	required: ['blurb']
 };
 
-let exa: Exa | undefined;
-
 export async function bookBlurb(title: string, author?: string): Promise<BookBlurb> {
-	if (!env.EXA_API_KEY) throw new Error('Set EXA_API_KEY in .env');
-	exa ??= new Exa(env.EXA_API_KEY);
-	const r = await exa.search(`${title}${author ? ` by ${author}` : ''} book review`, {
+	const r = await exa().search(`${title}${author ? ` by ${author}` : ''} book review`, {
 		type: 'auto',
 		numResults: 5,
 		contents: { highlights: true },

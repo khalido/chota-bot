@@ -5,6 +5,7 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { extractText, getDocumentProxy } from 'unpdf';
 
 const EXT: Record<string, string> = {
 	'image/jpeg': 'jpg',
@@ -35,4 +36,11 @@ export async function saveFile(
 	const path = join(dir, `${Date.now()}-${folderOf(messageId)}.${ext}`);
 	await writeFile(path, data);
 	return path;
+}
+
+/** A PDF's text layer, read on the box. Empty for a scan. */
+export async function pdfText(data: Buffer): Promise<string> {
+	const pdf = await getDocumentProxy(new Uint8Array(data));
+	const { text } = await extractText(pdf, { mergePages: true });
+	return text.replace(/[ \t]+\n/g, '\n').trim();
 }

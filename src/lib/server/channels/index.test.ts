@@ -6,6 +6,7 @@ vi.mock('./whatsapp', () => ({ whatsappChannel: () => null }));
 vi.mock('./triage', () => ({ triage: vi.fn(), triageHint: vi.fn() }));
 vi.mock('$lib/server/agent', () => ({ runAgentStream: vi.fn() }));
 vi.mock('$lib/server/agent/history', () => ({}));
+vi.mock('$lib/server/agent/prompts', () => ({ GROUP_HINT: '' }));
 vi.mock('$lib/server/log', () => ({ event: vi.fn(), logErr: vi.fn() }));
 
 const { followsBot, shouldAnswer } = await import('./index');

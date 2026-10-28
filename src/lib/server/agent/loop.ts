@@ -11,7 +11,7 @@
  * its history held tool calls, so the final step sees every lookup rewritten
  * as plain text.
  */
-import { isStepCount, type Instructions, type ModelMessage, type SystemModelMessage } from 'ai';
+import { isStepCount, type Instructions, type ModelMessage } from 'ai';
 
 /** Steps per turn. Generous: a WhatsApp turn shows each tool's emoji as it goes. */
 export const MAX_STEPS = 20;
@@ -34,17 +34,12 @@ export function answerWhenDone({
 	instructions: Instructions | undefined;
 }) {
 	if (stepNumber < MAX_STEPS - 1) return {};
-	const said: SystemModelMessage = { role: 'system', content: ANSWER_NOW };
+	// prepareCall always sets the instructions as one string (buildSystemPrompt).
 	return {
 		toolChoice: 'none' as const,
 		activeTools: [],
 		messages: lookupsAsText(messages),
-		instructions:
-			instructions == null
-				? ANSWER_NOW
-				: typeof instructions === 'string'
-					? `${instructions}\n\n${ANSWER_NOW}`
-					: [...(Array.isArray(instructions) ? instructions : [instructions]), said]
+		instructions: `${instructions ?? ''}\n\n${ANSWER_NOW}`.trim()
 	};
 }
 

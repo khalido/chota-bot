@@ -49,18 +49,33 @@ export function migrateThreadKeys(): void {
 	db.run(sql`UPDATE chat_message SET chat_id = 'tg:' || chat_id WHERE chat_id NOT LIKE '%:%'`);
 }
 
+/** A quiet turn's reply is stored with this prefix: kept as a note, never shown. */
+export const QUIET_PREFIX = '(quietly) ';
+
+/** Last N stored rows for a chat, oldest-first, as written. */
+export function loadRows(
+	chatId: string,
+	limit = HISTORY_LIMIT
+): { role: 'user' | 'assistant'; content: string }[] {
+	return (
+		db
+			.select({ role: chatMessage.role, content: chatMessage.content })
+			.from(chatMessage)
+			.where(eq(chatMessage.chatId, chatId))
+			// rowid (insertion order) breaks ties on equal createdAt ms so the window
+			// is deterministic; createdAt leads so the (chatId, createdAt) index sorts.
+			.orderBy(desc(chatMessage.createdAt), desc(sql`rowid`))
+			.limit(limit)
+			.all()
+			.reverse()
+	);
+}
+
 /** Last N messages for a chat, oldest-first, as agent `ModelMessage[]`. */
 export function loadHistory(chatId: string, limit = HISTORY_LIMIT): ModelMessage[] {
-	const rows = db
-		.select({ role: chatMessage.role, content: chatMessage.content })
-		.from(chatMessage)
-		.where(eq(chatMessage.chatId, chatId))
-		// rowid (insertion order) breaks ties on equal createdAt ms so the window
-		// is deterministic; createdAt leads so the (chatId, createdAt) index sorts.
-		.orderBy(desc(chatMessage.createdAt), desc(sql`rowid`))
-		.limit(limit)
-		.all();
-	const msgs = rows.reverse().map((r) => ({ role: r.role, content: r.content }) as ModelMessage);
+	const msgs = loadRows(chatId, limit).map(
+		(r) => ({ role: r.role, content: r.content }) as ModelMessage
+	);
 	// History must begin with a user message (some models reject anything
 	// else), but the window can start on assistant rows: a turn cut by the
 	// limit, or an alert the bot sent first (recordSent). Fold those into one

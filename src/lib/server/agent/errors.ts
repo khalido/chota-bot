@@ -52,9 +52,9 @@ export function describeChatError(outer: unknown): ChatFailure {
 		const retryable = (error as { isRetryable?: unknown }).isRetryable === true;
 		if (retryable || status === 429 || status >= 500) {
 			return {
-				kind: `provider-${status || 'error'}`,
+				kind: `provider-${status}`,
 				detail,
-				message: `The AI service is busy or down${status ? ` (${status})` : ''}. Ask again in a minute.`
+				message: `The AI service is busy or down (${status}). Ask again in a minute.`
 			};
 		}
 		// A bad AI_GATEWAY_API_KEY or an empty budget: ours to fix, not theirs.
@@ -66,9 +66,9 @@ export function describeChatError(outer: unknown): ChatFailure {
 			};
 		}
 		return {
-			kind: `provider-${status || 'rejected'}`,
+			kind: `provider-${status}`,
 			detail,
-			message: `The AI service rejected that${status ? ` (${status})` : ''}. Try asking it a different way.`
+			message: `The AI service rejected that (${status}). Try asking it a different way.`
 		};
 	}
 

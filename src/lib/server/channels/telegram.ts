@@ -191,18 +191,14 @@ export function telegramChannel(): Channel | null {
 				};
 				return onMessage(m);
 			});
-			bot.on('message:document', async (ctx) => {
+			bot.on('message:document', (ctx) => {
 				const d = ctx.message.document;
-				// Bots can only download files up to 20 MB.
-				if ((d.file_size ?? 0) > 20 * 1024 * 1024) {
-					await ctx.reply("That file is over Telegram's 20 MB limit for bots, so I can't open it.");
-					return;
-				}
 				const m = incoming(ctx, ctx.message.caption ?? '');
 				m.media = {
 					kind: 'document',
 					mimetype: d.mime_type ?? 'application/octet-stream',
 					fileName: d.file_name,
+					size: d.file_size, // the router refuses over 20 MB (also Telegram's bot limit)
 					download: download(d.file_id)
 				};
 				return onMessage(m);

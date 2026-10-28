@@ -25,7 +25,8 @@ import { buildSystemPrompt } from './prompts';
 import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
 import { z } from 'zod';
-import { AskerSchema, savedTool, saveTool } from './tools/content';
+import { savedTool, saveTool } from './tools/content';
+import { AskerSchema } from '$lib/server/tools/content';
 import { ticktickAddTool, ticktickDoneTool, ticktickTool } from './tools/ticktick';
 import { busTool } from './tools/bus';
 import { choresTool } from './tools/chores';
@@ -36,7 +37,6 @@ import { volleyballTool } from './tools/volleyball';
 import { webFetchTool, webSearchTool } from './tools/web';
 
 export { describeChatError, EMPTY_REPLY } from './errors';
-export type { ContentContext } from './tools/content';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
@@ -59,12 +59,12 @@ export const chotaAgent = new ToolLoopAgent({
 	prepareCall: async ({ options, ...settings }) => ({
 		...settings,
 		instructions: await buildSystemPrompt(),
-		toolsContext: { save: options?.asker ?? {}, saved: options?.asker ?? {} }
+		toolsContext: { save: { asker: options?.asker }, saved: { asker: options?.asker } }
 	}),
-	toolsContext: { save: {}, saved: {} },
 	// A hard step cap, and the last step answers without tools (see ./loop.ts).
 	stopWhen: STOP_WHEN,
 	prepareStep: answerWhenDone,
+	toolsContext: { save: {}, saved: {} },
 	tools: {
 		weather: weatherTool,
 		calendar: calendarTool,

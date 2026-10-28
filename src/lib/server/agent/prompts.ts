@@ -29,6 +29,10 @@ import { sydneyDateLong, sydneyTimeCompact, sydneyYMD } from '$lib/time';
 
 const log = logger('agent/prompts');
 
+/** Added to a group turn: kids read the family group, so answers stay short and plain. */
+export const GROUP_HINT =
+	'[Family group chat, kids included: answer in 1–3 short lines a 10-year-old follows.]';
+
 const STYLE = `Style guide:
 - Audience: a family with kids. Replies must be safe, friendly, age-appropriate.
 - Brevity is dignity. Default to one short sentence; two if the matter is grave. Output may be spoken aloud or scrolled across a small screen — prefer plain prose.

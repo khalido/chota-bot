@@ -11,36 +11,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sydneyYMD } from '$lib/time';
-import { saveContent, searchContent, TAG_NAMES, type Asker } from '$lib/server/tools/content';
-
-export const AskerSchema = z.object({
-	sender: z.string().nullable().optional(),
-	isDM: z.boolean().optional(),
-	channel: z.string().optional(),
-	threadId: z.string().optional(),
-	messageId: z.string().optional(),
-	attachment: z
-		.object({
-			kind: z.enum(['photo', 'voice', 'document']),
-			path: z.string(),
-			mimetype: z.string(),
-			fileName: z.string().optional(),
-			text: z.string().optional()
-		})
-		.optional(),
-	quiet: z.boolean().optional()
-});
-export type ContentContext = z.infer<typeof AskerSchema>;
-
-const askerOf = (c: ContentContext | undefined): Asker => ({
-	sender: c?.sender ?? null,
-	isDM: c?.isDM ?? false,
-	channel: c?.channel ?? 'admin',
-	threadId: c?.threadId ?? 'admin',
-	messageId: c?.messageId ?? '',
-	attachment: c?.attachment,
-	quiet: c?.quiet
-});
+import { AskerSchema, saveContent, searchContent, TAG_NAMES } from '$lib/server/tools/content';
 
 export const saveTool = tool({
 	description:
@@ -58,9 +29,9 @@ export const saveTool = tool({
 			.describe('What they said about it ("for the school trip"), or the note itself.')
 			.optional()
 	}),
-	contextSchema: AskerSchema,
+	contextSchema: z.object({ asker: AskerSchema.optional() }),
 	execute: async (input, { context }) => {
-		const row = await saveContent(input, askerOf(context));
+		const row = await saveContent(input, context.asker);
 		return {
 			saved: row.id,
 			kind: row.kind,
@@ -85,9 +56,9 @@ export const savedTool = tool({
 			.describe(`Optional tag: ${TAG_NAMES.join(', ')}.`)
 			.optional()
 	}),
-	contextSchema: AskerSchema,
+	contextSchema: z.object({ asker: AskerSchema.optional() }),
 	execute: async ({ query, kind, tag }, { context }) => {
-		const rows = await searchContent(query, askerOf(context), { kind, tag });
+		const rows = await searchContent(query, context.asker, { kind, tag });
 		return {
 			found: rows.map((r) => ({
 				id: r.id,

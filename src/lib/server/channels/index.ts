@@ -5,24 +5,21 @@
  * keeps history, runs the agent and hands the stream back to the adapter.
  * Design: docs/agent.md §Channels.
  */
-import {
-	describeChatError,
-	EMPTY_REPLY,
-	finalText,
-	runAgentStream,
-	type ContentContext
-} from '$lib/server/agent';
+import { describeChatError, EMPTY_REPLY, finalText, runAgentStream } from '$lib/server/agent';
+import { GROUP_HINT } from '$lib/server/agent/prompts';
+import type { Asker } from '$lib/server/tools/content';
 import {
 	appendMessage,
 	loadHistory,
+	loadRows,
 	migrateThreadKeys,
+	QUIET_PREFIX,
 	newTurnId
 } from '$lib/server/agent/history';
 import { LRUCache } from 'lru-cache';
 import { event, logErr } from '$lib/server/log';
 import { transcribeAudio } from '$lib/server/transcribe';
-import { pdfText } from '$lib/server/tools/content';
-import { saveFile } from './files';
+import { pdfText, saveFile } from './files';
 import { ThreadQueue } from './queue';
 import { photoIsActionable, triage, triageHint } from './triage';
 import { telegramChannel } from './telegram';
@@ -68,9 +65,10 @@ const BOT_CLIP = 300;
 function recentFor(threadId: string): string[] {
 	let lines = recentLines.get(threadId);
 	if (!lines) {
-		lines = loadHistory(threadId, RECENT)
-			.filter((h) => !(h.role === 'assistant' && String(h.content).startsWith('(quietly)')))
-			.map((h) => (h.role === 'user' ? String(h.content) : botLine(String(h.content))));
+		// Raw rows, not loadHistory: its model-shaped window rewrites leading bot rows.
+		lines = loadRows(threadId, RECENT)
+			.filter((h) => !(h.role === 'assistant' && h.content.startsWith(QUIET_PREFIX)))
+			.map((h) => (h.role === 'user' ? h.content : botLine(h.content)));
 		recentLines.set(threadId, lines);
 	}
 	return lines;
@@ -176,8 +174,11 @@ async function routeOnce(channel: Channel, incoming: Incoming): Promise<void> {
 	if (m.media?.kind === 'image') {
 		const image = await m.media.download();
 		if (!(await photoIsActionable(image, m.media.mimetype, m.text))) return;
-		const media = { ...m.media, download: async () => image };
-		return void queue.push(quietKey, { channel, m: { ...m, media, triage: { hint: PHOTO_HINT } } });
+		Object.assign(m, {
+			media: { ...m.media, download: async () => image },
+			triage: { hint: PHOTO_HINT }
+		});
+		return void queue.push(quietKey, { channel, m });
 	}
 	if (!m.text.trim()) return;
 	const hit = await triage(m, recent);
@@ -187,7 +188,8 @@ async function routeOnce(channel: Channel, incoming: Incoming): Promise<void> {
 		if (followsBot(recent)) void queue.push(m.threadId, { channel, m });
 		return;
 	}
-	void queue.push(quietKey, { channel, m: { ...m, triage: { hint: triageHint(hit) } } });
+	m.triage = { hint: triageHint(hit) };
+	void queue.push(quietKey, { channel, m });
 }
 
 /** How much of a document's text the agent sees in the turn (all of it is saved). */
@@ -198,8 +200,6 @@ const docText = (text?: string) =>
 		: '[No text could be read from the document.]';
 
 /** Kids read the family group: answers there stay short and plain. */
-const GROUP_HINT =
-	'[Family group chat, kids included: answer in 1–3 short lines a 10-year-old follows.]';
 
 /** Each line names its sender — several people share a group's history, and
  *  in a DM it's how the agent knows who "me" is. A photo is marked, not kept. */
@@ -252,7 +252,7 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		}
 		// Who's asking, from the channel, for tools that must know (save/saved:
 		// a DM save is private to its sender). Never taken from the model.
-		const asker: ContentContext = {
+		const asker: Asker = {
 			sender: m.person?.name ?? null,
 			isDM: m.isDM,
 			channel: m.channel,
@@ -269,7 +269,7 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		// A quiet turn's reply was never shown: keep it as a note, so later
 		// turns don't think they said it to anyone.
 		if (reply)
-			appendMessage(m.threadId, turnId, 'assistant', m.triage ? `(quietly) ${reply}` : reply);
+			appendMessage(m.threadId, turnId, 'assistant', m.triage ? `${QUIET_PREFIX}${reply}` : reply);
 		// Nothing came back (the model stopped without text): say so rather than go silent.
 		else if (!m.triage) await channel.send(m.threadId, { markdown: EMPTY_REPLY }).catch(() => {});
 		if (reply && !m.triage && !m.isDM) remember(m.threadId, botLine(reply));

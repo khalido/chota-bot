@@ -7,7 +7,9 @@
  * box); a voice note's from its transcript. One small vision model then writes
  * the title, summary and, for a photo or a scanned PDF, the text it can see.
  * Jev tags the item from that (decisions/content-tags.json), and the verdict
- * goes in the `decision` table like every other judgment.
+ * goes in the `decision` table like every other judgment. Tags could come from
+ * the describe call instead; Jev is used on purpose (KO, 28 Oct): its
+ * per-tag probabilities are kept for tuning the threshold and tag list.
  *
  * Privacy is decided here, not by the model: saved in a direct message, an
  * item is private to its sender; saved in a group, it belongs to the family.
@@ -18,10 +20,8 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { and, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { generateText, Output } from 'ai';
-import Exa from 'exa-js';
-import { extractText, getDocumentProxy } from 'unpdf';
+import { exa } from '$lib/server/exa';
 import { z } from 'zod';
-import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { content, decision } from '$lib/server/db/schema';
 import { decideBooleans, questionsHash, type Question } from '$lib/server/decide';
@@ -34,54 +34,52 @@ const MODEL = 'google/gemini-3.5-flash-lite';
 /** How much text goes to the model and into the row. */
 const MODEL_CHARS = 30_000;
 const KEEP_CHARS = 100_000;
+/** A PDF with at least this much text is read on the box; less means a scan. */
+const READ_ON_BOX = 300;
 
 export type ContentRow = typeof content.$inferSelect;
 
 /** A file that came with the message being answered (set by the router). */
-export interface Attachment {
-	kind: 'photo' | 'voice' | 'document';
-	path: string;
-	mimetype: string;
-	fileName?: string;
+const AttachmentSchema = z.object({
+	kind: z.enum(['photo', 'voice', 'document']),
+	path: z.string(),
+	mimetype: z.string(),
+	fileName: z.string().optional(),
 	/** Already known: a voice note's transcript, a PDF's text. */
-	text?: string;
-}
+	text: z.string().optional()
+});
+export type Attachment = z.infer<typeof AttachmentSchema>;
 
-/** Who is asking and where — from the router, never from the model. */
-export interface Asker {
+/**
+ * Who is asking and where — built by the channel router, never by the model.
+ * The save/saved tools take it as their context; with none (the admin chat)
+ * save refuses and search sees family items only.
+ */
+export const AskerSchema = z.object({
 	/** Family member name; null when the channel couldn't tell. */
-	sender: string | null;
-	isDM: boolean;
-	channel: string;
-	threadId: string;
-	messageId: string;
-	attachment?: Attachment;
+	sender: z.string().nullable(),
+	isDM: z.boolean(),
+	channel: z.string(),
+	threadId: z.string(),
+	messageId: z.string(),
+	attachment: AttachmentSchema.optional(),
 	/** An untagged group message handled quietly: lists only, never a save. */
-	quiet?: boolean;
-}
+	quiet: z.boolean().optional()
+});
+export type Asker = z.infer<typeof AskerSchema>;
 
 /** The rows `asker` may see. In a group, never anyone's private items. */
-export function visibleTo(asker: Pick<Asker, 'sender' | 'isDM'>): SQL {
+export function visibleTo(asker: Pick<Asker, 'sender' | 'isDM'> | undefined): SQL {
 	const family = eq(content.scope, 'family');
-	if (!asker.isDM || !asker.sender) return family;
+	if (!asker?.isDM || !asker.sender) return family;
 	return or(family, and(eq(content.scope, 'private'), eq(content.sender, asker.sender)))!;
 }
 
 /** Where a new item goes: a DM makes it private to the sender. */
 export const scopeFor = (asker: Pick<Asker, 'isDM'>) => (asker.isDM ? 'private' : 'family');
 
-export async function pdfText(data: Buffer): Promise<string> {
-	const pdf = await getDocumentProxy(new Uint8Array(data));
-	const { text } = await extractText(pdf, { mergePages: true });
-	return text.replace(/[ \t]+\n/g, '\n').trim();
-}
-
-let exa: Exa | undefined;
-
 async function fetchPage(url: string): Promise<{ title: string; text: string }> {
-	if (!env.EXA_API_KEY) throw new Error('Set EXA_API_KEY in .env');
-	exa ??= new Exa(env.EXA_API_KEY);
-	const r = await exa.getContents([url], { text: { maxCharacters: KEEP_CHARS } });
+	const r = await exa().getContents([url], { text: { maxCharacters: KEEP_CHARS } });
 	const page = r.results[0];
 	if (!page?.text) throw new Error(`no text for ${url}`);
 	return { title: page.title ?? url, text: page.text };
@@ -177,8 +175,8 @@ export interface SaveInput {
 }
 
 /** Save one item for `asker`. Returns the existing row if the same link was saved before. */
-export async function saveContent(input: SaveInput, asker: Asker): Promise<ContentRow> {
-	if (!asker.sender) throw new Error("Can't tell who's asking, so I can't save it for them.");
+export async function saveContent(input: SaveInput, asker: Asker | undefined): Promise<ContentRow> {
+	if (!asker?.sender) throw new Error("Can't tell who's asking, so I can't save it for them.");
 	if (asker.quiet) throw new Error('Save only when someone asks to keep something.');
 	const scope = scopeFor(asker);
 	const base = {
@@ -223,7 +221,7 @@ export async function saveContent(input: SaveInput, asker: Asker): Promise<Conte
 			const own = a.text ?? '';
 			const name = a.fileName ?? 'file';
 			const readable = a.mimetype === 'application/pdf' || a.mimetype.startsWith('image/');
-			if (own.length < 300 && !readable) {
+			if (own.length < READ_ON_BOX && !readable) {
 				item = {
 					kind: 'document',
 					...file,
@@ -235,11 +233,11 @@ export async function saveContent(input: SaveInput, asker: Asker): Promise<Conte
 				const d = await describe(
 					`document (${name})`,
 					base.note ?? undefined,
-					own.length >= 300
+					own.length >= READ_ON_BOX
 						? { text: own }
 						: { file: await readFile(a.path), mediaType: a.mimetype }
 				);
-				const text = own.length >= 300 ? own : d.text || own;
+				const text = own.length >= READ_ON_BOX ? own : d.text || own;
 				item = { kind: 'document', ...file, title: d.title, summary: d.summary, text };
 			}
 		}
@@ -266,7 +264,7 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 /** Items `asker` may see that match every word of `query`, newest first. */
 export async function searchContent(
 	query: string,
-	asker: Pick<Asker, 'sender' | 'isDM'>,
+	asker: Pick<Asker, 'sender' | 'isDM'> | undefined,
 	opts: { kind?: ContentRow['kind']; tag?: string; limit?: number } = {}
 ): Promise<ContentRow[]> {
 	const words = query

@@ -13,7 +13,8 @@ const db = drizzle(sqlite, { schema });
 vi.mock('$lib/server/db', () => ({ db }));
 vi.mock('$lib/server/log', () => ({ log: vi.fn(), logErr: vi.fn() }));
 
-const { searchContent, scopeFor } = await import('./content');
+const { saveContent, searchContent, scopeFor } = await import('./content');
+const { savedTool } = await import('$lib/server/agent/tools/content');
 
 const row = (sender: string, scope: 'private' | 'family', title: string) => ({
 	sender,
@@ -89,5 +90,38 @@ describe('content search matching', () => {
 		const asker = { sender: 'Kid1', isDM: false };
 		expect((await searchContent('100%', asker)).map((r) => r.title)).toEqual(['Score 100% sure']);
 		expect(await searchContent('Sc_re', asker)).toEqual([]);
+	});
+});
+
+describe('privacy through the tools', () => {
+	const call = { toolCallId: 'c', messages: [] };
+	const found = async (asker?: { sender: string | null; isDM: boolean }) => {
+		const ctx = asker && { ...asker, channel: 'test', threadId: 't', messageId: 'm' };
+		const out = (await savedTool.execute!(
+			{ query: 'sleep' },
+			{ ...call, context: { asker: ctx } }
+		)) as { found: { title: string; private: boolean }[] };
+		return out.found;
+	};
+
+	it('a group search through the tool never returns private items', async () => {
+		expect((await found({ sender: 'Parent1', isDM: false })).some((r) => r.private)).toBe(false);
+	});
+
+	it('no asker (the admin chat) sees family items only', async () => {
+		expect((await found()).some((r) => r.private)).toBe(false);
+	});
+
+	it('a DM search through the tool does see the asker’s own', async () => {
+		expect((await found({ sender: 'Parent1', isDM: true })).some((r) => r.private)).toBe(true);
+	});
+
+	it('save refuses without a known sender, and on a quiet turn', async () => {
+		const asker = { sender: null, isDM: true, channel: 't', threadId: 't', messageId: 'm' };
+		await expect(saveContent({ note: 'x' }, asker)).rejects.toThrow(/who's asking/);
+		await expect(saveContent({ note: 'x' }, undefined)).rejects.toThrow(/who's asking/);
+		await expect(
+			saveContent({ note: 'x' }, { ...asker, sender: 'Parent1', quiet: true })
+		).rejects.toThrow(/only when someone asks/);
 	});
 });
