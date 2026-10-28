@@ -25,7 +25,9 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 
 ## Notes
 
-- **AI calls go through Vercel AI Gateway only** (`AI_GATEWAY_API_KEY`, ids like `anthropic/…`, `google/…`); the code never used OpenRouter. KO deleted the OpenRouter key on 21 Oct and the dead line is gone from the Mac `.env`. Still to do, with KO's OK: a dedicated chota gateway key with a budget (`vercel ai-gateway api-keys`, `vercel ai-gateway budgets`), and checking the box's `.env` for an `OPENROUTER_API_KEY` line.
+- **AI calls go through Vercel AI Gateway only** (`AI_GATEWAY_API_KEY`). The old key was dead (401) by 28 Oct. New key `chota-2026-10-28b` ($20 a month, alerts at 75% and 100%) is in the Mac and box `.env`; the box restarted and a test call returned 200. The box's dead `OPENROUTER_API_KEY` line is gone. KO to delete the unused key `chota-2026-10-28` (its value was never saved; the remove was blocked here).
+- **Bus:** Transport NSW returned 502/504 from about 13:35 Sydney time on 28 Oct (their outage, not ours); the `bus-refresh` alert is open. Single 401s on 20 and 26 Oct cleared on their own.
+- **`~/code/home`** (`@khalido/home`, not on npm yet): the weather connector (`hourly`, `dayBlocks`) is the first thing chota would use. Wait for KO to publish; on Node, Hue and Enphase still need Bun's fetch.
 
 - **Agent shape (checked 25 Oct against the svelte skill's `agent-sidepanel.md`):** one ToolLoopAgent, 15 tools, no subagents; the only other model calls are pre-filters before the agent (Jev group triage, the Flash Lite photo gate in `channels/triage.ts`). Keep it that way: new abilities (school news, reserve) are tools on the same loop. Missing: an eval of ~10 golden questions run 2–3 times; build it before the next big prompt or tool change.
 - **Sentral portal:** two GETs change state (`markNewsletterAsRead`, `markHomeworkCompleted`) — never call them.
