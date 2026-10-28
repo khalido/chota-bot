@@ -27,6 +27,7 @@ import { getRecipients, FAMILY_RECIPIENT } from '$lib/server/print/sections';
 import { streamRichReply } from '$lib/server/telegram/stream';
 import { log, logErr } from '$lib/server/log';
 import { registerAlertChannel } from '$lib/server/alerts';
+import { recordSent } from '$lib/server/agent/history';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'telegram';
@@ -98,6 +99,9 @@ export function telegramChannel(): Channel | null {
 				const results = await Promise.allSettled(
 					ids.map((id) => bot.api.sendMessage(id, text, { disable_notification: silent }))
 				);
+				results.forEach((r, i) => {
+					if (r.status === 'fulfilled') recordSent(`tg:${ids[i]}`, text);
+				});
 				const failed = results.filter((r) => r.status === 'rejected');
 				if (failed.length === ids.length) throw (failed[0] as PromiseRejectedResult).reason;
 				if (failed.length) logErr(SCOPE, 'alert not delivered to every notify chat', failed[0]);

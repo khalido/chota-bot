@@ -33,6 +33,15 @@ export function appendMessage(
 	db.insert(chatMessage).values({ id: generateId(), chatId, turnId, role, content }).run();
 }
 
+/**
+ * Record a message the bot sent on its own (an alert, later a reminder), so a
+ * reply to it reaches an agent that has seen it. From yaad (commit 7bb26cb):
+ * without this, "done" or "why?" after an alert had nothing to refer to.
+ */
+export function recordSent(chatId: string, content: string): void {
+	appendMessage(chatId, newTurnId(), 'assistant', content);
+}
+
 /** One-off: history rows written before threads had a channel prefix were
  *  bare Telegram chat ids. Prefix them so they stay in the same thread.
  *  Idempotent; runs at boot. Delete once the box has run it (2026-10). */

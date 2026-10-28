@@ -27,6 +27,7 @@ import makeWASocket, {
 import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
 import { clearAlert, raiseAlert, registerAlertChannel } from '$lib/server/alerts';
+import { recordSent } from '$lib/server/agent/history';
 import { errorMessage, log, logErr } from '$lib/server/log';
 import { mediaOf, toIncoming, userOf, type WaMessage } from './whatsapp-message';
 import { toWhatsApp } from './whatsapp-format';
@@ -223,7 +224,10 @@ export function whatsappChannel(): Channel | null {
 			registerAlertChannel('whatsapp', async (text) => {
 				const to = getConfig().whatsapp?.notify ?? [];
 				if (!to.length) throw new Error('no whatsapp.notify configured');
-				for (const n of to) await requireSock().sendMessage(phoneJid(n), { text });
+				for (const n of to) {
+					await requireSock().sendMessage(phoneJid(n), { text });
+					recordSent(`wa:${phoneJid(n)}`, text);
+				}
 			});
 			scheduleConnect(onMessage);
 		},
