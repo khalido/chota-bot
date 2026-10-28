@@ -1,15 +1,16 @@
-# Handover — 2026-10-22
+# Handover — 2026-10-28
 
 Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota Bot Map](https://claude.ai/artifact/2xkHYp6pkL5yb3EVZ3fTSR); its source is `docs/chota-map.html` (to update it from a new session, publish with that artifact's `url`).
 
 ## Where things stand
 
-- **46 local commits not pushed** (since 16 Oct). The box (`pop-os`) still runs the 16 Oct build; the job hardening, WhatsApp fixes and movie/book tools from 16–17 Oct are not deployed. Push and deploy when KO says.
+- **51 local commits not pushed** (since 16 Oct). The box (`pop-os`) still runs `4eaa7f0` (checked 28 Oct); the job hardening, WhatsApp fixes and movie/book tools from 16–17 Oct are not deployed. Push and deploy when KO says.
 - **Box (`pop-os`):** prints, Telegram through the channel router, alerts on failed jobs. WhatsApp is **off** there. WhatsApp runs from the Mac: `TELEGRAM_BOT_TOKEN= WHATSAPP_ENABLED=true npm run dev`.
-- **Pi 5 not booted yet.** KO buys the microSD today (64 GB, A2; `parts.mjs` had it wrongly as owned, fixed). The tailnet shows only mbp, pixel-10-pro-xl and pop-os.
+- **Pi 5 not booted yet** (not on the tailnet 28 Oct). Needs the microSD (64 GB, A2) if KO hasn't bought it. The tailnet shows only mbp, pixel-10-pro-xl and pop-os.
 - **Box Designs page** ([artifact](https://claude.ai/artifact/GhhArcB5XuyjeBEBTQW8dC), v27, source `docs/box-design/`): now has a **Wiring** tab (`wiring.mjs` data, `wiring-client.js`, `wiring-checks.mjs`, `test-wiring.mjs`): Pi 5 header and Pico 2 W pins, each part's wires (decided or proposed), checks for pin clashes and rail current, a Whole box view, build ticks in the artifact's shared db. All 80 pins checked against the official pinouts. The old standalone wiring artifact (`21sqn2M722HWJEkCMSw1Nd`) is redundant; KO hasn't said whether to delete it.
 - **Photo frames** (`docs/frame.md`): KO may buy the A$75 Frameo 10.1" (Amazon AU B0F61WL5GD). Likely Android 6.0.1, so kiFOSSk (needs 7+) probably won't install; the doc has the arrival checklist (block it from the internet first, check the version over ADB).
 - **Ideas pile:** `docs/inspiration.md` §Links to look through has the AI hardware directory and the Claude Duet takeaways.
+- **Deps (23 Oct):** `.npmrc` has `min-release-age=2` (KO's choice; npm skips releases under 2 days old). Updated within ranges; majors held per CLAUDE.md. `googleapis` 187 is a new major, left on 186. Audit: nothing fixable without breaking majors.
 
 ## Next, in order
 
