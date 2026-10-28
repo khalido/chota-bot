@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toIncoming, type WaMessage } from './whatsapp-message';
+import { mediaOf, toIncoming, type WaMessage } from './whatsapp-message';
 import type { FamilyMember } from '$lib/config';
 
 const bot = { phone: '61400000000', lid: '111111111111111' };
@@ -94,5 +94,20 @@ describe('toIncoming', () => {
 
 	it('marks late delivery as catch-up', () => {
 		expect(toIncoming(dm(), 'append', bot, family)?.catchUp).toBe(true);
+	});
+});
+
+describe('mediaOf documents', () => {
+	it('finds a plain document and one sent with a caption', () => {
+		expect(
+			mediaOf({ documentMessage: { mimetype: 'application/pdf', fileName: 'note.pdf' } })
+		).toEqual({ kind: 'document', mimetype: 'application/pdf', fileName: 'note.pdf' });
+		expect(
+			mediaOf({
+				documentWithCaptionMessage: {
+					message: { documentMessage: { mimetype: 'application/pdf', fileName: 'trip.pdf' } }
+				}
+			})
+		).toEqual({ kind: 'document', mimetype: 'application/pdf', fileName: 'trip.pdf' });
 	});
 });

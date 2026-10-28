@@ -9,3 +9,4 @@ export * from './chat.schema';
 export * from './alert.schema';
 export * from './decision.schema';
 export * from './job.schema';
+export * from './content.schema';

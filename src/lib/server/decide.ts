@@ -40,3 +40,32 @@ export async function decideChoice(
 	);
 	return { probabilities, pick: answer.choice, model: result.response.modelId };
 }
+
+/**
+ * Ask several yes/no questions about one state in a single call; returns
+ * P(yes) for each key. A key Jev refused or skipped is left out.
+ */
+export async function decideBooleans(
+	label: string,
+	model: string,
+	state: Record<string, unknown>,
+	questions: Record<string, Question & { type: 'boolean' }>
+): Promise<{ probabilities: Record<string, number>; model: string }> {
+	const started = Date.now();
+	const result = await decide({
+		model: gateway.decisionModel(model),
+		state: JSON.parse(JSON.stringify(state)),
+		questions,
+		maxRetries: 1,
+		abortSignal: AbortSignal.timeout(15_000)
+	});
+	const probabilities: Record<string, number> = {};
+	for (const [key, answer] of Object.entries(result.answers)) {
+		if (answer?.type === 'boolean') probabilities[key] = answer.probability;
+	}
+	log(
+		'decide',
+		`${label}: ${Object.keys(probabilities).length} answers in ${Date.now() - started}ms (${result.response.modelId})`
+	);
+	return { probabilities, model: result.response.modelId };
+}

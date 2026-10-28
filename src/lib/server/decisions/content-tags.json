@@ -1,0 +1,21 @@
+{
+	"$comment": "Jev judgment that tags a saved item (tools/content.ts). One boolean per tag, asked together over the item's title, summary and opening text. A tag is kept at or above `threshold`. Tune here, not in code: an edit changes the stored questions hash, so old verdicts stay readable.",
+	"model": "typesafe-ai/jev",
+	"threshold": 0.7,
+	"instructions": "An item a family member saved: a web page, photo, voice note, document or note. Answer whether this tag describes it.",
+	"tags": {
+		"school": "School: notices, excursions, permission notes, timetables, homework, newsletters, school events.",
+		"kids-activities": "A child's sport, club, class, lesson or holiday program outside school.",
+		"event": "Something happening on a date: an invitation, show, party, meeting or booking.",
+		"recipe": "A recipe, meal idea or cooking technique.",
+		"health": "Health, medical, dental, fitness, sleep or wellbeing.",
+		"money": "A bill, receipt, invoice, price, bank or insurance matter.",
+		"home": "The house: repairs, appliances, garden, cleaning, furniture, utilities.",
+		"travel": "Trips, flights, places to visit, maps, accommodation.",
+		"shopping": "Something to buy, a product, a wishlist item.",
+		"to-read": "An article, essay or long piece meant to be read later.",
+		"to-watch": "A video, film, show or talk meant to be watched later.",
+		"learning": "How-to, tutorial, explainer, course or reference to learn from.",
+		"work": "A parent's job or professional matter."
+	}
+}

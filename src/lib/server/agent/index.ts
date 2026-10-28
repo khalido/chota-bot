@@ -24,6 +24,8 @@ import { answerWhenDone, STOP_WHEN } from './loop';
 import { buildSystemPrompt } from './prompts';
 import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
+import { z } from 'zod';
+import { AskerSchema, savedTool, saveTool } from './tools/content';
 import { ticktickAddTool, ticktickDoneTool, ticktickTool } from './tools/ticktick';
 import { busTool } from './tools/bus';
 import { choresTool } from './tools/chores';
@@ -34,6 +36,7 @@ import { volleyballTool } from './tools/volleyball';
 import { webFetchTool, webSearchTool } from './tools/web';
 
 export { describeChatError, EMPTY_REPLY } from './errors';
+export type { ContentContext } from './tools/content';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
@@ -50,10 +53,15 @@ export const chotaAgent = new ToolLoopAgent({
 	// model needs a flag to emit thoughts, bake it into a model alias, not here.
 	// `instructions` is unused at construction — `prepareCall` overrides
 	// it with the freshly-composed system prompt on every call.
-	prepareCall: async ({ ...settings }) => ({
+	// Per call: who is asking, from the channel router (never the model). The
+	// save/saved tools get it as their context; the admin chat sends none.
+	callOptionsSchema: z.object({ asker: AskerSchema.optional() }).optional(),
+	prepareCall: async ({ options, ...settings }) => ({
 		...settings,
-		instructions: await buildSystemPrompt()
+		instructions: await buildSystemPrompt(),
+		toolsContext: { save: options?.asker ?? {}, saved: options?.asker ?? {} }
 	}),
+	toolsContext: { save: {}, saved: {} },
 	// A hard step cap, and the last step answers without tools (see ./loop.ts).
 	stopWhen: STOP_WHEN,
 	prepareStep: answerWhenDone,
@@ -71,6 +79,8 @@ export const chotaAgent = new ToolLoopAgent({
 		watch_ideas: watchIdeasTool,
 		book: bookTool,
 		volleyball: volleyballTool,
+		save: saveTool,
+		saved: savedTool,
 		// AI Gateway's own web tools — work with any model (see tools/web.ts).
 		web_search: webSearchTool,
 		web_fetch: webFetchTool

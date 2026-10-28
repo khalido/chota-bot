@@ -7,6 +7,7 @@
  */
 import type { FamilyMember } from '$lib/config';
 import type { ChotaStreamResult } from '$lib/server/agent';
+import type { Attachment } from '$lib/server/tools/content';
 
 export type ChannelName = 'telegram' | 'whatsapp';
 
@@ -28,9 +29,17 @@ export interface Incoming {
 	/** Delivered late, after a reconnect (WhatsApp `append`). */
 	catchUp: boolean;
 	sentAt: Date;
-	/** A photo or voice note. Downloaded only once the message passes the
-	 *  gates — never on arrival. */
-	media?: { kind: 'image' | 'audio'; mimetype: string; download: () => Promise<Buffer> };
+	/** A photo, voice note or document. Downloaded only once the message
+	 *  passes the gates — never on arrival. */
+	media?: {
+		kind: 'image' | 'audio' | 'document';
+		mimetype: string;
+		fileName?: string;
+		download: () => Promise<Buffer>;
+	};
+	/** The file kept from this message (set by the router once saved), for
+	 *  the save tool. */
+	attachment?: Attachment;
 	/** Set by the router for a triaged (untagged) message: a note for the
 	 *  agent, and answer with a reaction only, no message. */
 	triage?: { hint: string };

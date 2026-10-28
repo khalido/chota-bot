@@ -1,7 +1,7 @@
 # tools/
 
 One file per external data source — `weather`, `bus`, `calendar`, `sentral`,
-`ticktick`, `tmdb`, `apod`, `bootprint`, `schoolterms`, `volleyball`, `beach`,
+`ticktick`, `tmdb`, `apod`, `bootprint`, `schoolterms`, `volleyball`, `beach`, `content` (saved links/photos/voice/documents/notes: Exa, unpdf, a vision model, Jev tags, DM saves private),
 and `books/` — a folder, since a book lookup combines several sources (Google
 Books, Open Library, the City of Sydney Library catalogue, Exa) behind one
 `lookupBook()` in `books/index.ts`. Each owns its fetch, its typed return

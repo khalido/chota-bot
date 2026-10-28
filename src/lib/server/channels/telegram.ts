@@ -18,6 +18,7 @@
  * addressed.
  */
 import { Bot, InputFile, InlineKeyboard, GrammyError, HttpError, type Context } from 'grammy';
+import type { Chat, Message } from 'grammy/types';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
@@ -142,7 +143,7 @@ export function telegramChannel(): Channel | null {
 				if (printRecipients().includes(who)) await sendBrief(ctx, who);
 			});
 
-			bot.on('message:text', async (ctx) => {
+			const incoming = (ctx: Context & { chat: Chat; message: Message }, text: string) => {
 				const m: Incoming = {
 					threadId: `tg:${ctx.chat.id}`,
 					channel: 'telegram',
@@ -152,14 +153,55 @@ export function telegramChannel(): Channel | null {
 						? ((getConfig().family ?? []).find((p) => p.telegram === ctx.from!.id) ?? null)
 						: null,
 					senderName: ctx.from?.first_name ?? 'Someone',
-					text: ctx.message.text,
+					text,
 					isDM: ctx.chat.type === 'private',
 					isMention: true, // privacy mode: groups only deliver what's addressed to us
 					catchUp: false, // drop_pending_updates: nothing old arrives
 					sentAt: new Date(ctx.message.date * 1000)
 				};
 				contexts.set(m, ctx);
-				await onMessage(m);
+				return m;
+			};
+			// A file is fetched only when the router asks (after its gates).
+			const download = (fileId: string) => async () => {
+				const file = await bot.api.getFile(fileId);
+				const res = await fetch(`https://api.telegram.org/file/bot${token}/${file.file_path}`);
+				if (!res.ok) throw new Error(`telegram file download ${res.status}`);
+				return Buffer.from(await res.arrayBuffer());
+			};
+
+			bot.on('message:text', (ctx) => onMessage(incoming(ctx, ctx.message.text)));
+			bot.on('message:photo', (ctx) => {
+				const m = incoming(ctx, ctx.message.caption ?? '');
+				const biggest = ctx.message.photo.at(-1)!;
+				m.media = { kind: 'image', mimetype: 'image/jpeg', download: download(biggest.file_id) };
+				return onMessage(m);
+			});
+			bot.on(['message:voice', 'message:audio'], (ctx) => {
+				const v = ctx.message.voice ?? ctx.message.audio!;
+				const m = incoming(ctx, ctx.message.caption ?? '');
+				m.media = {
+					kind: 'audio',
+					mimetype: v.mime_type ?? 'audio/ogg',
+					download: download(v.file_id)
+				};
+				return onMessage(m);
+			});
+			bot.on('message:document', async (ctx) => {
+				const d = ctx.message.document;
+				// Bots can only download files up to 20 MB.
+				if ((d.file_size ?? 0) > 20 * 1024 * 1024) {
+					await ctx.reply("That file is over Telegram's 20 MB limit for bots, so I can't open it.");
+					return;
+				}
+				const m = incoming(ctx, ctx.message.caption ?? '');
+				m.media = {
+					kind: 'document',
+					mimetype: d.mime_type ?? 'application/octet-stream',
+					fileName: d.file_name,
+					download: download(d.file_id)
+				};
+				return onMessage(m);
 			});
 
 			// grammY surfaces network / API errors here rather than throwing into

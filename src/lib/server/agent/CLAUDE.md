@@ -47,12 +47,13 @@ agent/
     chores.ts          # chore rotation by day / person
     school.ts          # school_day (a kid's timetable) + school_dates (terms, holidays)
     volleyball.ts      # kids' next games + duty + opponent ladder rank
+    content.ts         # save + saved — keep links/photos/voice/documents/notes; the asker comes as call options, never from the model
     web.ts             # web_search (Exa) + web_fetch (Browserbase) — AI Gateway tools, no data lib
   memory.ts            # later — SQLite-backed memory store (Stevens-shape; flat table to start)
 ```
 
 Registered in `index.ts > tools: { … }`: `weather` (also returns the beach
-report), `calendar` (range / date / search), `ticktick` + `ticktick_add` + `ticktick_done`, `bus`, `chores`, `school_day`, `school_dates`, `title_info`, `watch_ideas`, `book`, `volleyball`, `web_search` and `web_fetch` (AI Gateway's Exa search
+report), `calendar` (range / date / search), `ticktick` + `ticktick_add` + `ticktick_done`, `bus`, `chores`, `school_day`, `school_dates`, `title_info`, `watch_ideas`, `book`, `volleyball`, `save`, `saved`, `web_search` and `web_fetch` (AI Gateway's Exa search
 and Browserbase Fetch, run gateway-side, so they work with any model).
 
 The system prompt has four layers (see `prompts.ts`):
@@ -74,6 +75,8 @@ from (TODAY + SNAPSHOT) using `SystemModelMessage[]`.
 Memory joins when there's a real second use of it.
 
 ## Tool conventions
+
+- **Who is asking** goes in as call options (`options: { asker }`, `callOptionsSchema` in `index.ts`); `prepareCall` hands it to the tools that need it as tool context. Anything privacy-related is decided from that, never from model input.
 
 - **One tool per file.** Basename matches the data lib it wraps
   (`agent/tools/weather.ts` ↔ `tools/weather.ts`).

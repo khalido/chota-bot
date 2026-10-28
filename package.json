@@ -78,6 +78,7 @@
 		"node-ical": "^0.27.3",
 		"node-thermal-printer": "^4.6.0",
 		"tmdb-ts": "^2.3.0",
+		"unpdf": "^1.9.1",
 		"usb": "^2.18.0",
 		"zod": "^4.4.3"
 	},

@@ -5,7 +5,12 @@
  * keeps history, runs the agent and hands the stream back to the adapter.
  * Design: docs/agent.md §Channels.
  */
-import { describeChatError, EMPTY_REPLY, runAgentStream } from '$lib/server/agent';
+import {
+	describeChatError,
+	EMPTY_REPLY,
+	runAgentStream,
+	type ContentContext
+} from '$lib/server/agent';
 import {
 	appendMessage,
 	loadHistory,
@@ -15,6 +20,7 @@ import {
 import { LRUCache } from 'lru-cache';
 import { event, logErr } from '$lib/server/log';
 import { transcribeAudio } from '$lib/server/transcribe';
+import { pdfText } from '$lib/server/tools/content';
 import { saveFile } from './files';
 import { ThreadQueue } from './queue';
 import { photoIsActionable, triage, triageHint } from './triage';
@@ -106,17 +112,31 @@ async function route(channel: Channel, incoming: Incoming): Promise<void> {
 		if (seen.has(key)) return;
 		seen.set(key, true);
 	}
-	let m = incoming;
+	// Changed in place, never copied: Telegram finds its reply context by this
+	// object (a WeakMap in telegram.ts), so a copy would lose it.
+	const m = incoming;
 	const addressed = shouldAnswer(m);
 	const triaged = !addressed && triages(m);
 	// A voice note is a typed message once transcribed; it then takes the
 	// same path (answered, or triaged by Jev in the group).
 	if ((addressed || triaged) && m.media?.kind === 'audio') {
 		const audio = await m.media.download();
-		await saveFile(m.threadId, m.messageId, m.media.mimetype, audio);
+		const path = await saveFile(m.threadId, m.messageId, m.media.mimetype, audio);
 		const said = await transcribeAudio(audio);
 		if (!said) return;
-		m = { ...m, text: `[voice note] ${said}`, media: undefined };
+		const attachment = { kind: 'voice' as const, path, mimetype: m.media.mimetype, text: said };
+		Object.assign(m, { text: `[voice note] ${said}`, media: undefined, attachment });
+	}
+	// A document is read only when sent to the bot: kept, and the file left for
+	// the save tool. History keeps a short line; the text rides on this turn only.
+	if (addressed && m.media?.kind === 'document') {
+		const data = await m.media.download();
+		const { mimetype, fileName } = m.media;
+		const path = await saveFile(m.threadId, m.messageId, mimetype, data, fileName);
+		const text = mimetype === 'application/pdf' ? await pdfText(data).catch(() => '') : '';
+		const attachment = { kind: 'document' as const, path, mimetype, fileName, text };
+		const line = `[document: ${fileName ?? 'file'}]`;
+		Object.assign(m, { text: m.text ? `${m.text}\n${line}` : line, media: undefined, attachment });
 	}
 	const recent = m.isDM ? [] : recentFor(m.threadId);
 	if (!m.isDM) remember(m.threadId, asHistoryLine(m));
@@ -142,6 +162,13 @@ async function route(channel: Channel, incoming: Incoming): Promise<void> {
 	}
 	void queue.push(quietKey, { channel, m: { ...m, triage: { hint: triageHint(hit) } } });
 }
+
+/** How much of a document's text the agent sees in the turn (all of it is saved). */
+const DOC_CHARS = 8_000;
+const docText = (text?: string) =>
+	text
+		? `[document text]\n${text.slice(0, DOC_CHARS)}${text.length > DOC_CHARS ? '\n[…cut]' : ''}`
+		: '[No text could be read from the document.]';
 
 /** Kids read the family group: answers there stay short and plain. */
 const GROUP_HINT =
@@ -175,11 +202,13 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		// and the photo itself. History keeps the text line.
 		const last = messages.at(-1);
 		const hint = m.triage?.hint ?? (m.isDM ? undefined : GROUP_HINT);
-		if (last?.role === 'user' && (hint || m.media?.kind === 'image')) {
-			const text = hint ? `${last.content}\n\n${hint}` : String(last.content);
+		const doc = m.attachment?.kind === 'document' ? docText(m.attachment.text) : '';
+		if (last?.role === 'user' && (hint || doc || m.media?.kind === 'image')) {
+			const text = [String(last.content), doc, hint].filter(Boolean).join('\n\n');
 			if (m.media?.kind === 'image') {
 				const image = await m.media.download();
-				await saveFile(m.threadId, m.messageId, m.media.mimetype, image);
+				const path = await saveFile(m.threadId, m.messageId, m.media.mimetype, image);
+				m.attachment = { kind: 'photo', path, mimetype: m.media.mimetype };
 				messages[messages.length - 1] = {
 					role: 'user',
 					content: [
@@ -191,7 +220,21 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 				messages[messages.length - 1] = { role: 'user', content: text };
 			}
 		}
-		const result = await runAgentStream({ messages }, (r) => channel.reply(m, r));
+		// Who's asking, from the channel, for tools that must know (save/saved:
+		// a DM save is private to its sender). Never taken from the model.
+		const asker: ContentContext = {
+			sender: m.person?.name ?? null,
+			isDM: m.isDM,
+			channel: m.channel,
+			threadId: m.threadId,
+			messageId: m.messageId,
+			attachment: m.attachment,
+			// A quiet (untagged) turn only acts on lists; it never saves on its own.
+			quiet: !!m.triage
+		};
+		const result = await runAgentStream({ messages, options: { asker } }, (r) =>
+			channel.reply(m, r)
+		);
 		const reply = (await result.text).trim();
 		// A quiet turn's reply was never shown: keep it as a note, so later
 		// turns don't think they said it to anyone.

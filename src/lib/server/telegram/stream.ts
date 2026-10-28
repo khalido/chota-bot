@@ -43,6 +43,8 @@ const TOOL_STATUS: Record<string, string> = {
 	title_info: 'Looking that up',
 	watch_ideas: 'Finding ideas',
 	book: 'Looking up the book',
+	save: 'Saving it',
+	saved: 'Looking through what we saved',
 	web_search: 'Searching the web',
 	web_fetch: 'Reading the page'
 };

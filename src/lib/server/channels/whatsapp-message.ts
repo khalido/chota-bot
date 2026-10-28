@@ -43,7 +43,15 @@ interface ContextInfo {
 	stanzaId?: string | null;
 }
 
-function textAndContext(message: Record<string, unknown>): { text: string; ctx?: ContextInfo } {
+/** A document sent with a caption arrives wrapped one level deeper. */
+function unwrapDocument(message: Record<string, unknown>): Record<string, unknown> {
+	const wrapped = message.documentWithCaptionMessage as
+		{ message?: Record<string, unknown> } | undefined;
+	return wrapped?.message ?? message;
+}
+
+function textAndContext(raw: Record<string, unknown>): { text: string; ctx?: ContextInfo } {
+	const message = unwrapDocument(raw);
 	const conv = message.conversation;
 	if (typeof conv === 'string') return { text: conv };
 	for (const k of ['extendedTextMessage', 'imageMessage', 'videoMessage', 'documentMessage']) {
@@ -53,10 +61,19 @@ function textAndContext(message: Record<string, unknown>): { text: string; ctx?:
 	return { text: '' };
 }
 
-/** Which attachment, if any, a message carries (photo or voice note). */
+/** Which attachment, if any, a message carries (photo, voice note, document). */
 export function mediaOf(
-	message: Record<string, unknown>
-): { kind: 'image' | 'audio'; mimetype: string } | undefined {
+	raw: Record<string, unknown>
+): { kind: 'image' | 'audio' | 'document'; mimetype: string; fileName?: string } | undefined {
+	const message = unwrapDocument(raw);
+	const doc = message.documentMessage as { mimetype?: string; fileName?: string } | undefined;
+	if (doc) {
+		return {
+			kind: 'document',
+			mimetype: doc.mimetype ?? 'application/octet-stream',
+			fileName: doc.fileName ?? undefined
+		};
+	}
 	const image = message.imageMessage as { mimetype?: string } | undefined;
 	if (image) return { kind: 'image', mimetype: image.mimetype ?? 'image/jpeg' };
 	const audio = message.audioMessage as { mimetype?: string } | undefined;

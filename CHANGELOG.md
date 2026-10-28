@@ -9,6 +9,12 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ## [Unreleased]
 
+### Added
+
+- **Save and find things:** send chota a link (or a photo, voice note or PDF with "save this") and it keeps it with a title, summary, the full text and tags; "that article I saved about…" finds it. A vision model reads photos and scanned PDFs; Jev picks the tags (`decisions/content-tags.json`). Saved in a direct message it's private to the sender; in a group it's the family's, and group answers never show anyone's private items. New `content` table.
+- **Telegram takes photos, voice notes and documents**, and WhatsApp takes documents; a PDF's text goes to the agent.
+- **Agent turns:** a 20-step cap with a last step that must answer; failure messages that say whether to ask again or tell a parent.
+
 ### Changed
 
 - **Runs on Bun:** Bun replaces Node and npm as runtime and package manager (`bun.lock`, `bunfig.toml` with a 2-day minimum release age, `trustedDependencies`). `deploy.sh`, `bootstrap.sh` and `chota.service` use `~/.bun/bin/bun`; the Pi needs no Node. Tested on the X230: install, tests, build, pages, text and image prints over USB.
