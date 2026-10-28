@@ -27,6 +27,7 @@ All three say: deploy what's built before adding more (box still on `4eaa7f0`), 
 - Smaller: drop empty tool args (everx `dropUnsetArgs`), prune old tool results on threads idle 8 h+ (`pruneMessages`), no backup job yet, `/api/print` is LAN-open by choice.
 
 - **Fixed 28 Oct (69bf265, not deployed):** the 20-step cap with a last step that answers, failure messages that say what to do (a dead key says "tell a parent", checked live), one error message on Telegram instead of a partial answer plus "snag", WhatsApp redelivery dedupe.
+- **More from yaad (28 Oct, checked in chota):** (1) alerts and other bot-initiated sends aren't written to chat history (`appendMessage` only in `channels/index.ts:198,242`), so a reply to a reminder reaches an agent that never saw it; record outbound sends. (2) No "never invent tools; say what you can do by area" line in `prompts.ts`; yaad's agent claimed email and scheduling it didn't have. Add it, then ask the live bot "what can you do?" and "can you email?". (3) When reminders land: two kinds, `remind` (send the text, no model) and `task` (written as steps, run as a fresh turn). Don't repeat: SDK-managed sessions, plan-doc sprawl, model-backend churn.
 - **Saved content (e1fa14e, 28 Oct, not deployed):** save + saved tools, `content` table, Telegram photos/voice/documents, WhatsApp documents. DM saves are private to the sender. Next from yaad: read-later / to-watch status, resending a saved file ("send me that PDF"), YouTube summaries via Gemini, reminders as DB-backed user jobs (`next.md`).
 
 ## Next, in order
