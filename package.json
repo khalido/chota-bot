@@ -13,7 +13,7 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run",
+		"test": "vitest --run",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
@@ -81,11 +81,9 @@
 		"usb": "^2.18.0",
 		"zod": "^4.4.3"
 	},
-	"allowScripts": {
-		"better-sqlite3": true,
-		"usb": true,
-		"esbuild": true,
-		"protobufjs": false,
-		"fsevents": false
-	}
+	"trustedDependencies": [
+		"better-sqlite3",
+		"esbuild",
+		"usb"
+	]
 }

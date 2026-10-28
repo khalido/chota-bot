@@ -153,8 +153,8 @@ async function todaySnapshot(now: Date): Promise<string> {
  * starter). Returns '' if neither is present — never throws, since a
  * missing soul shouldn't sink the agent.
  *
- * `process.cwd()` is the repo root in all our entry paths (`npm run dev`,
- * `node build`, systemd ExecStart) so anchoring there is fine.
+ * `process.cwd()` is the repo root in all our entry paths (`bun run dev`,
+ * `bun build/index.js`, systemd ExecStart) so anchoring there is fine.
  */
 function loadSoul(): string {
 	const root = process.cwd();

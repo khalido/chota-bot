@@ -10,7 +10,7 @@
  *
  * Names + activities here are PLACEHOLDERS — real family data lives only in
  * the gitignored `chota.config.ts`. If you change the layout on purpose:
- * `npm run test:unit -- --run -u`, then eyeball the snapshot diff.
+ * `bun run test:unit --run -u`, then eyeball the snapshot diff.
  */
 import { describe, it, expect } from 'vitest';
 import { recipientToSections, sectionsToText } from './sections';

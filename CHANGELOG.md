@@ -9,6 +9,10 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Runs on Bun:** Bun replaces Node and npm as runtime and package manager (`bun.lock`, `bunfig.toml` with a 2-day minimum release age, `trustedDependencies`). `deploy.sh`, `bootstrap.sh` and `chota.service` use `~/.bun/bin/bun`; the Pi needs no Node. Tested on the X230: install, tests, build, pages, text and image prints over USB.
+
 ### Added
 
 - **Movies, shows and books in chat:** `title_info` (AU rating with a mature flag, where it streams in Australia, cinema dates, trailer), `watch_ideas` (trending, in cinemas, coming soon, "something like X") and `book` (what it's about, reader age, reception, and whether the City of Sydney Library has a copy on the shelf near us). TMDB now runs on `tmdb-ts`; books combine Google Books, Open Library, the library catalogue and one Exa search.

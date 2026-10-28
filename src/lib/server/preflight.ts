@@ -76,7 +76,7 @@ export function runPreflight(): PreflightFinding[] {
 			findings.push({
 				kind: 'file',
 				name: absDb,
-				hint: `bootstrap the DB: npx drizzle-kit generate && cat drizzle/*.sql | sqlite3 ${dbPath}`
+				hint: `bootstrap the DB: bunx drizzle-kit generate && cat drizzle/*.sql | sqlite3 ${dbPath}`
 			});
 		}
 	}

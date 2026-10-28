@@ -14,10 +14,10 @@
 #   2. apt prereqs: sqlite3
 #   3. plugdev membership for $USER (re-login takes effect)
 #   4. CUPS off (service + socket + path) + usblp blacklisted — printer claim defence
-#   5. sudoers entry for unattended `npm run deploy`
+#   5. sudoers entry for unattended `bun run deploy`
 #   6. udev rule for the MUNBYN printer
 #   7. Preflight: required files exist (.env, chota.config.ts)
-#   8. npm ci — Node deps
+#   8. Bun + bun install
 #   9. Hand off to deploy.sh — build, DB bootstrap, systemd install, health check
 #
 # Usage on a fresh box (after `git clone ... ~/code/chota-bot`):
@@ -109,17 +109,19 @@ if [ ! -d ../curios/.git ]; then
 fi
 echo "✓ ../curios/ at $(cd ../curios && git rev-parse --short HEAD)"
 
-# ── 8. npm ci ──────────────────────────────────────────────────────────────
-say "Step 8/9 — npm ci"
-if [ -d node_modules ] && [ -f node_modules/.package-lock.json ]; then
-	echo "✓ node_modules already installed (skip; re-run with rm -rf node_modules to force)"
-else
-	# fnm puts node on $PATH only in interactive shells; bootstrap.sh runs under
-	# bash but via `bash deploy/bootstrap.sh`, which may or may not source the
-	# rc file. Source the fnm bin dir explicitly to be safe.
-	export PATH="$HOME/.local/share/fnm/aliases/default/bin:$PATH"
-	npm ci
+# ── 8. Bun + bun install ───────────────────────────────────────────────────
+say "Step 8/9 — Bun + bun install"
+# Bun lives in ~/.bun/bin, on $PATH only via the rc file; set it explicitly.
+export PATH="$HOME/.bun/bin:$PATH"
+if ! command -v bun >/dev/null; then
+	curl -fsSL https://bun.sh/install | bash
 fi
+# No Node on the box: global CLIs with a node shebang (agent-browser) run on
+# Bun through this symlink. Skip where a real node exists (the X230's fnm).
+if ! command -v node >/dev/null; then
+	ln -sf "$HOME/.bun/bin/bun" "$HOME/.bun/bin/node"
+fi
+bun install --frozen-lockfile
 
 # ── 9. Hand off to deploy.sh ──────────────────────────────────────────────
 say "Step 9/9 — deploy.sh handles build, DB bootstrap, systemd install + health check"
@@ -137,14 +139,13 @@ sudo systemctl enable chota >/dev/null 2>&1
 # BEFORE = AFTER so we'd skip the build. Force a build path by calling the
 # build + DB-bootstrap + restart inline instead. (When deploy.sh evolves a
 # `--force` flag, switch to that.)
-export PATH="$HOME/.local/share/fnm/aliases/default/bin:$PATH"
 echo "Building…"
-npm run build
+bun run build
 mkdir -p data data/logs
 DB_PATH="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
 if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
 	echo "Fresh DB ($DB_PATH) → generating + applying schema"
-	npx drizzle-kit generate
+	bunx drizzle-kit generate
 	cat drizzle/*.sql | sqlite3 "$DB_PATH"
 fi
 sudo systemctl restart chota
@@ -157,4 +158,4 @@ echo
 echo "Next:"
 echo "  - Open http://$(hostname):8000/ from another machine on the tailnet"
 echo "  - Sign in with Google at /admin to wire up the calendar tool"
-echo "  - From the Mac, future updates are just: npm run deploy"
+echo "  - From the Mac, future updates are just: bun run deploy"

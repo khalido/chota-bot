@@ -36,21 +36,18 @@ EnvironmentFile=/home/ko/code/chota-bot/.env
 # fresh Pi OS box may be on UTC. Pin it here too.
 Environment=TZ=Australia/Sydney
 
-# Prepend fnm's default-alias bin dir to PATH so subprocesses chota spawns
-# (`agent-browser` for screenshots + Sentral login) resolve to the fnm-managed
-# binaries — no `/usr/local/bin/agent-browser` symlink needed. The rest is the
-# standard systemd default PATH.
-Environment=PATH=/home/ko/.local/share/fnm/aliases/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Bun first, then fnm (on the X230 the global `agent-browser` chota spawns for
+# screenshots + Sentral login still lives there; the Pi has no fnm and gets
+# agent-browser from `bun add -g` in ~/.bun/bin). The rest is the standard
+# systemd default PATH.
+Environment=PATH=/home/ko/.bun/bin:/home/ko/.local/share/fnm/aliases/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 
-# adapter-node build output. `node build` boots SvelteKit on $PORT (default
-# 3000; we set PORT=8000 in .env to match the kiosk's Caddy proxy / mDNS).
-#
-# Path points directly at fnm's default-alias symlink — fnm keeps this stable
-# across `fnm default <new>`, so a Node upgrade (`uv run ~/code/dotfiles/fnm.py
-# upgrade`) automatically updates what this resolves to. No /usr/local/bin
-# symlink to maintain. systemd doesn't expand `~`, hence the absolute path.
-ExecStart=/home/ko/.local/share/fnm/aliases/default/bin/node /home/ko/code/chota-bot/build
+# adapter-node build output, run on Bun (tested on the X230 28 Oct 2026: tests,
+# build, pages and USB prints). Boots SvelteKit on $PORT (8000 in .env, to match
+# Caddy / mDNS). `bun upgrade` updates the binary in place. systemd doesn't
+# expand `~`, hence the absolute path. Back to Node: point this at fnm's node.
+ExecStart=/home/ko/.bun/bin/bun /home/ko/code/chota-bot/build/index.js
 
 Restart=on-failure
 RestartSec=5

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy to the kiosk from your Mac — this is what `npm run deploy` runs.
+# Deploy to the kiosk from your Mac — this is what `bun run deploy` runs.
 #
 # Reaching the box needs Tailscale, which has TWO independent gates — so we
 # check them separately and print a clear, actionable message for each:
@@ -34,7 +34,7 @@ check_tailnet() {
 	else
 		echo "  Bring it up. Run:  tailscale up" >&2
 	fi
-	echo "  …then re-run 'npm run deploy'." >&2
+	echo "  …then re-run 'bun run deploy'." >&2
 	return 1
 }
 
@@ -76,7 +76,7 @@ ensure_ssh() {
 			return 0
 		fi
 	done
-	echo "✗ Not authenticated within ${AUTH_WAIT_SECONDS}s — approve the page, then re-run 'npm run deploy'." >&2
+	echo "✗ Not authenticated within ${AUTH_WAIT_SECONDS}s — approve the page, then re-run 'bun run deploy'." >&2
 	return 1
 }
 

@@ -1,0 +1,7 @@
+[install]
+# Skip any release under 2 days old: supply-chain worms ship as fresh releases.
+minimumReleaseAge = 172800
+
+[run]
+# `bun run <script>` runs node-shebang CLIs (vite, vitest, drizzle-kit) on Bun too.
+bun = true

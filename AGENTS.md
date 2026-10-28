@@ -12,7 +12,7 @@ cp .env.example .env # then set BETTER_AUTH_SECRET to any 32+ char string
 mkdir -p data        # DATABASE_URL=data/home.db lives here
 ```
 
-- **Verify with:** `npm ci && npm run check && npm test && npm run lint && npm run build`. All must pass; `check` and `test` alone won't catch a broken production build.
+- **Verify with:** `bun install --frozen-lockfile && bun run check && bun run test && bun run lint && bun run build` (`bun run test`, not `bun test`). All must pass; `check` and `test` alone won't catch a broken production build.
 - **The build is the real gate.** `auth` (the Better Auth CLI) pins `better-auth` exactly — bump both together, or a second better-auth copy lands and fails only at build time.
 - **Holds — do not bump:** `typescript` stays on 6 (7 breaks `svelte-check`), `usb` stays on 2 (3 is untested against the printer), SvelteKit stays on 2 for now (3 is a real migration — see docs/handover.md).
 - **Never put real family names anywhere** — tests, docs, code and comments use `Kid1/Kid2/Kid3`, `Parent1/Parent2`. Real values load at runtime from the gitignored `chota.config.ts`.

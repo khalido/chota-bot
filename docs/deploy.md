@@ -2,7 +2,7 @@
 
 The kiosk box (currently a ThinkPad X230 running Pop!_OS, reached as `pop-os` over Tailscale) sits at the lounge wall. It hosts the SvelteKit app behind systemd, with the MUNBYN ITPP098P plugged into USB. Nothing fancy — `git pull`, build, restart.
 
-**No CI, no auto-deploy.** Updates are manual SSH-from-Mac (`npm run deploy`). The friction of typing the command is the deploy gate, and we don't want code shipping while the printer is mid-run at 06:45. `push.sh` runs two Tailscale preflight checks first (device-on-tailnet, then the faster-expiring SSH re-auth) and tells you what to approve; after it lands, `curl pop-os/api/health` shows the running commit — the proof the box rebuilt on your push.
+**No CI, no auto-deploy.** Updates are manual SSH-from-Mac (`bun run deploy`). The friction of typing the command is the deploy gate, and we don't want code shipping while the printer is mid-run at 06:45. `push.sh` runs two Tailscale preflight checks first (device-on-tailnet, then the faster-expiring SSH re-auth) and tells you what to approve; after it lands, `curl pop-os/api/health` shows the running commit — the proof the box rebuilt on your push.
 
 ## Admin auth gate
 
@@ -12,7 +12,7 @@ The kiosk box (currently a ThinkPad X230 running Pop!_OS, reached as `pop-os` ov
 
 ```
 /home/ko/code/chota-bot/      # repo (mirrors ~/code/chota-bot on Mac)
-  build/                       # adapter-node output (`npm run build` writes here)
+  build/                       # adapter-node output (`bun run build` writes here)
   data/                        # runtime data (all gitignored)
     home.db                    #   sqlite — jobs, sessions, auth
     logs/chota.log             #   LogTape rotating file (see docs/logging.md)
@@ -46,7 +46,7 @@ when you have the box physically wired to a dedicated kiosk display
 The commands as written target Cinnamon (the SP5's Mint install); they need
 a Pop!\_OS / GNOME rewrite before they're useful again.
 
-Assumes Node is installed via fnm — `chota.service` points directly at `~/.local/share/fnm/aliases/default/bin/node`, so no `/usr/local/bin` symlink to maintain. `node-usb` ships libusb statically linked, so no apt libusb either. See [`docs/printers.md`](printers.md) for the full USB story.
+Assumes Bun is installed in `~/.bun/bin` (step 2) — `chota.service` points directly at `~/.bun/bin/bun`, so no `/usr/local/bin` symlink to maintain. `node-usb` ships libusb statically linked, so no apt libusb either. See [`docs/printers.md`](printers.md) for the full USB story.
 
 > **Shortcut:** once the repo is cloned and `.env` + `chota.config.ts` are
 > scp'd over (steps 1 and 4 below), `bash deploy/bootstrap.sh` runs Phase 1
@@ -70,7 +70,7 @@ echo 'blacklist usblp' | sudo tee /etc/modprobe.d/blacklist-usblp.conf
 #    The plugdev change needs a fresh login to take effect — easiest:
 #    `exit` the SSH session and reconnect once.
 #
-#    Sudoers entry for unattended deploys — without this, every `npm run deploy`
+#    Sudoers entry for unattended deploys — without this, every `bun run deploy`
 #    from the Mac would hang waiting for a sudo password (push.sh shells in
 #    over non-TTY SSH). The rule is narrow: three specific systemctl commands
 #    on the chota unit, nothing else. Self-documenting; see the file header.
@@ -82,15 +82,17 @@ mkdir -p ~/code && cd ~/code
 git clone <repo-url> chota-bot
 cd chota-bot
 
-# 2. Install Node deps
-npm ci
+# 2. Install Bun (user-local, ~/.bun/bin) and the deps
+curl -fsSL https://bun.sh/install | bash
+~/.bun/bin/bun install --frozen-lockfile
 
 # 3. Install agent-browser (the production HTML→screenshot print path needs it)
 #    Skip the install steps if setup_linux.sh already did them.
-npm install -g agent-browser
-agent-browser install                 # downloads Chromium (~150MB, one-time)
-#    No /usr/local/bin/agent-browser symlink — chota.service has the fnm bin
-#    dir on PATH, so the subprocess spawn finds it directly.
+ln -sf ~/.bun/bin/bun ~/.bun/bin/node   # only on a box with no Node: agent-browser's launcher has a node shebang
+bun add -g agent-browser
+agent-browser install                 # downloads Chromium (~150MB, one-time; not on arm64, see box.md)
+#    No /usr/local/bin/agent-browser symlink — chota.service has ~/.bun/bin
+#    on PATH, so the subprocess spawn finds it directly.
 
 # 4. Copy secrets from your Mac (one-time)
 #    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
@@ -107,7 +109,7 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --attr-match=idVendor=0483
 
 # 6. Build
-npm run build
+bun run build
 
 # 7. Install + enable the systemd unit
 sudo cp deploy/chota.service /etc/systemd/system/chota.service
@@ -149,26 +151,13 @@ gsettings set org.cinnamon.desktop.session idle-delay 0
 gsettings set org.cinnamon.settings-daemon.plugins.power sleep-display-ac 0
 ```
 
-## When you upgrade Node (fnm)
-
-fnm scopes globals per Node version, so a `fnm default <new>` orphans them. The `/usr/local/bin/*` symlinks themselves keep working (they go through `aliases/default`, which fnm updates), but you have to reinstall the globals on the new version.
-
-[`fnm.py`](https://github.com/khalido/dotfiles) (in the `khalido/dotfiles` repo, cloned to `~/code/dotfiles` on the SP5) automates this — it installs latest LTS, sets it as default, and reinstalls every global you had:
+## When you upgrade Bun
 
 ```bash
-ssh chota 'uv run ~/code/dotfiles/fnm.py upgrade'
-ssh chota 'agent-browser install'        # only if the Chromium ABI changed
-ssh chota 'sudo systemctl restart chota'
+ssh chota '~/.bun/bin/bun upgrade && sudo systemctl restart chota'
 ```
 
-Manual fallback if `fnm.py` ever breaks:
-
-```bash
-fnm install v26 && fnm default v26
-npm install -g agent-browser
-agent-browser install
-sudo systemctl restart chota
-```
+The X230 still has fnm and Node only for its global `agent-browser`; the Pi has neither. To go back to Node, point `ExecStart` in `chota.service` at fnm's `node` and redeploy.
 
 Caddy reverse-proxy and mDNS are listed at the bottom as optional hardening — not Phase 1 blockers.
 
@@ -177,8 +166,8 @@ Caddy reverse-proxy and mDNS are listed at the bottom as optional hardening — 
 From your Mac:
 
 ```bash
-npm run deploy    # = bash deploy/push.sh  (preflight, then deploy.sh on the kiosk)
-npm run logs      # = ssh chota 'sudo journalctl -u chota -f'
+bun run deploy    # = bash deploy/push.sh  (preflight, then deploy.sh on the kiosk)
+bun run logs      # = ssh chota 'sudo journalctl -u chota -f'
 ```
 
 (`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) `push.sh` is
@@ -192,7 +181,7 @@ things:
    re-run.
 2. **Auto-syncs `chota.config.ts` → kiosk.** The config is gitignored, so the
    kiosk doesn't get it via `git pull`. SP5 is treated as a dumb deploy target
-   — edit the config here, `npm run deploy` pushes it up.
+   — edit the config here, `bun run deploy` pushes it up.
 3. **Hands off to `deploy/deploy.sh` on the kiosk** for the actual pull / build
    / restart.
 
@@ -202,9 +191,9 @@ things:
 The deploy script (`deploy.sh`, on the kiosk) is idempotent (re-running with no new commits is a no-op):
 
 1. `git fetch` + `git pull --ff-only origin main` (fails loudly on a non-fast-forward — investigate, don't paper over)
-2. If `package-lock.json` changed → `npm ci`
-3. If `drizzle/` or `src/lib/server/db/auth.schema.ts` changed → `npx drizzle-kit push`
-4. `npm run build` (always)
+2. If `bun.lock` changed → `bun install --frozen-lockfile`
+3. If `drizzle/` or `src/lib/server/db/auth.schema.ts` changed → `bunx drizzle-kit push`
+4. `bun run build` (always)
 5. `mkdir -p data data/logs` (cheap; tool-specific subdirs like `data/sentral/` are created on demand by the writing code)
 6. `sudo systemctl restart chota` + verify it came up
 
@@ -237,7 +226,7 @@ ssh chota 'cd ~/code/chota-bot && git checkout <sha> && bash deploy/deploy.sh'
 (`deploy.sh` will see the SHA already matches origin and bail at the "nothing to deploy" check — so when rolling back, run the build + restart steps directly:)
 
 ```bash
-ssh chota 'cd ~/code/chota-bot && git checkout <sha> && npm ci && npm run build && sudo systemctl restart chota'
+ssh chota 'cd ~/code/chota-bot && git checkout <sha> && ~/.bun/bin/bun install --frozen-lockfile && ~/.bun/bin/bun run build && sudo systemctl restart chota'
 ```
 
 Once main moves past the bad commit, a normal deploy will fast-forward back onto it.

@@ -9,26 +9,27 @@ Family kiosk + thermal printer. Runs on a ThinkPad X230 (Pop!_OS 24.04) with a M
 ## Day-to-day
 
 ```bash
-npm run dev        # http://localhost:8000/  (vite.config.ts pins the port)
-npm test           # vitest --run (fast; count drifts — trust the output)
-npm run check      # svelte-check (type errors)
-npm run lint       # prettier + eslint
-npm run build      # adapter-node → build/index.js
+bun run dev        # http://localhost:8000/  (vite.config.ts pins the port)
+bun run test       # vitest --run (fast; count drifts — trust the output). Not `bun test`: that's Bun's own runner
+bun run check      # svelte-check (type errors)
+bun run lint       # prettier + eslint
+bun run build      # adapter-node → build/index.js
 ```
 
-The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!_OS) — reach it portless at **`http://pop-os/`** on the LAN, or **`http://pop-os.<tailnet>.ts.net/`** over Tailscale. A Caddy reverse-proxy service maps port 80 → the app on :8000, so there's no port to type. Deploy is manual SSH-from-Mac (`npm run deploy`) — see [`docs/deploy.md`](docs/deploy.md).
+The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!_OS) — reach it portless at **`http://pop-os/`** on the LAN, or **`http://pop-os.<tailnet>.ts.net/`** over Tailscale. A Caddy reverse-proxy service maps port 80 → the app on :8000, so there's no port to type. Deploy is manual SSH-from-Mac (`bun run deploy`) — see [`docs/deploy.md`](docs/deploy.md).
 
 ## First-time setup
 
 1. `cp chota.config.example.ts chota.config.ts` — fill in your family details incl. `adminEmails` (the Google account[s] allowed into `/admin`). Real names live here only; never in tests/docs/code
 2. `cp .env.example .env` — fill API keys (Transport NSW, Google, TickTick, etc.)
-3. `npm install`
-4. (Print pipeline only) `npm i -g agent-browser && agent-browser install` — downloads the bundled Chromium used to screenshot `/print/<who>` into the PNG that goes to the thermal printer
-5. (Kiosk only) plug in MUNBYN, confirm USB IDs with `node scripts/printer-test.mjs visible` — see [`docs/printers.md`](docs/printers.md)
+3. `bun install`
+4. (Print pipeline only) `bun add -g agent-browser && agent-browser install` — downloads the bundled Chromium used to screenshot `/print/<who>` into the PNG that goes to the thermal printer
+5. (Kiosk only) plug in MUNBYN, confirm USB IDs with `bun scripts/printer-test.mjs visible` — see [`docs/printers.md`](docs/printers.md)
 
 ## Stack
 
-- **SvelteKit** TS, Tailwind, adapter-node — UI + API in one process
+- **Bun** — runtime and package manager (`bun.lock`; `bunfig.toml` skips releases under 2 days old). Switched from Node 28 Oct 2026 after tests, build, pages and USB prints passed on the X230
+- **SvelteKit** TS, Tailwind, adapter-node (its output runs on Bun) — UI + API in one process
 - **Drizzle + better-sqlite3** at `data/home.db`
 - **Better-auth** Google OAuth — powers the calendar tool AND the admin gate: `hooks.server.ts` is **deny-by-default** — `/admin` and every `/api/*` need a session whose email is in `chota.config.ts > adminEmails`, except the public `/api/auth`, `/api/health`, `/api/print`. New API routes are gated unless allow-listed. Sign-in at `/login`
 - **grammY (Telegram)** — long-polling bot at `src/lib/server/channels/telegram.ts` (behind the shared channel router), chat-ID allowlisted, streams agent replies as rich messages — see [`docs/telegram.md`](docs/telegram.md)
@@ -113,12 +114,12 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 
 ## Gotchas (learned the hard way)
 
-- **Deploy = `npm run deploy`** (SSH from the Mac over Tailscale). It runs two preflight checks — is this Mac on the tailnet, then the faster-expiring Tailscale SSH re-auth — and tells you what to approve. After it lands, `curl pop-os/api/health` (or `?format=json | jq .version`) shows the running commit — the proof the box rebuilt on your push. See [`docs/deploy.md`](docs/deploy.md).
-- **`auth` (the Better Auth CLI, devDep) pins `better-auth` exactly** — bump both together, or npm installs a second better-auth copy for the CLI.
-- **npm 11 blocks install scripts unless allow-listed** in `package.json > allowScripts`. `better-sqlite3`, `usb` and `esbuild` need theirs (npm adds an implicit `node-gyp rebuild` for any package with a `binding.gyp`); a missing entry for a native addon shows up as `ERR_DLOPEN_FAILED` at build/run time, not at install.
-- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). **SvelteKit stays on 2** for now — 3 is a real migration (`npx sv migrate sveltekit-3`; adapter-node drops `ORIGIN` for `paths.origin`). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
+- **Deploy = `bun run deploy`** (SSH from the Mac over Tailscale). It runs two preflight checks — is this Mac on the tailnet, then the faster-expiring Tailscale SSH re-auth — and tells you what to approve. After it lands, `curl pop-os/api/health` (or `?format=json | jq .version`) shows the running commit — the proof the box rebuilt on your push. See [`docs/deploy.md`](docs/deploy.md).
+- **`auth` (the Better Auth CLI, devDep) pins `better-auth` exactly** — bump both together, or the install pulls a second better-auth copy for the CLI.
+- **Bun runs install scripts only for `package.json > trustedDependencies`** (`better-sqlite3`, `esbuild`, `usb`); `bun pm untrusted` lists the blocked ones (`protobufjs`, on purpose). A native addon missing from the list shows up as a load error at run time, not at install.
+- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). **SvelteKit stays on 2** for now — 3 is a real migration (`bunx sv migrate sveltekit-3`; adapter-node drops `ORIGIN` for `paths.origin`). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
 
 ## UI + tooling
 
-- **shadcn-svelte** (Nova style, neutral) over Tailwind — add primitives with `npx shadcn-svelte@latest add <name>`, vendored into `src/lib/components/ui/`.
+- **shadcn-svelte** (Nova style, neutral) over Tailwind — add primitives with `bunx shadcn-svelte@latest add <name>`, vendored into `src/lib/components/ui/`.
 - Use the official **Svelte MCP** server for Svelte 5 / SvelteKit work, and run `svelte-autofixer` on Svelte files you write until clean.

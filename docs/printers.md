@@ -69,8 +69,8 @@ A process-level mutex prevents two prints racing on the same USB endpoint. Concu
 ## Smoke test
 
 ```bash
-node scripts/printer-test.mjs visible    # check vendor/product IDs visible
-node scripts/printer-test.mjs print      # 3-line print + cut
+bun scripts/printer-test.mjs visible    # check vendor/product IDs visible
+bun scripts/printer-test.mjs print      # 3-line print + cut
 ```
 
 Uses raw ESC/POS bytes (no node-thermal-printer dependency) so it's the simplest possible round-trip — useful for diagnosing transport vs formatting issues.
@@ -115,7 +115,7 @@ USB thermal, 80mm rolls. **80mm @ default font = 48 chars per line** (use this w
 The blueprint says vendor `0x0416` product `0x5011`. The kit-on-hand (May 2026) is **`0x0483:0x5743`** — STMicro generic IDs. Many MUNBYNs share these because the manufacturer didn't flash a custom USB descriptor. Confirm yours:
 
 ```bash
-node scripts/printer-test.mjs visible    # lists all USB devices, marks MUNBYN
+bun scripts/printer-test.mjs visible    # lists all USB devices, marks MUNBYN
 ioreg -p IOUSB -l | grep -B 2 -A 20 printer-80   # macOS detail
 ```
 

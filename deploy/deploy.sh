@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Manual deploy — runs on the kiosk box. Don't invoke this directly; from your
-# Mac run `npm run deploy`, which calls `deploy/push.sh` (a preflight SSH guard)
+# Mac run `bun run deploy`, which calls `deploy/push.sh` (a preflight SSH guard)
 # and that hands off to this script over SSH.
 #
 # What it does (idempotent — re-runnable, no-op when there's nothing new):
 #   - preflight: verify .env, chota.config.ts, and the sqlite DB are present
 #   - git fetch + fast-forward pull from origin/main (fails on conflict)
-#   - if package-lock.json changed → npm ci
-#   - if drizzle/schema files changed → npx drizzle-kit push (apply migrations)
-#   - npm run build (always)
+#   - if bun.lock changed → bun install --frozen-lockfile
+#   - if drizzle/schema files changed → bunx drizzle-kit push (apply migrations)
+#   - bun run build (always)
 #   - mkdir -p the runtime data subdirs (in case it's a fresh box)
 #   - sudo systemctl restart chota
 #   - verify health: systemd active + HTTP 200 + jobs registered
@@ -18,11 +18,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# fnm puts node/npm/npx on $PATH only via the rc-file init in interactive
-# shells; this script runs over non-TTY SSH from push.sh on the Mac, so we
-# prepend fnm's default-alias bin dir explicitly. Same path the systemd unit
-# resolves through, so npm version + node version are guaranteed to match.
-export PATH="$HOME/.local/share/fnm/aliases/default/bin:$PATH"
+# Bun lives in ~/.bun/bin, on $PATH only via the rc file in interactive shells;
+# this script runs over non-TTY SSH from push.sh on the Mac, so prepend it. Same
+# binary the systemd unit runs. (fnm stays on the X230 only for the global
+# agent-browser; the Pi installs that with `bun add -g`.)
+export PATH="$HOME/.bun/bin:$HOME/.local/share/fnm/aliases/default/bin:$PATH"
 
 # ── Preflight: fail loudly if a required file is missing ────────────────────
 # A fresh-box deploy that's missing one of these would produce cryptic errors
@@ -71,22 +71,22 @@ fi
 echo "Updating $BEFORE → $AFTER"
 CHANGED=$(git diff --name-only "$BEFORE" "$AFTER")
 
-if echo "$CHANGED" | grep -q '^package-lock\.json$'; then
-	echo "package-lock.json changed → npm ci"
-	npm ci
+if echo "$CHANGED" | grep -q '^bun\.lock$'; then
+	echo "bun.lock changed → bun install"
+	bun install --frozen-lockfile
 fi
 
 if echo "$CHANGED" | grep -qE '^(drizzle/|src/lib/server/db/.*\.schema\.ts$)'; then
 	# --force: push renders an interactive review UI otherwise, which has no TTY
 	# over SSH. --force auto-approves (incl. data-loss statements) — fine here
-	# since schema changes are reviewed locally via `npm run db:push` first; a
+	# since schema changes are reviewed locally via `bun run db:push` first; a
 	# destructive change would need that local confirmation before it ships.
 	echo "drizzle schema changed → drizzle-kit push --force"
-	npx drizzle-kit push --force
+	bunx drizzle-kit push --force
 fi
 
 echo "Building…"
-npm run build
+bun run build
 
 # Runtime data dir — tool-specific subdirs (data/sentral/, data/morning/, etc.)
 # are created on demand by the writing code. data/logs/ is pre-created for
@@ -96,13 +96,13 @@ mkdir -p data data/logs
 
 # Fresh-box DB init: if the sqlite file doesn't exist, generate the schema
 # from drizzle and apply it directly (drizzle-kit push needs a TTY). Subsequent
-# schema changes go through the `npx drizzle-kit push` step above. Requires
+# schema changes go through the `bunx drizzle-kit push` step above. Requires
 # sqlite3 in PATH — see docs/deploy.md bootstrap.
 DB_PATH="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
 if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
 	echo "╭─ Fresh box detected: no DB at $DB_PATH"
 	echo "│  Generating schema from src/lib/server/db/auth.schema.ts…"
-	npx drizzle-kit generate
+	bunx drizzle-kit generate
 	echo "│  Applying SQL to $DB_PATH…"
 	cat drizzle/*.sql | sqlite3 "$DB_PATH"
 	echo "╰─ DB ready: $(sqlite3 "$DB_PATH" '.tables' | tr -s ' \n' ', ' | sed 's/,$//')"

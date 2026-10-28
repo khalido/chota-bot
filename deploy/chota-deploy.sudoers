@@ -1,5 +1,5 @@
 # Allow `ko` to restart / reload / check the chota service without a password.
-# This is what lets `npm run deploy` finish without an interactive sudo prompt:
+# This is what lets `bun run deploy` finish without an interactive sudo prompt:
 # push.sh shells into the kiosk over SSH (no TTY), and deploy.sh's
 # `sudo systemctl restart chota` at the end of every deploy would otherwise
 # hang asking for a password.

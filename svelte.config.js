@@ -24,8 +24,8 @@ const config = {
 		runes: ({ filename }) => (filename.split(/[/\\]/).includes('node_modules') ? undefined : true)
 	},
 	kit: {
-		// adapter-node — runs on the kiosk box (Linux). `npm run build` → build/index.js;
-		// run with `node build` (PORT / ORIGIN / HOST from .env). systemd supervises
+		// adapter-node — runs on the kiosk box (Linux). `bun run build` → build/index.js;
+		// run with `bun build/index.js` (PORT / ORIGIN / HOST from .env). systemd supervises
 		// it on the box; see docs/deploy.md.
 		adapter: adapter(),
 
