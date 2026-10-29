@@ -23,7 +23,7 @@ The X230 hand-deploy is dropped (KO, 29 Oct): the Pi 5 becomes the main box on 3
 4. **WhatsApp on the Pi:** `WHATSAPP_ENABLED=true`, restart, pairing code arrives on Telegram, KO types it on the bot phone, unlink the Mac device, back up `data/whatsapp-auth/`. Before mid-November.
 5. **A week of real use:** forward links, ask for saved things, watch `decision` rows for group triage and `agent.turn` failures (kinds now logged), and the Pi's memory and temperature. Then a second Fable/Gemini round with that evidence.
 6. **School news watch:** write ~10 golden questions first (the first job where the bot speaks unprompted). The probe is in `tools.md` §Sentral ("Probe, 28 Oct 2026"): the school calendar is the useful feed. Needs each kid's year group in config, dedupe by event id, lead times. One kid's cookie returned 403; check `sentral-refresh` first.
-7. **Long reads (proposed 29 Oct, awaiting KO):** the summary model sees only the first 30,000 characters (a New Yorker piece was 60,000; Exa got all of it despite the paywall). Send everything kept, and add reading time + 3–5 key points for pieces over ~2,000 words.
+7. **Long reads:** saves now fetch, read and keep up to 400,000 characters (KO, 29 Oct; a 60,000-character New Yorker piece saved whole in 2.3 s, paywall and all). Still proposed: reading time + 3–5 key points for pieces over ~2,000 words.
 8. **Later:** reminders (two kinds, from yaad: `remind` sends text with no model; `task` is written as steps and runs as a fresh turn), read-later status, "send me that PDF", printer status check, weekly parent digest, library reserve, phone dashboard over `tailscale serve`.
 
 ## Decisions waiting on KO
