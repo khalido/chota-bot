@@ -31,8 +31,9 @@ import { log, logErr } from '$lib/server/log';
 const SCOPE = 'content';
 /** Reads photos and PDFs; the same small model as the group photo gate. */
 const MODEL = 'google/gemini-3.5-flash-lite';
-/** How much text is fetched, read by the model and kept: a long book chapter (~100K tokens). */
-const MAX_CHARS = 400_000;
+/** Text kept per item (~500K tokens: a whole book) and the part the model reads for the summary (~100K). */
+const KEEP_CHARS = 2_000_000;
+const MODEL_CHARS = 400_000;
 /** A PDF with at least this much text is read on the box; less means a scan. */
 const READ_ON_BOX = 300;
 
@@ -78,7 +79,7 @@ export function visibleTo(asker: Pick<Asker, 'sender' | 'isDM'> | undefined): SQ
 export const scopeFor = (asker: Pick<Asker, 'isDM'>) => (asker.isDM ? 'private' : 'family');
 
 async function fetchPage(url: string): Promise<{ title: string; text: string }> {
-	const r = await exa().getContents([url], { text: { maxCharacters: MAX_CHARS } });
+	const r = await exa().getContents([url], { text: { maxCharacters: KEEP_CHARS } });
 	const page = r.results[0];
 	if (!page?.text) throw new Error(`no text for ${url}`);
 	return { title: page.title ?? url, text: page.text };
@@ -109,7 +110,7 @@ async function describe(
 				role: 'user',
 				content:
 					'text' in body
-						? [{ type: 'text', text: `${intro}\n\n${body.text.slice(0, MAX_CHARS)}` }]
+						? [{ type: 'text', text: `${intro}\n\n${body.text.slice(0, MODEL_CHARS)}` }]
 						: [
 								{ type: 'text', text: intro },
 								{ type: 'file', data: body.file, mediaType: body.mediaType }
@@ -247,7 +248,7 @@ export async function saveContent(input: SaveInput, asker: Asker | undefined): P
 		throw new Error('Nothing to save: give a link, a note, or send a file with the message.');
 	}
 
-	const text = (item.text ?? '').slice(0, MAX_CHARS);
+	const text = (item.text ?? '').slice(0, KEEP_CHARS);
 	const tags = await tagsFor({ title: item.title, summary: item.summary, text }, asker);
 	const [row] = await db
 		.insert(content)
