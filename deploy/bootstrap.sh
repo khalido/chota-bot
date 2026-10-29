@@ -123,6 +123,17 @@ if ! command -v node >/dev/null; then
 fi
 bun install --frozen-lockfile
 
+# agent-browser screenshots the print sheets and runs the Sentral login.
+# Chrome for Testing has no linux-arm64 build, so the Pi uses the OS Chromium.
+command -v agent-browser >/dev/null || bun add -g agent-browser
+if [ "$(uname -m)" = aarch64 ]; then
+	have_pkg chromium || sudo apt-get install -y chromium
+	grep -q '^AGENT_BROWSER_EXECUTABLE_PATH=' .env \
+		|| echo 'AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium' >>.env
+else
+	agent-browser install
+fi
+
 # ── 9. Hand off to deploy.sh ──────────────────────────────────────────────
 say "Step 9/9 — deploy.sh handles build, DB bootstrap, systemd install + health check"
 # deploy.sh expects the chota.service unit installed already; install it now if
