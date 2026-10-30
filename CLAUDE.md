@@ -109,6 +109,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/artifacts.md`](docs/artifacts.md) — idea: quick phone-friendly pages built from a chat ask, at `<word>.<domain>`. Not built.
 - [`docs/frame.md`](docs/frame.md) — photo frames: a A$75 Frameo frame opened with ADB, and a Pico 2 W e-ink panel that shows a PNG chota draws. Not built.
 - [`docs/whatsapp.md`](docs/whatsapp.md) — WhatsApp: baileyrs as a linked device on a dedicated number, in the family group + 1-to-1. Channel built (`channels/whatsapp.ts`), tested from the Mac; on the box next.
+- [`docs/jaldi.md`](docs/jaldi.md) — working with jaldi (KO's Mac app) over Tailscale: saved content, an MCP endpoint, pings. Agreed, not built.
 - [`CHANGELOG.md`](CHANGELOG.md) — keepachangelog-style log of shipped changes; add an entry when you ship something notable.
 - [`docs/logging.md`](docs/logging.md) — LogTape structured logging: design + what shipped.
 
