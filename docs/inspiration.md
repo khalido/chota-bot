@@ -228,3 +228,19 @@ Screens: the official Touch Display 2 now comes in 10.1" (portrait-native 1200×
 
 - **[AI HardWare](https://josephzhou.me/ai/)** (Joseph Zhou): a directory of about 127 AI gadgets with photos and Chinese/English write-ups, filterable by brand and price. Ideas for the box's form, controls and screens.
 - **[Claude Duet](https://claude.com/product/claude-duet)** ([HN](https://news.ycombinator.com/item?id=50186037), Oct 2026): Anthropic's always-on phone assistant, US only. Worth taking: a "needs your attention" list with the next step drafted; "on it… done" for long tasks; a page showing what the agent is doing and what waits for approval; scoped, short-lived credentials (1Password CLI) for agent tools; a monthly forgotten-subscriptions check. One HN commenter runs our setup on an old MacBook: iMessage, a family group chat and a Skylight frame.
+- **[Grok bot after six months of OpenClaw](https://x.com/matthewcanham/status/2115103609474154750)** (Matthew Canham, Oct 2026): what won him over was voice calls with the agent's full context (a daily standup by voice, a different voice per bot), several threads in one chat, and specialist bots that decide together whether an email is urgent, goes in the standup, or is archived. Calls for chota are below.
+
+## Calls (idea, KO, 30 Oct 2026)
+
+Talk to chota on a call instead of typing, with the same tools and history as the chat. Two directions:
+
+- **A parent rings chota**: "what's on today", "add milk", "is the bus late". Hands-free in the car or the kitchen.
+- **chota rings a parent, rarely**: only for something urgent that can't wait for a message, chosen by rules first (a same-day school change from the news watch, the 06:45 print failing). Every outbound call is logged with its reason.
+
+Telegram bots can't take calls, and baileys (WhatsApp) has no call audio, so a call needs its own API. Options to check when we build it (from memory, June 2026):
+
+- **No phone number:** a `/call` page on the box over Tailscale; the browser streams audio over WebRTC to a realtime voice model (OpenAI Realtime, Gemini Live), and chota's tools are bridged as function calls. Cheapest, works anywhere on the tailnet, but it can't ring anyone.
+- **A real number:** an Australian number from Twilio or Telnyx (both need an address bundle), streaming audio to the same realtime model, or a hosted voice-agent layer (Vapi, Retell, ElevenLabs Agents) that calls chota's tools over HTTPS. Needs a public endpoint into the private Pi: Tailscale Funnel or a small relay.
+- Check whether AI Gateway routes realtime audio models; if not, it's a second key with its own budget.
+
+Shares its voice stack with Phase 3 (the box's mic and TALK button), so build it once. The urgency judgment (call, message, or wait for the brief) is a Jev question, like the group triage.
