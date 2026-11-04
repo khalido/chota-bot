@@ -4,8 +4,8 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 
 ## Where things stand
 
-- **On GitHub up to 29 Oct; the 30 Oct commits are local until KO OKs a push.** Nothing is deployed: the X230 (`pop-os`) still runs `4eaa7f0` (16 Oct). 215 tests, `bun run check` clean, build boots (all 13 jobs register). `bun run lint` fails only on prettier in `docs/box-design/` and `docs/frame.md`.
-- **Packages current** (30 Oct): `ai` 7.0.153, `better-auth` + `auth` 1.7.14, croner 11, googleapis 188. Held on purpose: TypeScript 6, `usb` 2, SvelteKit 2 (adapter-node 6 needs Kit 3).
+- **All pushed (4 Nov, `929d43d`).** Nothing is deployed: the X230 (`pop-os`) still runs `4eaa7f0` (16 Oct). 215 tests, `bun run check` clean, build boots (all 13 jobs register). `bun run lint` fails only on prettier in `docs/box-design/` and `docs/frame.md`.
+- **Packages current** (4 Nov): `ai` 7.0.159, `better-auth` + `auth` 1.7.15, baileyrs 0.3.13. Majors not taken yet: googleapis 189, unpdf 2, tailwind-variants 4, `@types/node` 26. Held on purpose: TypeScript 6, `usb` 2, SvelteKit 2 (adapter-node 6 needs Kit 3).
 - **Runs on Bun** (28 Oct): `deploy.sh`, `bootstrap.sh` and `chota.service` use `~/.bun/bin/bun`; tested on the X230 with no Node on PATH, prints included. `bootstrap.sh` now also installs agent-browser and, on arm64, apt Chromium with `AGENT_BROWSER_EXECUTABLE_PATH` (untested until the Pi).
 - **Agent:** 20-step cap with a last step that must answer (`agent/loop.ts`); failure messages that say "ask again" or "tell a parent" (`agent/errors.ts`); one `finalText` rule for every channel; alerts written into chat history.
 - **Saved content:** `save` and `saved` tools, `content` table. A bare link is saved with a title, summary, full text (up to 2,000,000 characters; the summary model reads the first 400,000) and Jev tags; photos, voice notes and PDFs on "save this". A DM save is private to its sender; group searches never show private items. A 60,000-character New Yorker piece saved whole in 2.3 s, paywall and all.
@@ -17,7 +17,7 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota B
 
 The Pi 5 becomes the main box (KO, 30 Oct). The X230 keeps printing on `4eaa7f0` until cutover; there is no separate X230 deploy.
 
-1. **Push** the local commits (KO's OK). The Pi clones from GitHub.
+1. ~~Push~~ done 4 Nov. SD card flashed 4 Nov (Lite 64-bit, `chota`, user `ko`, `id_ed25519` key).
 2. **Pi 5 up, without chat** (`docs/box.md` §First boot): Imager → Pi OS Lite 64-bit, hostname `chota`, SSH key, Ethernet. `sudo apt install git`, clone `chota-bot`, scp `.env` + `chota.config.ts` from the Mac **with `TELEGRAM_BOT_TOKEN` removed and `WHATSAPP_ENABLED` unset** (only one process may poll the bot, and the X230 still does). Add `KIOSK=true` and the 17 Oct keys (`GOOGLE_BOOKS_API_KEY`, `EXA_API_KEY`, `LIBRARY_BARCODE`). Run `deploy/bootstrap.sh`. Caddy by hand (`deploy.md` §Caddy). Prove by hand: pages load, one print sheet screenshots to PNG, one Sentral login.
 3. **Cutover:** stop chota on the X230; copy its `data/` (`home.db` holds OAuth tokens, history and decisions; `sentral/`) to the Pi; `bunx drizzle-kit push --force` (adds `content`); put the Telegram token back; move the MUNBYN; restart. On the Mac, point the `chota` SSH alias at the Pi (`~/.ssh/config`, `HostName chota`) so `bun run deploy` targets it. Check: `/api/health` shows the new commit, one test print, a link sent on Telegram saves privately, the 06:45 print next morning. Leave the X230 off but intact for a week.
 4. **WhatsApp on the Pi:** `WHATSAPP_ENABLED=true`, restart, pairing code arrives on Telegram, KO types it on the bot phone, unlink the Mac device, back up `data/whatsapp-auth/`.
