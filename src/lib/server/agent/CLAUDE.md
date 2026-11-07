@@ -15,21 +15,10 @@ keeps the tool's response terse.
 
 ## Before writing anything here, load the skill
 
-The `ai-sdk` skill at `.agents/skills/ai-sdk/` is the canonical source for
-current (`ai@7`) patterns. Read these first, in this order:
-
-1. `.agents/skills/ai-sdk/SKILL.md` — top-level prerequisites + the "do not
-   trust internal knowledge" rule. **Always fetch current model IDs from the
-   AI Gateway** — never use IDs from memory.
-2. `.agents/skills/ai-sdk/references/type-safe-agents.md` — the `ToolLoopAgent`
-   pattern and `InferAgentUIMessage<typeof agent>` for the typed Telegram
-   handler.
-3. `.agents/skills/ai-sdk/references/common-errors.md` — the v5→v7 renames that
-   bite if you copy from older docs (`maxSteps` → `stopWhen: stepCountIs(n)`,
-   `parameters` → `inputSchema`, `maxTokens` → `maxOutputTokens`,
-   `totalUsage` → `usage`).
-4. `.agents/skills/ai-sdk/references/ai-gateway.md` — gateway-specific
-   patterns including caching, tags, and model routing.
+The `ai-sdk` skill at `.agents/skills/ai-sdk/SKILL.md` is the starting point for
+current (`ai@7`) patterns: use the docs bundled in `node_modules/ai/docs/`, which
+match the installed version, and never write SDK code from memory. **Always fetch
+current model IDs from the AI Gateway**, never use IDs from memory.
 
 ## Shape
 
@@ -37,6 +26,8 @@ current (`ai@7`) patterns. Read these first, in this order:
 agent/
   index.ts             # the single ToolLoopAgent instance (+ thin event() wrapper around .generate())
   prompts.ts           # buildSystemPrompt() — soul + style + today + snapshot, composed per call
+  history.ts           # sessions + messages + runs: stores everything; loadHistory decides what the model sees
+  turns.ts             # a run's steps → tool parts (call + result together) and numbers
   tools/               # one file per tool, basename matching the data lib it wraps
     weather.ts         # weather + the beach/surf report folded in (sky + sea)
     calendar.ts
@@ -49,7 +40,6 @@ agent/
     volleyball.ts      # kids' next games + duty + opponent ladder rank
     content.ts         # save + saved — keep links/photos/voice/documents/notes; the asker comes as call options, never from the model
     web.ts             # web_search (Exa) + web_fetch (Browserbase) — AI Gateway tools, no data lib
-  memory.ts            # later — SQLite-backed memory store (Stevens-shape; flat table to start)
 ```
 
 Registered in `index.ts > tools: { … }`: `weather` (also returns the beach

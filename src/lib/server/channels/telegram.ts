@@ -27,7 +27,7 @@ import { getRecipients, FAMILY_RECIPIENT } from '$lib/server/print/sections';
 import { streamRichReply } from '$lib/server/telegram/stream';
 import { log, logErr } from '$lib/server/log';
 import { registerAlertChannel } from '$lib/server/alerts';
-import { recordSent } from '$lib/server/agent/history';
+import { recordSent, sessionKeyFor } from '$lib/server/agent/history';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'telegram';
@@ -37,6 +37,10 @@ const isAllowed = (chatId: number | undefined) =>
 
 /** `tg:-100123` → -100123 */
 const chatIdOf = (threadId: string) => Number(threadId.slice('tg:'.length));
+
+/** The same family member as on WhatsApp, if their Telegram id is on file. */
+const personByTelegram = (id: number) =>
+	(getConfig().family ?? []).find((p) => p.telegram === id) ?? null;
 
 /** Title-case a recipient slug for display: `kid1` → `Kid1`, `family` → `Family`. */
 const titleCase = (who: string) => who.charAt(0).toUpperCase() + who.slice(1);
@@ -100,7 +104,11 @@ export function telegramChannel(): Channel | null {
 					ids.map((id) => bot.api.sendMessage(id, text, { disable_notification: silent }))
 				);
 				results.forEach((r, i) => {
-					if (r.status === 'fulfilled') recordSent(`tg:${ids[i]}`, text);
+					if (r.status !== 'fulfilled') return;
+					const person = personByTelegram(ids[i]);
+					// A positive Telegram chat id is a private chat.
+					const key = sessionKeyFor({ threadId: `tg:${ids[i]}`, isDM: ids[i] > 0, person });
+					recordSent(key, text, 'telegram');
 				});
 				const failed = results.filter((r) => r.status === 'rejected');
 				if (failed.length === ids.length) throw (failed[0] as PromiseRejectedResult).reason;
@@ -152,10 +160,7 @@ export function telegramChannel(): Channel | null {
 					threadId: `tg:${ctx.chat.id}`,
 					channel: 'telegram',
 					messageId: String(ctx.message.message_id),
-					// The same family member as on WhatsApp, if their Telegram id is on file.
-					person: ctx.from
-						? ((getConfig().family ?? []).find((p) => p.telegram === ctx.from!.id) ?? null)
-						: null,
+					person: ctx.from ? personByTelegram(ctx.from.id) : null,
 					senderName: ctx.from?.first_name ?? 'Someone',
 					text,
 					isDM: ctx.chat.type === 'private',

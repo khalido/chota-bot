@@ -37,6 +37,10 @@ export const userOf = (jid?: string | null) => jid?.split('@')[0].split(':')[0] 
 
 const digits = (phone: string) => phone.replace(/\D/g, '');
 
+/** The family member with this phone number, in any format. */
+export const personByPhone = (family: FamilyMember[], phone: string): FamilyMember | null =>
+	family.find((p) => p.whatsapp && digits(p.whatsapp) === digits(phone)) ?? null;
+
 interface ContextInfo {
 	mentionedJid?: string[] | null;
 	participant?: string | null;
@@ -103,7 +107,7 @@ export function toIncoming(
 	// take whichever is the phone JID.
 	const candidates = isGroup ? [k.participant, k.participantAlt] : [k.remoteJid, k.remoteJidAlt];
 	const senderPhone = userOf(candidates.find((j) => j?.endsWith('@s.whatsapp.net')));
-	const person = family.find((p) => p.whatsapp && digits(p.whatsapp) === senderPhone) ?? null;
+	const person = personByPhone(family, senderPhone);
 	if (!person) return null;
 
 	const { text, ctx } = textAndContext(m.message);

@@ -12,7 +12,7 @@ import type { Attachment } from '$lib/server/tools/content';
 export type ChannelName = 'telegram' | 'whatsapp';
 
 export interface Incoming {
-	/** `tg:<chatId>` / `wa:<jid>` — the history and queue key. */
+	/** `tg:<chatId>` / `wa:<jid>`: where to reply. `sessionKeyFor` turns it into the history and queue key. */
 	threadId: string;
 	channel: ChannelName;
 	/** Platform message id, for replies, reactions and dedupe. */

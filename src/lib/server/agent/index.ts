@@ -22,6 +22,7 @@ import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
 import { event } from '$lib/server/log';
 import { answerWhenDone, STOP_WHEN } from './loop';
 import { buildSystemPrompt } from './prompts';
+import { turnStats } from './turns';
 import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
 import { z } from 'zod';
@@ -55,11 +56,19 @@ export const chotaAgent = new ToolLoopAgent({
 	// it with the freshly-composed system prompt on every call.
 	// Per call: who is asking, from the channel router (never the model). The
 	// save/saved tools get it as their context; the admin chat sends none.
-	callOptionsSchema: z.object({ asker: AskerSchema.optional() }).optional(),
+	// `sessionId` is the opaque chat session id: AI Gateway keeps a conversation
+	// on one provider with it, instead of a fingerprint of its first message,
+	// which our rolling history window would keep changing.
+	callOptionsSchema: z
+		.object({ asker: AskerSchema.optional(), sessionId: z.string().optional() })
+		.optional(),
 	prepareCall: async ({ options, ...settings }) => ({
 		...settings,
 		instructions: await buildSystemPrompt(),
-		toolsContext: { save: { asker: options?.asker }, saved: { asker: options?.asker } }
+		toolsContext: { save: { asker: options?.asker }, saved: { asker: options?.asker } },
+		...(options?.sessionId
+			? { providerOptions: { gateway: { sessionId: options.sessionId } } }
+			: {})
 	}),
 	// A hard step cap, and the last step answers without tools (see ./loop.ts).
 	stopWhen: STOP_WHEN,
@@ -91,25 +100,6 @@ export const chotaAgent = new ToolLoopAgent({
 export type ChotaAgentUIMessage = InferAgentUIMessage<typeof chotaAgent>;
 
 /**
- * Sum the AI Gateway's per-step dollar cost off `providerMetadata.gateway.cost`
- * — null when the metadata is absent (non-gateway model, or the gateway didn't
- * price the call). Rides the `agent.run` wide event so PostHog can chart spend.
- */
-function gatewayCost(steps: readonly { providerMetadata?: unknown }[]): number | null {
-	let total = 0;
-	let found = false;
-	for (const s of steps) {
-		const raw = (s.providerMetadata as { gateway?: { cost?: unknown } } | undefined)?.gateway?.cost;
-		const n = typeof raw === 'string' ? Number(raw) : raw;
-		if (typeof n === 'number' && Number.isFinite(n)) {
-			total += n;
-			found = true;
-		}
-	}
-	return found ? total : null;
-}
-
-/**
  * Thin wrapper around `chotaAgent.generate(...)` that emits one
  * `agent.run` wide event per call. Pass through whatever generate
  * accepts; bring your own prompt or messages.
@@ -122,8 +112,8 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 		ev.set('tokens_in', result.usage.inputTokens ?? 0)
 			.set('tokens_out', result.usage.outputTokens ?? 0)
 			.set('steps', result.steps.length);
-		const cost = gatewayCost(result.steps);
-		if (cost !== null) ev.set('cost_usd', cost);
+		const { costUsd } = turnStats(result.steps);
+		if (costUsd !== null) ev.set('cost_usd', costUsd);
 		ev.done();
 		return result;
 	} catch (err) {
@@ -176,8 +166,8 @@ export async function runAgentStream(
 		ev.set('tokens_in', usage.inputTokens ?? 0)
 			.set('tokens_out', usage.outputTokens ?? 0)
 			.set('steps', steps.length);
-		const cost = gatewayCost(steps);
-		if (cost !== null) ev.set('cost_usd', cost);
+		const { costUsd } = turnStats(steps);
+		if (costUsd !== null) ev.set('cost_usd', costUsd);
 		ev.done();
 		return result;
 	} catch (err) {

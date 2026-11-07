@@ -119,9 +119,9 @@ Adding the bot to a family group works with the existing code — checklist:
    `/commands`, @-mentions, and replies to its own messages — so it never
    burns tokens answering human-to-human chatter, and family small talk stays
    out of the agent. Ask it things as `@<botname> what's on the volleyball?`.
-3. History is per-chat (`chat_message` keyed by chat ID), so the group gets
-   its own shared conversation memory; in groups each stored user turn is
-   prefixed with the sender's first name so the agent knows who asked.
+3. A group has its own session (`group:<threadId>/main`), so it gets its own
+   shared conversation memory; each stored message has a `sender`, and the
+   agent sees it as a name before the text, so it knows who asked.
 4. `/print` works in the group — the brief PNG lands where everyone sees it.
 
 Turning privacy mode OFF would deliver every group message to the bot; don't,

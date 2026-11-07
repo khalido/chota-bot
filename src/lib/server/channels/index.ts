@@ -1,7 +1,7 @@
 /**
  * The channel router — everything about a conversation that isn't transport.
  * Adapters (Telegram now, WhatsApp next) deliver allowlisted messages as
- * `Incoming`; this decides whether to answer, queues one turn per thread,
+ * `Incoming`; this decides whether to answer, queues one turn per session,
  * keeps history, runs the agent and hands the stream back to the adapter.
  * Design: docs/agent.md §Channels.
  */
@@ -12,10 +12,12 @@ import {
 	appendMessage,
 	loadHistory,
 	loadRows,
-	migrateThreadKeys,
+	newTurnId,
+	openSession,
 	QUIET_PREFIX,
-	newTurnId
+	sessionKeyFor
 } from '$lib/server/agent/history';
+import { type StepLike, toolParts, turnStats } from '$lib/server/agent/turns';
 import { LRUCache } from 'lru-cache';
 import { event, logErr } from '$lib/server/log';
 import { transcribeAudio } from '$lib/server/transcribe';
@@ -62,20 +64,21 @@ const BOT_CLIP = 300;
 
 /** A group's recent lines; after a restart, seeded from stored history (the
  *  addressed turns — quiet replies were never shown, so they're left out). */
-function recentFor(threadId: string): string[] {
-	let lines = recentLines.get(threadId);
+function recentFor(m: Incoming): string[] {
+	let lines = recentLines.get(m.threadId);
 	if (!lines) {
 		// Raw rows, not loadHistory: its model-shaped window rewrites leading bot rows.
-		lines = loadRows(threadId, RECENT)
-			.filter((h) => !(h.role === 'assistant' && h.content.startsWith(QUIET_PREFIX)))
+		lines = loadRows(openSession(sessionKeyFor(m)), RECENT)
+			// A tool-only run said nothing, so it mustn't count as the bot speaking.
+			.filter((h) => h.content && !(h.role === 'assistant' && h.content.startsWith(QUIET_PREFIX)))
 			.map((h) => (h.role === 'user' ? h.content : botLine(h.content)));
-		recentLines.set(threadId, lines);
+		recentLines.set(m.threadId, lines);
 	}
 	return lines;
 }
 
-function remember(threadId: string, line: string) {
-	recentLines.set(threadId, [...recentFor(threadId), line].slice(-RECENT));
+function remember(m: Incoming, line: string) {
+	recentLines.set(m.threadId, [...recentFor(m), line].slice(-RECENT));
 }
 
 /** A follow-up needs the bot to have spoken in the last two lines — a code
@@ -163,14 +166,17 @@ async function routeOnce(channel: Channel, incoming: Incoming): Promise<void> {
 		const line = `[document: ${fileName ?? 'file'}]`;
 		Object.assign(m, { text: m.text ? `${m.text}\n${line}` : line, media: undefined, attachment });
 	}
-	const recent = m.isDM ? [] : recentFor(m.threadId);
-	if (!m.isDM) remember(m.threadId, asHistoryLine(m));
+	const recent = m.isDM ? [] : recentFor(m);
+	if (!m.isDM) remember(m, asHistoryLine(m));
 
-	if (addressed) return void queue.push(m.threadId, { channel, m });
+	// One turn per session at a time, so someone's WhatsApp and Telegram
+	// messages can't run at once in their one chat.
+	const key = sessionKeyFor(m);
+	if (addressed) return void queue.push(key, { channel, m });
 	if (!triaged) return;
 	// Quiet turns get their own queue key, so they never merge with a message
 	// someone addressed to the bot (which must get its reply).
-	const quietKey = `${m.threadId}#quiet`;
+	const quietKey = `${key}#quiet`;
 	if (m.media?.kind === 'image') {
 		const image = await m.media.download();
 		if (!(await photoIsActionable(image, m.media.mimetype, m.text))) return;
@@ -185,7 +191,7 @@ async function routeOnce(channel: Channel, incoming: Incoming): Promise<void> {
 	if (!hit) return;
 	// A follow-up to the bot is answered like a tagged message.
 	if (hit.reply) {
-		if (followsBot(recent)) void queue.push(m.threadId, { channel, m });
+		if (followsBot(recent)) void queue.push(key, { channel, m });
 		return;
 	}
 	m.triage = { hint: triageHint(hit) };
@@ -201,12 +207,32 @@ const docText = (text?: string) =>
 
 /** Kids read the family group: answers there stay short and plain. */
 
-/** Each line names its sender — several people share a group's history, and
- *  in a DM it's how the agent knows who "me" is. A photo is marked, not kept. */
-const asHistoryLine = (m: Incoming) => {
-	const photo = m.media?.kind === 'image' ? '[photo] ' : '';
-	return `${m.person?.name ?? m.senderName}: ${photo}${m.text}`.trimEnd();
-};
+/** A message's text as stored. A photo is marked, not kept. */
+const storedText = (m: Incoming) => `${m.media?.kind === 'image' ? '[photo] ' : ''}${m.text}`;
+
+const senderOf = (m: Incoming) => m.person?.name ?? m.senderName;
+
+/** A line of a group's recent context, naming its sender. */
+const asHistoryLine = (m: Incoming) => `${senderOf(m)}: ${storedText(m)}`.trimEnd();
+
+/** Write a run's one assistant row: its reply, tool calls and numbers. Called
+ *  for a failed run too: a tool may have changed something, and its finished
+ *  steps were paid for. */
+function keepRun(
+	sessionId: string,
+	turnId: string,
+	steps: readonly StepLike[],
+	channel: Incoming['channel'],
+	text: string,
+	error?: string
+) {
+	appendMessage(sessionId, turnId, 'assistant', text, {
+		channel,
+		parts: toolParts(steps),
+		run: turnStats(steps),
+		error
+	});
+}
 
 async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 	const { channel, m } = latest;
@@ -216,15 +242,21 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 		skipped: skipped.length || undefined
 	});
 	const stopTyping = channel.typing(m);
+	const turnId = newTurnId();
+	const steps: StepLike[] = [];
+	let sessionId: string | undefined;
 	try {
-		// Short-term context: record the user message(s), load the recent window,
-		// stream the reply, record the final text. Tool calls and thinking are
-		// not stored. Messages that arrived mid-turn go in first, in order.
-		const turnId = newTurnId();
-		for (const t of [...skipped, latest]) {
-			appendMessage(m.threadId, turnId, 'user', asHistoryLine(t.m));
+		// Record the user message(s), load the recent window, stream the reply,
+		// then record the reply with its tool calls and the run's numbers.
+		// Messages that arrived mid-turn go in first, in order.
+		sessionId = openSession(sessionKeyFor(m));
+		for (const { m: t } of [...skipped, latest]) {
+			appendMessage(sessionId, turnId, 'user', storedText(t), {
+				sender: senderOf(t),
+				channel: t.channel
+			});
 		}
-		const messages = loadHistory(m.threadId);
+		const messages = loadHistory(sessionId);
 		// This turn's own extras ride on the last message only — a triage note
 		// and the photo itself. History keeps the text line.
 		const last = messages.at(-1);
@@ -262,22 +294,29 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 			// A quiet (untagged) turn only acts on lists; it never saves on its own.
 			quiet: !!m.triage
 		};
-		const result = await runAgentStream({ messages, options: { asker } }, (r) =>
-			channel.reply(m, r)
+		const result = await runAgentStream(
+			{ messages, options: { asker, sessionId }, onStepEnd: (step) => void steps.push(step) },
+			(r) => channel.reply(m, r)
 		);
 		const reply = await finalText(result);
 		// A quiet turn's reply was never shown: keep it as a note, so later
 		// turns don't think they said it to anyone.
-		if (reply)
-			appendMessage(m.threadId, turnId, 'assistant', m.triage ? `${QUIET_PREFIX}${reply}` : reply);
+		const text = reply && m.triage ? `${QUIET_PREFIX}${reply}` : reply;
+		keepRun(sessionId, turnId, steps, m.channel, text);
 		// Nothing came back (the model stopped without text): say so rather than go silent.
-		else if (!m.triage) await channel.send(m.threadId, { markdown: EMPTY_REPLY }).catch(() => {});
-		if (reply && !m.triage && !m.isDM) remember(m.threadId, botLine(reply));
+		if (!reply && !m.triage)
+			await channel.send(m.threadId, { markdown: EMPTY_REPLY }).catch(() => {});
+		if (reply && !m.triage && !m.isDM) remember(m, botLine(reply));
 		ev.done();
 	} catch (err) {
 		const failure = describeChatError(err);
 		logErr(SCOPE, `agent turn failed (${m.threadId}, ${failure.kind})`, err);
 		ev.fail(err, { kind: failure.kind });
+		try {
+			if (sessionId) keepRun(sessionId, turnId, steps, m.channel, '', failure.kind);
+		} catch (e) {
+			logErr(SCOPE, `couldn't keep the failed run (${m.threadId})`, e);
+		}
 		// A quiet (triaged) turn fails silently — nobody asked.
 		if (!m.triage) await channel.send(m.threadId, { markdown: failure.message }).catch(() => {});
 	} finally {
@@ -292,11 +331,6 @@ export async function bootChannels(): Promise<void> {
 	if (channels.length) {
 		await Promise.allSettled(channels.map((c) => c.stop()));
 		channels.length = 0;
-	}
-	try {
-		migrateThreadKeys();
-	} catch (err) {
-		logErr(SCOPE, 'history key migration failed', err); // a turn will fail, not boot
 	}
 	for (const channel of [telegramChannel(), whatsappChannel()]) {
 		if (!channel) continue;

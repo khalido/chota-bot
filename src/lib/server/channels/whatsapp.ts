@@ -28,9 +28,9 @@ import { env } from '$env/dynamic/private';
 import { getConfig } from '$lib/server/config';
 import { clearAlert, raiseAlert, registerAlertChannel } from '$lib/server/alerts';
 import { finalText } from '$lib/server/agent';
-import { recordSent } from '$lib/server/agent/history';
+import { recordSent, sessionKeyFor } from '$lib/server/agent/history';
 import { errorMessage, log, logErr } from '$lib/server/log';
-import { mediaOf, toIncoming, userOf, type WaMessage } from './whatsapp-message';
+import { mediaOf, personByPhone, toIncoming, userOf, type WaMessage } from './whatsapp-message';
 import { toWhatsApp } from './whatsapp-format';
 import { FAILED, THINKING, toolEmoji, WRITE_TOOLS } from './reactions';
 import type { Channel, Incoming, Outgoing } from './types';
@@ -226,8 +226,14 @@ export function whatsappChannel(): Channel | null {
 				const to = getConfig().whatsapp?.notify ?? [];
 				if (!to.length) throw new Error('no whatsapp.notify configured');
 				for (const n of to) {
-					await requireSock().sendMessage(phoneJid(n), { text });
-					recordSent(`wa:${phoneJid(n)}`, text);
+					const jid = phoneJid(n);
+					await requireSock().sendMessage(jid, { text });
+					const person = personByPhone(getConfig().family ?? [], n);
+					recordSent(
+						sessionKeyFor({ threadId: `wa:${jid}`, isDM: true, person }),
+						text,
+						'whatsapp'
+					);
 				}
 			});
 			scheduleConnect(onMessage);

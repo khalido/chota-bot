@@ -99,15 +99,23 @@ The result carries more than tokens. Worth keeping:
 - `result.totalUsage` (input/output tokens, cached/reasoning detail), `result.finishReason`, `result.steps.length`.
 - Skip `providerMetadata` (niche for now).
 
-Two homes: the `agent.run` **wide event** (LogTape → OTel/PostHog) is the analytics layer — enrich it with the actual `response.modelId` + `finishReason`; the `chat_message.metadata` JSON blob can carry a compact `{ model, in, out, finishReason, steps }` per assistant row for at-a-glance inspection in Drizzle Studio. _(Not yet wired — see Future / worklog.)_
+Two homes: the `agent.run` **wide event** (LogTape → OTel/PostHog) is the analytics layer — enrich it with the actual `response.modelId` + `finishReason`; A run's assistant row in `chat_message` holds `model`, `provider`, tokens, cached tokens and cost; an older idea was a compact `{ model, in, out, finishReason, steps }` blob per assistant row for at-a-glance inspection in Drizzle Studio. _(Not yet wired — see Future / worklog.)_
 
-## Conversation history — light table, not a session transcript
+## Conversation history — keep everything, load little
 
-Shipped: a `chat_message` table (`db/chat.schema.ts`). Per turn the Telegram handler records the user message + the final reply **text only** — tool calls and thinking are scrubbed (their cost rides the wide event). Every message is kept; the last 50 (~25 exchanges, a few thousand tokens) go back to the model as context each turn (was 12 until 2026-10-16). Helpers live in `agent/history.ts` (`loadHistory`, `appendMessage`, `newTurnId`). Columns (`id`, `chatId`, `turnId`, `role`, `content`, `createdAt`, `metadata`) — `turnId` groups a user+assistant exchange; `metadata` is a JSON escape hatch. Compression (summarise + prune old turns) is deferred until volume warrants.
+`db/chat.schema.ts` has two tables, with helpers in `agent/history.ts` and `agent/turns.ts`:
 
-**Compaction (2026-10-16):** the context window is the text of the last 50 messages — tool calls and their results are never stored, which is the bulk of what the [compaction guide](https://ai-sdk.dev/cookbook/guides/agent-context-compaction) trims. Replies are short, and family facts live in memory, not history. So: nothing to build yet. When a long chat needs it — mostly the family group — summarise turns older than the window into one short message, per chat, and let durable facts go to memory via the inbox. Group history is per chat ID, so the group never shares context with a 1-to-1 chat.
+| Table          | One row per  | Holds                                                                                                                                                                                                                    |
+| -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `chat_session` | Conversation | Opaque `id`, `key` (`owner/agent`), `agent`, `parent_id`, `last_active_at`, `closed_at`                                                                                                                                  |
+| `chat_message` | Message      | `session_id`, `turn_id`, `role`, `sender`, `channel`, `content`, JSON `parts` (each tool call with its result); on a run's one assistant row, `model`, `provider`, `steps`, tokens, `cached_tokens`, `cost_usd`, `error` |
 
-> **Design principle (locked June 2026):** what defines the agent is `soul.md` (identity) + a well-maintained **memory store**. Messages are just light recent context. Full "sessions" — rich transcripts with every tool call + thought — are low-value and get messy fast, so we deliberately don't store them. Optimise soul + memory; keep history thin.
+- **Sessions.** A family member's DMs are one session on every channel (`person:<name>/main`). Each group has its own (`group:<threadId>/main`), so a group never shares context with a DM. Someone not on file gets `chat:<threadId>/main`. Turns queue per session. If WhatsApp and Telegram messages both wait during a turn, they merge, and the one reply goes to the channel of the newest.
+- **Session ID.** `id` is sent as AI Gateway's `sessionId`, so it holds no names or numbers. Without it, the Gateway fingerprints the first message, which our rolling window keeps changing.
+- **Storage vs context.** The database keeps every message and tool result (a result over 200,000 characters is cut and marked `truncated`). A failed run keeps its finished steps' tool calls and numbers; the error kind is on its assistant row. `loadHistory` decides what the model sees: today, the text of the last 50 messages. Tool output isn't sent back; a run with no text shows as a note, such as `[ran tools: ticktick_add (ok); then the run failed]`, so the model can see the action happened. In a small live test (3 tries each) it didn't write these notes out as tool calls, but it still re-added an item once in 3 after a failed run.
+- **Not built yet:** compaction, fading tool results into context, project and research agents, closing a session to start fresh. `parent_id` and `closed_at` are there for these.
+
+> **Design principle:** what defines the agent is `soul.md` plus a well-maintained memory store. History is not memory, but it is the record dreaming checks notes against and the data for analysis, so it's all kept. (Until Nov 2026, tool calls were deliberately not stored.)
 
 ## Agent organization — one now, more later
 
@@ -265,7 +273,7 @@ chota is reached from more than one chat app: Telegram now, WhatsApp next ([`wha
 
 ```ts
 interface Incoming {
-	threadId: string; // 'tg:<chatId>' | 'wa:<jid>' — the history and queue key
+	threadId: string; // 'tg:<chatId>' | 'wa:<jid>'
 	channel: 'telegram' | 'whatsapp';
 	messageId: string;
 	person: FamilyMember | null; // resolved from config when the adapter can
@@ -394,7 +402,6 @@ chota's cases: "print this" needs no model (print the image); a school notice �
 ## Future / worklog
 
 - **On `ai` v7 now.** When a second agent role appears, adopt the native [subagents](https://ai-sdk.dev/v7/docs/agents/subagents) primitive instead of the hand-rolled agent-as-tool above (book-agent pattern).
-- **Wire the model/usage metadata capture** (§What to capture) — enrich the `agent.run` wide event with the actual `response.modelId` + `finishReason`, and store a compact `{ model, in, out, finishReason, steps }` blob on `chat_message` assistant rows.
 - **PostHog AI observability** ([posthog.com/ai-observability](https://posthog.com/ai-observability)) — we already ship events to PostHog via the OTel sink; PostHog's LLM-analytics adds per-generation cost/latency/trace dashboards on top. Low effort later + a useful pattern for other projects. (Captured in `~/code/ops/inbox.md`.)
 - **Sandbox + bash-tool / skill `scripts/`** — [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox), [vercel-labs/bash-tool](https://github.com/vercel-labs/bash-tool). For jobs where the agent writes + runs code, and for executing skill `scripts/`. Revisit in the **v7 era** — interesting sandbox products are emerging. Deferred; typed tool wrappers cover everything today.
 - **Code mode** (`@ai-sdk/code-mode`, experimental) — the model writes sandboxed JS that calls several tools at once. Not worth it at six tools and one-sentence replies; revisit when the agent drives jobs.
