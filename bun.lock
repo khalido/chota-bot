@@ -11,7 +11,7 @@
         "@logtape/otel": "^2.4.2",
         "@napi-rs/canvas": "^1.1.0",
         "@oxidezap/baileyrs": "^0.3.13",
-        "ai": "^7.0.159",
+        "ai": "^7.0.163",
         "better-auth": "^1.7.15",
         "better-sqlite3": "^13.0.3",
         "cheerio": "^1.2.0",
@@ -28,7 +28,7 @@
         "zod": "^4.6.7",
       },
       "devDependencies": {
-        "@ai-sdk/svelte": "^5.0.159",
+        "@ai-sdk/svelte": "^5.0.163",
         "@eslint/compat": "^2.1.1",
         "@eslint/js": "^10.0.1",
         "@fontsource-variable/inter": "^5.3.0",
@@ -72,13 +72,13 @@
     "usb",
   ],
   "packages": {
-    "@ai-sdk/gateway": ["@ai-sdk/gateway@4.0.132", "", { "dependencies": { "@ai-sdk/provider": "4.0.35", "@ai-sdk/provider-utils": "5.0.72", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-ppStDEz96g+JEuxGiVTP29OKBjPyYZXRxs38wnq3427U2QbZtxe6TukrgSAAq0n4yaHvSvVAWJY9kBlW8XudYg=="],
+    "@ai-sdk/gateway": ["@ai-sdk/gateway@4.0.136", "", { "dependencies": { "@ai-sdk/provider": "4.0.36", "@ai-sdk/provider-utils": "5.0.75", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-P851NL80P85Ee6MhblRuuCzNlQdOYU5rKmdt/Wuo5dMtkzvIHhyVZY9wtfKG3wBJUUoxHxWKsI2aR6O75o8diA=="],
 
-    "@ai-sdk/provider": ["@ai-sdk/provider@4.0.35", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-yBz6fmLS8MSCIzy7NiHEUAq56ZLD4ZA1GR6bpXBxgbwUacP1La7LuwAr/xy9jSzthem4F8Xu2OrhvU/JrE9fYA=="],
+    "@ai-sdk/provider": ["@ai-sdk/provider@4.0.36", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-GqvWZSZdBelCGughlBdOoupT258rgM3YMbaLAS9WSZJ0vlt8c9vm3My+ZT31mYhiReMCMCF2qF2axnGbILpk1A=="],
 
-    "@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@5.0.72", "", { "dependencies": { "@ai-sdk/provider": "4.0.35", "@standard-schema/spec": "^1.1.0", "@workflow/serde": "4.1.0", "eventsource-parser": "^3.0.8", "undici": "^7.29.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-M6QAztI84jWumQSvKcGOL91DxhChsWxn3D3gYtV0/7E1TPQg9BmLdIerOolUC/jghQbMlQrHyzp0hqdIhUZ2Rw=="],
+    "@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@5.0.75", "", { "dependencies": { "@ai-sdk/provider": "4.0.36", "@standard-schema/spec": "^1.1.0", "@workflow/serde": "4.1.0", "eventsource-parser": "^3.0.8", "undici": "^7.29.1" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-k4yAsFliGZwoTpyTpm3ptxwIeaPvRh5vGh/UWoqDiLLXKoyz4zuBGS7p3ygf8to5Bh4fAOHynotLBsWLIYdu2A=="],
 
-    "@ai-sdk/svelte": ["@ai-sdk/svelte@5.0.159", "", { "dependencies": { "@ai-sdk/provider-utils": "5.0.72", "ai": "7.0.159" }, "peerDependencies": { "svelte": "^5.31.0" } }, "sha512-5Fe7qPznrSKsYh0362V1+s87jF1hu6+Qvpi7TsYsw2NjFooRLuWX+a4KLXkcDYvz4mxBvRDvaa83m+ChomdoWg=="],
+    "@ai-sdk/svelte": ["@ai-sdk/svelte@5.0.163", "", { "dependencies": { "@ai-sdk/provider-utils": "5.0.75", "ai": "7.0.163" }, "peerDependencies": { "svelte": "^5.31.0" } }, "sha512-e4H1ka14TJqZFo8MArFohVBNqOE+uZr6Sq28dvYWsWZg7KD7ZE8DplweL8TNvVbygx2mCewYmH+HYCpsLei05g=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 
@@ -592,7 +592,7 @@
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
-    "ai": ["ai@7.0.159", "", { "dependencies": { "@ai-sdk/gateway": "4.0.132", "@ai-sdk/provider": "4.0.35", "@ai-sdk/provider-utils": "5.0.72" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-4e/BwDoKJlMNYZaqERcTbGte+4TwroN9qKnCprog/XVfD9InzVPlhCviDhN452JIRrRsYg9BT0WsQ2C3Ds2mVQ=="],
+    "ai": ["ai@7.0.163", "", { "dependencies": { "@ai-sdk/gateway": "4.0.136", "@ai-sdk/provider": "4.0.36", "@ai-sdk/provider-utils": "5.0.75" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-nm8+qn36NQXO4Hjfj7SlbcNRhUyNXKtdoS9xhXr/z92lvdGFuPkzHmA2tFzhaUQy13IitNYrcw2QSNpEJC/iSA=="],
 
     "ajv": ["ajv@6.15.0", "", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, "sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw=="],
 
