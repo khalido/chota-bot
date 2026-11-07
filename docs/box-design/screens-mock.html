@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chota screens: three screens, three jobs</title>
+<style>
+:root{--bg:#f6f2e9;--panel:#fffdf8;--ink:#2a2622;--soft:#655d52;--edge:#d9d0bf;--accent:#8c3b22}
+@media(prefers-color-scheme:dark){:root{--bg:#191714;--panel:#24211c;--ink:#efe8da;--soft:#b5ab9a;--edge:#40392f;--accent:#e49a6c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Helvetica,Arial,sans-serif}
+main{max-width:1120px;margin:auto;padding:18px 16px 40px}
+h1{font-size:27px;line-height:1.15;margin:0 0 6px}h2{font-size:19px;margin:0 0 8px}h3{font-size:15px;margin:12px 0 6px}
+p{margin:0 0 10px}.soft{color:var(--soft);font-size:14px}
+section{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;margin:14px 0}
+.tools{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;align-items:center}
+.group{display:flex;flex-wrap:wrap;gap:4px;align-items:center}.group b{font-size:13px;margin-right:4px}
+button{font:inherit;font-size:14px;min-height:38px;padding:4px 10px;color:inherit;background:transparent;border:1px solid var(--edge);border-radius:7px;cursor:pointer}
+button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+#wrap{width:100%;overflow:hidden;border-radius:8px}
+#board{position:relative;transform-origin:0 0;width:420px;height:175px;background:repeating-linear-gradient(91deg,#7a4d28 0 3px,#744825 3px 7px,#80532c 7px 12px,#6f4423 12px 15px);box-shadow:inset 0 0 40px rgba(30,15,0,.45)}
+.part{position:absolute}
+.pcb{background:#1d1f22;border-radius:1.5px;box-shadow:0 1.2px 3px rgba(0,0,0,.55)}
+.brass{background:linear-gradient(140deg,#e4c777,#a47f33 45%,#d7b663 72%,#8d6c2a);box-shadow:0 1.2px 3px rgba(0,0,0,.55);border-radius:2px}
+.screw{position:absolute;width:3px;height:3px;border-radius:50%;background:radial-gradient(#f4e1a4,#6c5120)}
+.key{position:absolute;width:3px;height:3px;border-radius:50%;background:#555}
+#board canvas{position:absolute;display:block}
+.tag{position:absolute;font-size:4px;line-height:1.1;color:#f9edd7;text-shadow:0 .3px .6px #000}
+.full{overflow:auto;border:1px solid var(--edge);border-radius:8px;margin-bottom:12px}.full canvas{display:block}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}td,th{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--edge);vertical-align:top}th{font-size:13px}tr.pick td{font-weight:600}
+a{color:var(--accent)}
+</style>
+<main>
+<h1>E-ink for the day, 5" for right now, Pico for the bus</h1>
+<p>All three are drawn at their real sizes against each other, in one row to compare them. The e-ink showing the day ahead is decided. The rest is proposed.</p>
+
+<section>
+<div class="tools">
+<div class="group" id="ink-btns"><b>E-ink</b><button data-ink="today">Today</button><button data-ink="tomorrow">Tomorrow</button><button data-ink="weekend">Weekend</button><button data-ink="quote">Quote</button><button id="flash">Play a refresh</button></div>
+<div class="group" id="lcd-btns"><b>5"</b><button data-lcd="clock">Idle clock</button><button data-lcd="do">Tapped</button></div>
+<div class="group" id="pico-btns"><b>Pico</b><button data-pico="bus">Bus</button><button data-pico="next">Next event</button></div>
+</div>
+<div id="wrap"><div id="board"></div></div>
+<p class="soft" style="margin:8px 0 0">Monday morning, 7:45, with placeholder names and events. The row needs about 41 cm of width, so the 360 mm Cabinet board would have to stack them. The 5" frame is my sketch; the Hosyond's size isn't published.</p>
+</section>
+
+<section>
+<h2>Who shows what</h2>
+<div class="scroll"><table>
+<tr><th></th><th>7.3" e-ink</th><th>5" touch</th><th>Pico Display</th></tr>
+<tr><td><b>Job</b></td><td>The day, for the whole family</td><td>Right now, and doing things</td><td>One thing, always visible</td></tr>
+<tr><td><b>Shows</b></td><td>Calendar, weather, chores, school, volleyball</td><td>Literary clock when idle, then timers, lists, print</td><td>Minutes to the bus, or the next event outside bus times</td></tr>
+<tr><td><b>Input</b></td><td>Four side buttons, one per view</td><td>Touch</td><td>Four buttons</td></tr>
+<tr><td><b>Updates</b></td><td>Every 15–30 min and on a button press, about 28 s each</td><td>Live</td><td>Polls every 60 s over Wi-Fi; needs a 5 V lead</td></tr>
+<tr><td><b>Overnight</b></td><td>Holds its last image with no power</td><td>Off, if the panel allows it</td><td>Off or very dim</td></tr>
+<tr><td><b>Status</b></td><td>Day ahead decided, buttons proposed</td><td>Proposed</td><td>Proposed; <code>/api/panel</code> not built</td></tr>
+</table></div>
+<p class="soft" style="margin-top:8px">Photos stay with the Frameo idea: with six inks, faces turn into dots.</p>
+</section>
+
+<section>
+<h2>Do the literary clock's quotes fit the 5"?</h2>
+<p>Yes, at 30 px or larger for almost every minute. I measured all 4,676 quotes from curios in Georgia, in a 736 × 390 px box on the 800 × 480 panel, assuming a 108 mm wide screen. Short quotes can run larger, as the one above does at 44 px.</p>
+<div class="scroll"><table>
+<tr><th>Text size</th><th>Letter height on the panel</th><th>Quotes that fit</th><th>Minutes with at least one that fits</th></tr>
+<tr><td>44 px</td><td>5.9 mm</td><td>55.8%</td><td>1,206 of 1,431</td></tr>
+<tr><td>38 px</td><td>5.1 mm</td><td>84.0%</td><td>1,392 of 1,431</td></tr>
+<tr><td>34 px</td><td>4.6 mm</td><td>94.6%</td><td>1,421 of 1,431</td></tr>
+<tr class="pick"><td>30 px</td><td>4.1 mm</td><td>99.2%</td><td>1,429 of 1,431</td></tr>
+<tr><td>26 px</td><td>3.5 mm</td><td>100%</td><td>1,431 of 1,431</td></tr>
+</table></div>
+<p class="soft" style="margin-top:8px">Letter height here is the full font size, so lowercase letters are smaller. Curios has no quote for 9 of the 1,440 minutes. Whether 4 mm reads well from where you stand needs the real panel.</p>
+</section>
+
+<section>
+<h2>At full pixels</h2>
+<p class="soft">Ink colours are my approximation, so judge the real panel when it arrives.</p>
+<h3>E-ink, 800 × 480</h3><div class="full"><canvas id="full-ink" width="800" height="480"></canvas></div>
+<h3>5" touch, 800 × 480</h3><div class="full"><canvas id="full-lcd" width="800" height="480"></canvas></div>
+<h3>Pico Display, 320 × 240</h3><div class="full"><canvas id="full-pico" width="320" height="240"></canvas></div>
+</section>
+
+<section>
+<h2>5" touch panels</h2>
+<p class="soft">Prices are AUD at Core Electronics on 7 Nov 2026 unless marked. Before buying, check that the screen can be turned off from software at night, and that a Pi 5 cable is included: the Pi 5's DSI port is 22-pin and many of these boards are 15-pin.</p>
+<div class="scroll"><table>
+<tr><th>Panel</th><th>Pixels</th><th>Screen, mm</th><th>Price</th><th>Notes</th></tr>
+<tr class="pick"><td>Hosyond 5" (cheap test)</td><td>800 × 480</td><td>Not published</td><td>$66.17, Amazon AU, your screenshot</td><td>Same pixels as the Inky. PWM dimming is claimed, but I couldn't confirm software control</td></tr>
+<tr><td>Freenove 5"</td><td>Not checked</td><td>Not checked</td><td>About $55, June note, not rechecked</td><td>Raw green board. Backlight control undocumented in our June notes, and the Pi 5 cable wasn't in the box</td></tr>
+<tr><td>DFRobot 5"</td><td>800 × 480</td><td>108 × 65</td><td>$89.83, in stock</td><td>Brightness may be a knob on the back on this family, so check before relying on night-off</td></tr>
+<tr><td>Waveshare 5"</td><td>720 × 1280</td><td>Not checked</td><td>$107.85, lead time</td><td>Sharper, and portrait unless rotated</td></tr>
+<tr><td>Raspberry Pi Touch Display 2, 5"</td><td>720 × 1280</td><td>110 × 62</td><td>US$40 list; AU price not checked</td><td>Official, and made until at least 2030. Wide bezels, which a frame would hide</td></tr>
+</table></div>
+<p class="soft" style="margin-top:8px">Sources: <a href="https://shop.pimoroni.com/en-au/products/inky-impression">Pimoroni Inky</a>, <a href="https://core-electronics.com.au/pimoroni-inky-impression-e-ink-screen-73-for-pi.html">Core: Inky, A$164.95 in stock</a> (its 12 s figure is older than Pimoroni's 28 s), <a href="https://core-electronics.com.au/catalogsearch/result/?q=5inch+DSI+touch">Core: 5" DSI</a>, <a href="https://raspberrypi.com/products/touch-display-2">Raspberry Pi Touch Display 2</a>, <a href="https://wiki.dfrobot.com/5''TFT-Display_with_Touchscreen_SKU_DFR0550">DFRobot 5" wiki</a>.</p>
+</section>
+</main>
+<script>
+const P = { w:[222,219,208], k:[32,34,38], r:[150,46,40], y:[208,180,58], g:[62,108,78], b:[46,76,140] };
+const PAL = Object.values(P);
+const css = (c) => `rgb(${c})`;
+const AMBER = '#f0b35a', GLASS = '#120c07', RUST = '#e0713f', DIM = '#b8843f';
+const nearest = (r,g,b) => { let best=PAL[0],d=1e9; for (const c of PAL){const e=(c[0]-r)**2+(c[1]-g)**2+(c[2]-b)**2; if(e<d){d=e;best=c}} return best; };
+function toInks(ctx){
+  const im=ctx.getImageData(0,0,800,480), a=im.data;
+  for(let i=0;i<a.length;i+=4){const c=nearest(a[i],a[i+1],a[i+2]);a[i]=c[0];a[i+1]=c[1];a[i+2]=c[2]}
+  ctx.putImageData(im,0,0);
+}
+function wrap(x,text,left,top,maxW,lh,color,hl,hlColor){
+  let cx=left, cy=top;
+  for(const w of text.split(' ')){ const t=w+' ', wd=x.measureText(t).width; if(cx+wd>left+maxW){cx=left;cy+=lh} x.fillStyle=hl&&hl.test(w)?hlColor:color; x.fillText(t,cx,cy); cx+=wd }
+  return cy;
+}
+// One layout for every day view: heading, weather, columns of rows, and a school line on school days.
+function sheet(x,title,temp,sky,cols,school){
+  const k=css(P.k);
+  x.fillStyle=css(P.w);x.fillRect(0,0,800,480);
+  x.fillStyle=k;x.font='600 42px Georgia,serif';x.fillText(title,32,62);
+  x.fillStyle=css(sky);x.beginPath();x.arc(650,48,26,0,7);x.fill();
+  x.fillStyle=k;x.font='600 40px Helvetica,Arial,sans-serif';x.fillText(temp,690,62);
+  x.fillRect(32,84,736,3);
+  cols.forEach(([left,head,color,rows])=>{
+    x.fillStyle=css(color);x.font='600 22px Helvetica,Arial,sans-serif';x.fillText(head,left,126);
+    x.fillStyle=k;x.font='24px Helvetica,Arial,sans-serif';rows.forEach((r,i)=>x.fillText(r,left,168+i*38));
+  });
+  if(school){ x.fillStyle=k;x.fillRect(32,330,736,3);
+    x.fillStyle=css(P.b);x.font='600 22px Helvetica,Arial,sans-serif';x.fillText('SCHOOL',32,370);
+    x.fillStyle=k;x.font='24px Helvetica,Arial,sans-serif';x.fillText(school,32,410); }
+  x.font='18px Helvetica,Arial,sans-serif';x.fillStyle=k;x.fillText('Updated 7:30',660,462);
+  toInks(x);
+}
+const ink = {
+  today:(x)=>sheet(x,'Monday 9 November','24°',P.y,[
+    [32,'TODAY',P.r,['8:45  Kid3 dentist','3:30  Kid1 volleyball','5:00  Parent1 pickup','6:30  Parent2 home late']],
+    [430,'CHORES',P.g,['Kid1  Bins','Kid2  Dishwasher','Kid3  Feed the fish']]],
+    'Kid1  Sport, bring hat     Kid2  Library     Kid3  Excursion note'),
+  tomorrow:(x)=>sheet(x,'Tomorrow, Tuesday','21°',P.b,[
+    [32,'TOMORROW',P.r,['8:00  Kid2 band','4:15  Kid3 swimming','7:00  Parent1 meeting']],
+    [430,'CHORES',P.g,['Kid1  Dishwasher','Kid2  Feed the fish','Kid3  Bins']]]),
+  weekend:(x)=>sheet(x,'This weekend','26°',P.y,[
+    [32,'SATURDAY',P.r,['9:30  Kid1 volleyball','1:00  Lunch with Parent2','4:15  Kid3 party']],
+    [430,'SUNDAY',P.b,['10:00  Kid2 volleyball','Beach if it holds','6:30  Dinner out']]]),
+  quote(x){
+    x.fillStyle=css(P.w);x.fillRect(0,0,800,480);
+    x.font='italic 500 46px Georgia,serif';
+    wrap(x,"Czarina Catherine reported entering Galatz at one o'clock today.",64,120,672,66,css(P.k),/^(one|o'clock)$/,css(P.r));
+    x.fillStyle=css(P.k);x.fillRect(64,316,90,3);
+    x.font='24px Georgia,serif';x.fillText('Dracula, Bram Stoker',64,362);
+    toInks(x);
+  }
+};
+const lcd = {
+  clock(x){
+    x.fillStyle=GLASS;x.fillRect(0,0,800,480);
+    x.font='44px Georgia,serif';
+    wrap(x,"Contrary to his habit of being late, Pierre on that day arrived at the Bergs' house, not at ten but at fifteen minutes to eight.",32,82,736,57,AMBER,/^(fifteen|minutes|to|eight\.)$/,RUST);
+    x.fillStyle=DIM;x.font='22px Georgia,serif';x.fillText('War and Peace, Leo Tolstoy',32,452);
+    x.fillStyle=AMBER;x.font='600 30px Helvetica,Arial,sans-serif';x.textAlign='right';x.fillText('7:45',768,454);x.textAlign='left';
+  },
+  do(x){
+    x.fillStyle=GLASS;x.fillRect(0,0,800,480);
+    x.fillStyle=AMBER;x.font='600 34px Helvetica,Arial,sans-serif';x.fillText('7:45',32,58);
+    x.fillStyle=DIM;x.font='22px Helvetica,Arial,sans-serif';x.textAlign='right';x.fillText('Back to the clock after 1 minute',768,56);x.textAlign='left';
+    [['Timer','Start'],['Lists','4 to do'],['Print','A brief']].forEach(([a,b],i)=>{ const l=32+i*252;
+      x.strokeStyle='#8a6a3c';x.lineWidth=3;x.strokeRect(l,92,232,356);
+      x.fillStyle=AMBER;x.font='600 44px Georgia,serif';x.textAlign='center';x.fillText(a,l+116,262);
+      x.fillStyle=DIM;x.font='24px Helvetica,Arial,sans-serif';x.fillText(b,l+116,306);x.textAlign='left'; });
+  }
+};
+const pico = {
+  bus(x){ x.fillStyle=GLASS;x.fillRect(0,0,320,240);
+    x.fillStyle=DIM;x.font='600 26px Helvetica,Arial,sans-serif';x.fillText('BUS',16,38);
+    x.fillStyle=AMBER;x.font='600 124px Helvetica,Arial,sans-serif';x.fillText('7',16,160);
+    x.font='34px Helvetica,Arial,sans-serif';x.fillText('min',96,160);
+    x.fillStyle=DIM;x.font='26px Helvetica,Arial,sans-serif';x.fillText('then 22',16,212); },
+  next(x){ x.fillStyle=GLASS;x.fillRect(0,0,320,240);
+    x.fillStyle=DIM;x.font='600 26px Helvetica,Arial,sans-serif';x.fillText('NEXT',16,38);
+    x.fillStyle=AMBER;x.font='600 72px Helvetica,Arial,sans-serif';x.fillText('8:45',16,124);
+    x.font='30px Helvetica,Arial,sans-serif';x.fillText('Kid3 dentist',16,184); }
+};
+const state={ink:'today',lcd:'clock',pico:'bus'};
+const paint=(id,fn)=>{ const x=document.getElementById(id).getContext('2d',{willReadFrequently:true}); x.textBaseline='alphabetic'; fn(x); };
+function paintAll(){
+  for(const [id,fn] of [['ink',ink[state.ink]],['full-ink',ink[state.ink]],['lcd',lcd[state.lcd]],['full-lcd',lcd[state.lcd]],['pico',pico[state.pico]],['full-pico',pico[state.pico]]]) paint(id,fn);
+  for(const k of ['ink','lcd','pico']) document.querySelectorAll(`[data-${k}]`).forEach(e=>e.setAttribute('aria-pressed',e.dataset[k]===state[k]));
+}
+function build(){
+  const screw=(l,t)=>`<i class="screw" style="left:${l}px;top:${t}px"></i>`;
+  document.getElementById('board').innerHTML=`
+  <div class="part pcb" style="left:13px;top:26px;width:174px;height:123px"></div>
+  <canvas id="ink" width="800" height="480" style="left:20px;top:34px;width:160px;height:96px"></canvas>
+  <div class="tag" style="left:13px;top:152px">7.3" e-ink, four side buttons</div>
+  <div class="part brass" style="left:201px;top:26px;width:124px;height:81px">${screw(3,3)+screw(118,3)+screw(3,75)+screw(118,75)}</div>
+  <canvas id="lcd" width="800" height="480" style="left:209px;top:34px;width:108px;height:65px;cursor:pointer"></canvas>
+  <div class="tag" style="left:201px;top:110px">5" touch. Tap it to switch</div>
+  <div class="part pcb" style="left:339px;top:26px;width:56px;height:35px;background:#23262b">
+    <i class="key" style="left:2px;top:6px"></i><i class="key" style="left:2px;top:26px"></i><i class="key" style="left:51px;top:6px"></i><i class="key" style="left:51px;top:26px"></i></div>
+  <canvas id="pico" width="320" height="240" style="left:347px;top:28px;width:41px;height:31px"></canvas>
+  <div class="tag" style="left:339px;top:64px">Pico Display, Wi-Fi</div>`;
+  document.getElementById('lcd').addEventListener('click',()=>{state.lcd=state.lcd==='clock'?'do':'clock';paintAll()});
+}
+function fit(){ const w=document.getElementById('wrap'), b=document.getElementById('board'), s=w.clientWidth/420; b.style.transform=`scale(${s})`; w.style.height=175*s+'px'; }
+addEventListener('resize',fit);
+for(const k of ['ink','lcd','pico']) document.getElementById(k+'-btns').addEventListener('click',e=>{ if(e.target.dataset[k]){state[k]=e.target.dataset[k];paintAll()} });
+let timer=null;
+document.getElementById('flash').addEventListener('click',e=>{
+  const btn=e.currentTarget, x=document.getElementById('ink').getContext('2d'), cols=[P.k,P.w,P.r,P.y,P.b,P.g,P.w,P.k];
+  const done=()=>{clearInterval(timer);timer=null;btn.textContent='Play a refresh';paintAll()};
+  if(timer) return done();
+  let t=0; btn.textContent='Stop, 28 s';
+  timer=setInterval(()=>{ t++; if(t>=28) return done(); btn.textContent=`Stop, ${28-t} s`; x.fillStyle=css(cols[t%cols.length]);x.fillRect(0,0,800,480) },1000);
+});
+build();paintAll();fit();
+</script>
+</html>

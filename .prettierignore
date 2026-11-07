@@ -14,3 +14,5 @@ bun.lockb
 /docs/box-design/*.svg
 /docs/box-design/shots/
 /docs/box-design/.chrome*/
+docs/box-design/
+devices/

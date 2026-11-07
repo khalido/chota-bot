@@ -11,11 +11,16 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Full chat history:** every message, tool call and result is kept, with each run's model, tokens and cost on its reply. What the agent sees stays the last 50 messages; a run with no text shows as a short note of its tools.
 - **Save and find things:** send chota a link (or a photo, voice note or PDF with "save this") and it keeps it with a title, summary, the full text and tags; "that article I saved about…" finds it. A vision model reads photos and scanned PDFs; Jev picks the tags (`decisions/content-tags.json`). Saved in a direct message it's private to the sender; in a group it's the family's, and group answers never show anyone's private items. New `content` table.
 - **Telegram takes photos, voice notes and documents**, and WhatsApp takes documents; a PDF's text goes to the agent.
 - **Agent turns:** a 20-step cap with a last step that must answer; failure messages that say whether to ask again or tell a parent.
 
 ### Changed
+
+- **One chat per person:** a family member's WhatsApp and Telegram DMs are now one conversation (Telegram once their id is in `chota.config.ts`); each group keeps its own. The first deploy started chat history fresh, with the old messages in `data/chat_message-before-sessions.sql`.
+- **A new soul:** short behaviour rules in `soul.example.md`, in place of the butler paragraph.
+- **WAL on `home.db`:** reads carry on during a write. Copy the live database with `sqlite3 .backup`, not `cp`.
 
 - **Runs on Bun:** Bun replaces Node and npm as runtime and package manager (`bun.lock`, `bunfig.toml` with a 2-day minimum release age, `trustedDependencies`). `deploy.sh`, `bootstrap.sh` and `chota.service` use `~/.bun/bin/bun`; the Pi needs no Node. Tested on the X230: install, tests, build, pages, text and image prints over USB.
 

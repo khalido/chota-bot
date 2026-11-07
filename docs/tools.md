@@ -25,12 +25,12 @@ Tools = typed TS functions in `src/lib/server/tools/<domain>.ts`. One file per d
 
 ### Planned (Phase 2)
 
-| Tool     | Purpose                                                    | Source                                                                                     | Keys / config               |
-| -------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------- |
-| `drive`  | Family Drive folder (read)                                 | `googleapis` Node SDK                                                                      | Same Google OAuth           |
-| `memory` | Read/write `data/memory/family.jsonl` (custom AI SDK tool) | `agent/memory-tool.ts`                                                                     | None                        |
-| `exa`    | Web search + content extract (for agent jobs)              | `exa-js` SDK or hosted Exa MCP                                                             | `EXA_API_KEY`               |
-| `energy` | Enphase solar (export, prod)                               | port of v1's Python OR Python sidecar (see `docs/audit-2026-05.md` §Ideas Worth Salvaging) | Enphase local gateway creds |
+| Tool     | Purpose                                                    | Source                                                   | Keys / config               |
+| -------- | ---------------------------------------------------------- | -------------------------------------------------------- | --------------------------- |
+| `drive`  | Family Drive folder (read)                                 | `googleapis` Node SDK                                    | Same Google OAuth           |
+| `memory` | Read/write `data/memory/family.jsonl` (custom AI SDK tool) | `agent/memory-tool.ts`                                   | None                        |
+| `exa`    | Web search + content extract (for agent jobs)              | `exa-js` SDK or hosted Exa MCP                           | `EXA_API_KEY`               |
+| `energy` | Enphase solar (export, prod)                               | `@khalido/home` from npm, once published (`~/code/home`) | Enphase local gateway creds |
 
 ### Phase 3 (voice, chat, polish)
 
@@ -114,7 +114,7 @@ Order ≈ when we'll need each. Existing keys in `.env` only need rotating if th
 - [x] `TICKTICK_API_KEY` — set; generated at TickTick → Account → MCP. Bearer token for `https://mcp.ticktick.com`
 - [x] `TMDB_READ_ACCESS_TOKEN` + `TMDB_API_KEY` — set; v4 read access token is what we use (Bearer)
 - [ ] `EXA_API_KEY` — exa.ai dashboard. When agent needs web search/fetch
-- [ ] **Enphase** — local gateway uses a JWT dance against Enphase Enlighten cloud. Plan flags this as the gnarliest port; might end up in a Python sidecar
+- [ ] **Enphase** — comes with `@khalido/home`, no port or sidecar. Its gateway refused connections on 28 Oct; sort that out in `~/code/home` first
 - [ ] `GROQ_API_KEY` — console.groq.com → free tier covers our voice volumes. Phase 3
 - [x] `TELEGRAM_BOT_TOKEN` — @BotFather. Live: boots the grammY bot at startup (see `docs/telegram.md`)
 

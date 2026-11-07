@@ -1,0 +1,4 @@
+# Keep secrets and bulky firmware out of the public repo
+src/env.py
+*.uf2
+__pycache__/

@@ -75,6 +75,8 @@ src/
     version.ts           # build commit + is-the-box-behind-origin check
     log.ts               # LogTape structured logging
 
+devices/                 # code for hardware around the house
+  pico-display/          # Pimoroni Pico Display 2.0" + Pico W (MicroPython apps, own CLAUDE.md)
 deploy/                  # production deploy: deploy.sh + chota.service
 scripts/                 # ad-hoc / exploratory (printer-test, *-explore)
 data/                    # runtime state — sqlite, logs, sentral cache. All gitignored.

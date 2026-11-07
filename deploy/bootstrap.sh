@@ -150,8 +150,9 @@ sudo systemctl enable chota >/dev/null 2>&1
 # BEFORE = AFTER so we'd skip the build. Force a build path by calling the
 # build + DB-bootstrap + restart inline instead. (When deploy.sh evolves a
 # `--force` flag, switch to that.)
-echo "Building…"
-bun run build
+#
+# The DB comes before the build: the build opens it, so it fails with no data/,
+# and otherwise leaves an empty home.db that would make this check skip the schema.
 mkdir -p data data/logs
 DB_PATH="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
 if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
@@ -159,6 +160,8 @@ if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
 	bunx drizzle-kit generate
 	cat drizzle/*.sql | sqlite3 "$DB_PATH"
 fi
+echo "Building…"
+bun run build
 sudo systemctl restart chota
 sleep 3
 

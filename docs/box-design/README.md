@@ -15,6 +15,7 @@ docs/box-design/pageshot.sh           # screenshot the whole page at 1500 and 40
 - `build-page.mjs` inlines the three modules into `index.html` and wires the lid buttons; `review-notes.html` is the "what the reviews changed" section it injects.
 - `parts.mjs`: the equipment list (have / buy / later, AUD) for the Equipment tab; `hardware` in `box.mjs` is the box fittings.
 - `build-box.mjs`, `build-wall.mjs` write the SVGs that `shot.sh` renders.
+- `board.mjs`: the steampunk wall board (Nov 2026), part sizes in `SPECS` and positions in `LAYOUTS`. `board3d.js` builds the same parts in three.js, from a CDN. `bun docs/box-design/build-board.mjs` writes `board.html`.
 - `RULES.md`: drawing rules for an agent working here. `BRIEF-wall.md`: the brief Fig 2 was drawn from.
 
 Generated files (`index.html`, `*.svg`, `shots/`) are gitignored.

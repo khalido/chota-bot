@@ -44,8 +44,8 @@ family-home/
 Composed per call in `prompts.ts`, in this order:
 
 1. **SOUL** — `bot/soul.md` from the home folder. Fallbacks unchanged: repo-root `soul.md`, then `soul.example.md`.
-2. **MEMORY** — `bot/memory.md`: family-wide facts. This is also the family group's memory.
-3. **PERSON** — `people/<name>.md` for whoever sent the message (DM or group sender): their interests, what they like the bot to do, how they like answers ("KO: short, links welcome, follows F1 and AI news"). The way chota takes over KO's personal yaad bot: same agent, a personal layer on top. ~4,000-char cap (yaad's number). KO edits his on the Mac; the bot proposes changes to `bot/inbox.md` and the 03:00 pass applies them — never a direct write, same rule as `memory.md`.
+2. **MEMORY** — `bot/memory.md`: family-wide facts. This is also the family group's memory, and it reaches kids' DMs, so keep it family-safe. Cap between 10,000 and 20,000 characters (KO, 7 Nov).
+3. **PERSON** — `people/<name>.md`, for DMs: the sender's interests, what they like the bot to do, how they like answers ("KO: short, links welcome, follows F1 and AI news"). The way chota takes over KO's personal yaad bot: same agent, a personal layer on top. In the family group, parents' files stay out and kids' files load read-only: a group chat can't change any person file (KO, 7 Nov). Whatever goes in a kid's file can therefore come up in front of siblings. Cap between 10,000 and 20,000 characters (KO, 7 Nov). KO edits his on the Mac; the bot proposes changes to `bot/inbox.md` and the 03:00 pass applies them — never a direct write, same rule as `memory.md`.
 4. **STYLE + RULES** — in code: audience, tool use, kid safety, no secrets, the write rules below. Last, and says it wins, so an evolving soul can never loosen safety.
 5. **TODAY + SNAPSHOT** — as now.
 
@@ -67,7 +67,7 @@ Path-jailed to the home folder (resolve, then reject anything outside it; no sym
 
 **Nothing a chat says lands in the always-loaded prompt directly.** `bot/memory.md` is loaded into every conversation, so a chat message (or a web page the bot read) that got written there would steer every later chat. Chats append candidate facts to `bot/inbox.md`, which isn't loaded; the 03:00 dreaming pass reviews the inbox and promotes what's genuinely a fact into `memory.md`. `soul.md` and `AGENTS.md` change only from the Mac.
 
-Every write is one git commit with the chat and turn in the message, so any bad write is a `git revert`.
+**Commits are debounced (KO, 7 Nov).** A job every 10 minutes commits and pushes once the folder has been quiet for 10 minutes, listing the chats and turns in the message. A burst of edits to one project is one commit, so a bad burst is one `git revert`.
 
 ## Sync — local-first, git
 
