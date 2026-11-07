@@ -7,9 +7,9 @@
 #   - preflight: verify .env, chota.config.ts, and the sqlite DB are present
 #   - git fetch + fast-forward pull from origin/main (fails on conflict)
 #   - if bun.lock changed → bun install --frozen-lockfile
-#   - if drizzle/schema files changed → bunx drizzle-kit push (apply migrations)
 #   - bun run build (always)
 #   - mkdir -p the runtime data subdirs (in case it's a fresh box)
+#   - if drizzle/schema files changed → bunx drizzle-kit push (apply migrations)
 #   - sudo systemctl restart chota
 #   - verify health: systemd active + HTTP 200 + jobs registered
 #
@@ -76,15 +76,6 @@ if echo "$CHANGED" | grep -q '^bun\.lock$'; then
 	bun install --frozen-lockfile
 fi
 
-if echo "$CHANGED" | grep -qE '^(drizzle/|src/lib/server/db/.*\.schema\.ts$)'; then
-	# --force: push renders an interactive review UI otherwise, which has no TTY
-	# over SSH. --force auto-approves (incl. data-loss statements) — fine here
-	# since schema changes are reviewed locally via `bun run db:push` first; a
-	# destructive change would need that local confirmation before it ships.
-	echo "drizzle schema changed → drizzle-kit push --force"
-	bunx drizzle-kit push --force
-fi
-
 echo "Building…"
 bun run build
 
@@ -96,7 +87,7 @@ mkdir -p data data/logs
 
 # Fresh-box DB init: if the sqlite file doesn't exist, generate the schema
 # from drizzle and apply it directly (drizzle-kit push needs a TTY). Subsequent
-# schema changes go through the `bunx drizzle-kit push` step above. Requires
+# schema changes go through the `bunx drizzle-kit push` step below. Requires
 # sqlite3 in PATH — see docs/deploy.md bootstrap.
 DB_PATH="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
 if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
@@ -106,6 +97,34 @@ if [ -n "$DB_PATH" ] && [ ! -f "$DB_PATH" ]; then
 	echo "│  Applying SQL to $DB_PATH…"
 	cat drizzle/*.sql | sqlite3 "$DB_PATH"
 	echo "╰─ DB ready: $(sqlite3 "$DB_PATH" '.tables' | tr -s ' \n' ', ' | sed 's/,$//')"
+fi
+
+# Schema last, right before the restart: the old build is still serving and a
+# table change can break it, so keep that window to seconds. A failed build then
+# leaves the running bot untouched.
+if echo "$CHANGED" | grep -qE '^(drizzle/|src/lib/server/db/.*\.schema\.ts$)'; then
+	# --force: push renders an interactive review UI otherwise, which has no TTY
+	# over SSH. --force auto-approves (incl. data-loss statements) — fine here
+	# since schema changes are reviewed locally via `bun run db:push` first; a
+	# destructive change would need that local confirmation before it ships.
+	echo "drizzle schema changed → drizzle-kit push --force"
+	# One-off for the session tables (Nov 2026): push can't turn the old
+	# chat_message into the new one without a TTY, so drop it first, keeping a
+	# dump. To undo: drop the new chat_message, then sqlite3 "$OLD_DB" < the dump,
+	# then deploy the previous commit. Delete this block and the check below once
+	# the box has run it.
+	OLD_DB="$DB_PATH"
+	if [ -f "$OLD_DB" ] && [ -n "$(sqlite3 "$OLD_DB" "SELECT 1 FROM pragma_table_info('chat_message') WHERE name='chat_id'")" ]; then
+		echo "Dropping the old chat_message (dump in data/chat_message-before-sessions.sql)"
+		sqlite3 -cmd '.timeout 5000' "$OLD_DB" ".dump chat_message" > data/chat_message-before-sessions.sql
+		sqlite3 -cmd '.timeout 5000' "$OLD_DB" "DROP TABLE chat_message"
+	fi
+	bunx drizzle-kit push --force
+	# push can print an error and still exit 0, so check the result.
+	if [ -f "$OLD_DB" ] && [ -z "$(sqlite3 "$OLD_DB" "SELECT 1 FROM sqlite_master WHERE name='chat_session'")" ]; then
+		echo "drizzle-kit push did not create chat_session; stopping" >&2
+		exit 1
+	fi
 fi
 
 echo "Restarting chota.service…"
