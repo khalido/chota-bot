@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { CalendarEvent } from '$lib/server/tools/calendar';
-	import { sydneyTimeCompact, sydneyYMD, sydneyDayOfWeek } from '$lib/time';
+	import { sydneyTimeCompact, sydneyYMD, sydneyYMDOffset, sydneyDayOfWeek } from '$lib/time';
 
 	type EventWithPeople = CalendarEvent & { people: string[] };
 
 	let { events }: { events: EventWithPeople[] } = $props();
 
 	const todayKey = sydneyYMD(new Date());
-	const tomorrowKey = sydneyYMD(new Date(Date.now() + 24 * 60 * 60 * 1000));
+	const tomorrowKey = sydneyYMDOffset(1);
 
 	function dayLabel(dateKey: string, sample: Date): string {
 		if (dateKey === todayKey) return 'Today';

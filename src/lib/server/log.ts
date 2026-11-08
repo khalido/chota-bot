@@ -241,11 +241,8 @@ function flatten(args: unknown[]): { msg: string; props: Record<string, unknown>
 	return { msg, props };
 }
 
-/** A thrown value's message, for error text returned to a caller (agent tool
- *  results, API responses). Inside LogTape calls pass `{ error }` instead. */
-export function errorMessage(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
+/** Lives in `$lib/utils` so Svelte pages can use it too; re-exported for server code. */
+export { errorMessage } from '$lib/utils';
 
 /** Compat shim for the old console.log wrapper — logs at `info`. */
 export function log(scope: string, ...args: unknown[]): void {

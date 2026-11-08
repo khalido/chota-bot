@@ -22,8 +22,8 @@ import {
 import { getSchedule } from '$lib/server/tools/sentral';
 import { briefToPng } from './snapshot';
 import { renderReceiptPng } from './render';
-import { logErr } from '$lib/server/log';
-import { sydneyYMD } from '$lib/time';
+import { logErr, errorMessage } from '$lib/server/log';
+import { sydneyYMDOffset } from '$lib/time';
 
 /**
  * The school-timetable day to render: an explicit `date` wins; otherwise
@@ -31,7 +31,7 @@ import { sydneyYMD } from '$lib/time';
  */
 function scheduleDateFor(date: string | undefined, day: 'today' | 'tomorrow'): string | undefined {
 	if (date) return date;
-	return day === 'tomorrow' ? sydneyYMD(new Date(Date.now() + 86_400_000)) : undefined;
+	return day === 'tomorrow' ? sydneyYMDOffset(1) : undefined;
 }
 
 /** Printable URL kinds = the `test` sheet + the whole-family weekend sheet + every family member. */
@@ -121,7 +121,7 @@ export async function composeImage(
 }
 
 function screenshotFailureReason(err: unknown): string {
-	const msg = err instanceof Error ? err.message : String(err);
+	const msg = errorMessage(err);
 	if (/ENOENT|not found|spawn/i.test(msg)) return 'agent-browser missing';
 	if (/timeout|timed ?out/i.test(msg)) return 'agent-browser timeout';
 	return 'screenshot error';

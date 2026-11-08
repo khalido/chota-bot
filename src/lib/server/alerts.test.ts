@@ -15,7 +15,7 @@ vi.mock('$lib/server/config', () => ({
 		alerts: { quietHours: { from: '21:00', to: '07:00' } }
 	})
 }));
-vi.mock('$lib/server/log', () => ({ log: vi.fn(), logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { clearAlert, inQuietHours, raiseAlert, registerAlertChannel } = await import('./alerts');
 

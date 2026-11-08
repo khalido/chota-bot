@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { withTtl } from './cache';
 
-vi.mock('$lib/server/log', () => ({ logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 afterEach(() => vi.useRealTimers());
 

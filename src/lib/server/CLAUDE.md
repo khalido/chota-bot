@@ -18,3 +18,5 @@ Loose files: `config.ts` (loads the gitignored `chota.config.ts`), `chores.ts`,
 `browser-lock.ts` (the process-wide agent-browser mutex shared by the print
 screenshots and the Sentral SAML login), and
 `scheduler.ts` (the `defineJob` wrapper that `jobs/` self-register through).
+
+Tests mock logging with `vi.mock('$lib/server/log', () => import('$lib/server/log.mock'))`, never a hand-written partial mock.

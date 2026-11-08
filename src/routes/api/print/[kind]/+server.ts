@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { composeText, composeImage } from '$lib/server/print/composers';
 import { printText, printPng } from '$lib/server/print/printer';
-import { event } from '$lib/server/log';
+import { event, errorMessage } from '$lib/server/log';
 import type { RequestHandler } from './$types';
 
 /**
@@ -76,7 +76,7 @@ export const POST: RequestHandler = async ({ params, url }) => {
 		return json({ ok: true, kind: params.kind, mode, bytes, lines, fallback: composed?.fallback });
 	} catch (err) {
 		ev.fail(err);
-		const message = err instanceof Error ? err.message : String(err);
+		const message = errorMessage(err);
 		return json({ ok: false, kind: params.kind, mode, error: message }, { status: 500 });
 	}
 };

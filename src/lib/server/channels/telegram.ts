@@ -21,7 +21,7 @@ import { Bot, InputFile, InlineKeyboard, GrammyError, HttpError, type Context } 
 import type { Chat, Message } from 'grammy/types';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { env } from '$env/dynamic/private';
-import { getConfig } from '$lib/server/config';
+import { getConfig, getFamily } from '$lib/server/config';
 import { composeImage } from '$lib/server/print/composers';
 import { getRecipients, FAMILY_RECIPIENT } from '$lib/server/print/sections';
 import { streamRichReply } from '$lib/server/telegram/stream';
@@ -39,8 +39,7 @@ const isAllowed = (chatId: number | undefined) =>
 const chatIdOf = (threadId: string) => Number(threadId.slice('tg:'.length));
 
 /** The same family member as on WhatsApp, if their Telegram id is on file. */
-const personByTelegram = (id: number) =>
-	(getConfig().family ?? []).find((p) => p.telegram === id) ?? null;
+const personByTelegram = (id: number) => getFamily().find((p) => p.telegram === id) ?? null;
 
 /** Title-case a recipient slug for display: `kid1` → `Kid1`, `family` → `Family`. */
 const titleCase = (who: string) => who.charAt(0).toUpperCase() + who.slice(1);

@@ -11,8 +11,16 @@
 import { GOOGLE_WEATHER_API_KEY } from '$env/static/private';
 import { getConfig } from '$lib/server/config';
 import { log } from '$lib/server/log';
-import { sydneyDayOfWeek, sydneyHour, sydneyTimeCompact, sydneyYMD } from '$lib/time';
+import {
+	sydneyDateMedium,
+	sydneyDayOfWeek,
+	sydneyHour,
+	sydneyTimeCompact,
+	sydneyYMD,
+	sydneyYMDOffset
+} from '$lib/time';
 import type { WeatherThresholds } from '$lib/config';
+import { fetchJson } from './http';
 
 const CURRENT_URL = 'https://weather.googleapis.com/v1/currentConditions:lookup';
 const FORECAST_URL = 'https://weather.googleapis.com/v1/forecast/hours:lookup';
@@ -94,24 +102,14 @@ export async function refreshWeather({
 	const forecastParams = new URLSearchParams(params);
 	forecastParams.set('hours', String(Math.min(hours, 48)));
 
-	const [currentRes, forecastRes] = await Promise.all([
-		fetch(`${CURRENT_URL}?${params}`, { signal: AbortSignal.timeout(10_000) }),
-		fetch(`${FORECAST_URL}?${forecastParams}`, { signal: AbortSignal.timeout(10_000) })
+	const [current, forecast] = await Promise.all([
+		fetchJson<GoogleCurrent>(`${CURRENT_URL}?${params}`, {
+			label: 'Google Weather currentConditions'
+		}),
+		fetchJson<GoogleForecast>(`${FORECAST_URL}?${forecastParams}`, {
+			label: 'Google Weather forecast/hours'
+		})
 	]);
-
-	if (!currentRes.ok) {
-		throw new Error(
-			`Google Weather currentConditions ${currentRes.status}: ${await currentRes.text().catch(() => '')}`
-		);
-	}
-	if (!forecastRes.ok) {
-		throw new Error(
-			`Google Weather forecast/hours ${forecastRes.status}: ${await forecastRes.text().catch(() => '')}`
-		);
-	}
-
-	const current = (await currentRes.json()) as GoogleCurrent;
-	const forecast = (await forecastRes.json()) as GoogleForecast;
 
 	const hourly: ForecastHour[] = (forecast.forecastHours ?? []).map(toForecastHour);
 
@@ -208,8 +206,8 @@ const BLOCKS: { name: BlockName; startHour: number; endHour: number }[] = [
 export function groupByDayBlocks(hourly: ForecastHour[]): DayBlock[] {
 	const buckets = new Map<string, ForecastHour[]>();
 	for (const h of hourly) {
-		const date = sydneyDateKey(h.at);
-		const hour = sydneyHourFor(h.at);
+		const date = sydneyYMD(h.at);
+		const hour = sydneyHour(h.at);
 		const block = BLOCKS.find((b) => hour >= b.startHour && hour < b.endHour)!;
 		const key = `${date}|${block.name}`;
 		if (!buckets.has(key)) buckets.set(key, []);
@@ -265,40 +263,9 @@ function sydneyAtFromDisplayDate(d?: GoogleDisplayDateTime): Date {
 	return new Date(`${ymd}T${hms}+10:00`); // best-effort; overwritten when interval.startTime present
 }
 
-function sydneyDateKey(d: Date): string {
-	return new Intl.DateTimeFormat('en-CA', {
-		timeZone: 'Australia/Sydney',
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	}).format(d);
-}
-
-function sydneyHourFor(d: Date): number {
-	return parseInt(
-		new Intl.DateTimeFormat('en-US', {
-			timeZone: 'Australia/Sydney',
-			hour: 'numeric',
-			hour12: false
-		}).format(d),
-		10
-	);
-}
-
+/** "Sat 9 May": sydneyDateMedium without its comma. */
 function sydneyShortLabel(d: Date): string {
-	const weekday = new Intl.DateTimeFormat('en-AU', {
-		timeZone: 'Australia/Sydney',
-		weekday: 'short'
-	}).format(d);
-	const day = parseInt(
-		new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', day: 'numeric' }).format(d),
-		10
-	);
-	const month = new Intl.DateTimeFormat('en-AU', {
-		timeZone: 'Australia/Sydney',
-		month: 'short'
-	}).format(d);
-	return `${weekday} ${day} ${month}`;
+	return sydneyDateMedium(d).replace(',', '');
 }
 
 function avg(ns: number[]): number {
@@ -493,7 +460,7 @@ export function tomorrowSummary(
 	now: Date = new Date()
 ): string | null {
 	const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
-	const tomorrowKey = sydneyYMD(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+	const tomorrowKey = sydneyYMDOffset(1, now);
 	const hours = weather.hourly.filter((h) => sydneyYMD(h.at) === tomorrowKey);
 	if (hours.length === 0) return null;
 

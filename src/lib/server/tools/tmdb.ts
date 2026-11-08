@@ -17,6 +17,7 @@ import { TMDB, type AppendToResponseMovieKey, type AppendToResponseTvKey } from 
 import { TMDB_READ_ACCESS_TOKEN } from '$env/static/private';
 import { withTtl } from '$lib/server/cache';
 import { log } from '$lib/server/log';
+import { fetchOk } from './http';
 
 const REGION = 'AU';
 const LANGUAGE = 'en-AU' as const;
@@ -230,11 +231,7 @@ function client(): TMDB {
 	// tmdb-ts has no timeout of its own, and on an HTTP error it rejects with
 	// the parsed JSON body, not an Error. Both are fixed here, per request.
 	tmdb ??= new TMDB(TMDB_READ_ACCESS_TOKEN, {
-		fetch: async (url, init) => {
-			const res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
-			if (!res.ok) throw new Error(`TMDB ${res.status}: ${(await res.text()).slice(0, 200)}`);
-			return res;
-		}
+		fetch: (url, init) => fetchOk(url, { ...init, label: 'TMDB', timeoutMs: TIMEOUT_MS })
 	});
 	return tmdb;
 }

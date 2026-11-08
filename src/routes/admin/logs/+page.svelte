@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '$lib/components/ui/empty';
 	import { Button } from '$lib/components/ui/button';
+	import { SYDNEY_TZ } from '$lib/time';
 	import type { PageData } from './$types';
 	import type { LogEntry } from '../../api/admin/logs/+server';
 
@@ -79,7 +80,7 @@
 		const d = new Date(iso);
 		if (isNaN(d.getTime())) return '';
 		return d.toLocaleTimeString('en-AU', {
-			timeZone: 'Australia/Sydney',
+			timeZone: SYDNEY_TZ,
 			hour: '2-digit',
 			minute: '2-digit',
 			second: '2-digit',

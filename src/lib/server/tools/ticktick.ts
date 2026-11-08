@@ -14,11 +14,10 @@
  */
 import { TICKTICK_API_KEY } from '$env/static/private';
 import { getConfig } from '$lib/server/config';
-import { log, logErr } from '$lib/server/log';
-import { sydneyNoon, sydneyOffset, sydneyTimeOnDay } from '$lib/time';
+import { log, logErr, errorMessage } from '$lib/server/log';
+import { SYDNEY_TZ, sydneyNoon, sydneyOffset, sydneyTimeOnDay } from '$lib/time';
 
 const ENDPOINT = 'https://mcp.ticktick.com/';
-const SYDNEY_TZ = 'Australia/Sydney';
 const PROTOCOL_VERSION = '2025-06-18';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -179,12 +178,12 @@ async function getCompletedByProject(projectIds: string[]): Promise<Map<string, 
 	} catch (err) {
 		const stale = staleOk(completedCache);
 		if (stale) {
-			log('ticktick', `list_completed_tasks_by_date failed (${errText(err)}) — serving stale`);
+			log('ticktick', `list_completed_tasks_by_date failed (${errorMessage(err)}) — serving stale`);
 			return stale;
 		}
 		log(
 			'ticktick',
-			`list_completed_tasks_by_date failed (${errText(err)}) — no done items this round`
+			`list_completed_tasks_by_date failed (${errorMessage(err)}) — no done items this round`
 		);
 		return new Map();
 	}
@@ -342,7 +341,7 @@ export async function listProjects(): Promise<Project[]> {
 	} catch (err) {
 		const stale = staleOk(projectsCache);
 		if (stale) {
-			log('ticktick', `list_projects failed (${errText(err)}) — serving stale cache`);
+			log('ticktick', `list_projects failed (${errorMessage(err)}) — serving stale cache`);
 			return stale;
 		}
 		throw err;
@@ -363,7 +362,7 @@ export async function getProjectWithTasks(projectId: string): Promise<ProjectWit
 		if (stale) {
 			log(
 				'ticktick',
-				`get_project_with_undone_tasks(${projectId}) failed (${errText(err)}) — serving stale cache`
+				`get_project_with_undone_tasks(${projectId}) failed (${errorMessage(err)}) — serving stale cache`
 			);
 			return stale;
 		}
@@ -470,7 +469,7 @@ export async function pingTickTick(): Promise<{
 		return {
 			ok: false,
 			ms: Date.now() - start,
-			error: err instanceof Error ? err.message : String(err)
+			error: errorMessage(err)
 		};
 	}
 }
@@ -595,19 +594,15 @@ async function rawCall(method: string, params: unknown): Promise<unknown> {
 		return await attempt();
 	} catch (err) {
 		if (!isTransient(err)) throw err;
-		log('ticktick', `${method} transient failure (${errText(err)}) — retrying once`);
+		log('ticktick', `${method} transient failure (${errorMessage(err)}) — retrying once`);
 		await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
 		return attempt();
 	}
 }
 
-function errText(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
-
 function isTransient(err: unknown): boolean {
 	if ((err as { retryable?: boolean })?.retryable) return true;
-	const m = errText(err).toLowerCase();
+	const m = errorMessage(err).toLowerCase();
 	return /fetch failed|aborted|timeout|timed ?out|econnreset|socket hang|network|enotfound|eai_again/.test(
 		m
 	);
@@ -642,6 +637,6 @@ async function parseSse(res: Response): Promise<{ result?: unknown; error?: unkn
 }
 
 function isSessionError(err: unknown): boolean {
-	const msg = err instanceof Error ? err.message : String(err);
+	const msg = errorMessage(err);
 	return /session/i.test(msg) && (/not.?found/i.test(msg) || /expired/i.test(msg));
 }

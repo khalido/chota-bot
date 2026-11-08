@@ -6,7 +6,7 @@ vi.mock('$lib/server/db', () => ({
 	db: { insert: () => ({ values: (v: unknown) => ({ run: () => inserted.push(v) }) }) }
 }));
 vi.mock('$lib/server/db/schema', () => ({ decision: {} }));
-vi.mock('$lib/server/log', () => ({ logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 const decideChoice = vi.fn();
 vi.mock('$lib/server/decide', () => ({ decideChoice, questionsHash: () => 'h' }));
 

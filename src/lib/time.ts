@@ -8,11 +8,12 @@
  */
 import type { DayOfWeek } from '$lib/config';
 
-const TZ = 'Australia/Sydney';
+/** The kiosk's time zone. Import this rather than writing the name out. */
+export const SYDNEY_TZ = 'Australia/Sydney';
 
 /** "Mon" | "Tue" | ... | "Sun" — short weekday in Sydney local. */
 export function sydneyDayOfWeek(d: Date = new Date()): DayOfWeek {
-	return new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short' }).format(
+	return new Intl.DateTimeFormat('en-AU', { timeZone: SYDNEY_TZ, weekday: 'short' }).format(
 		d
 	) as DayOfWeek;
 }
@@ -20,7 +21,7 @@ export function sydneyDayOfWeek(d: Date = new Date()): DayOfWeek {
 export function sydneyHour(d: Date = new Date()): number {
 	return parseInt(
 		new Intl.DateTimeFormat('en-US', {
-			timeZone: TZ,
+			timeZone: SYDNEY_TZ,
 			hour: 'numeric',
 			hour12: false
 		}).format(d),
@@ -31,7 +32,7 @@ export function sydneyHour(d: Date = new Date()): number {
 /** "08:42" — 24h, zero-padded. */
 export function sydneyHHMM(d: Date = new Date()): string {
 	return new Intl.DateTimeFormat('en-AU', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		hour: '2-digit',
 		minute: '2-digit',
 		hour12: false
@@ -41,7 +42,7 @@ export function sydneyHHMM(d: Date = new Date()): string {
 /** "2026-05-09" — ISO date, useful for keys + ISO date construction. */
 export function sydneyYMD(d: Date = new Date()): string {
 	return new Intl.DateTimeFormat('en-CA', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		year: 'numeric',
 		month: '2-digit',
 		day: '2-digit'
@@ -51,7 +52,7 @@ export function sydneyYMD(d: Date = new Date()): string {
 /** "8:42 am" — short 12h, glanceable. */
 export function sydneyTimeShort(d: Date = new Date()): string {
 	return new Intl.DateTimeFormat('en-AU', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		hour: 'numeric',
 		minute: '2-digit',
 		hour12: true
@@ -64,7 +65,7 @@ export function sydneyTimeShort(d: Date = new Date()): string {
  */
 export function sydneyTimeCompact(d: Date = new Date()): string {
 	const parts = new Intl.DateTimeFormat('en-US', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		hour: 'numeric',
 		minute: '2-digit',
 		hour12: true
@@ -93,7 +94,7 @@ export function sydneyTimeRange(start: Date, end: Date): string {
 /** "Friday 9 May" — long weekday + day + month, no year. */
 export function sydneyDateLong(d: Date = new Date()): string {
 	return new Intl.DateTimeFormat('en-AU', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		weekday: 'long',
 		day: 'numeric',
 		month: 'long'
@@ -103,7 +104,7 @@ export function sydneyDateLong(d: Date = new Date()): string {
 /** "Tue 26 May" — abbreviated weekday + day + abbreviated month. */
 export function sydneyDateMedium(d: Date = new Date()): string {
 	return new Intl.DateTimeFormat('en-AU', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short'
@@ -113,12 +114,32 @@ export function sydneyDateMedium(d: Date = new Date()): string {
 /** "Thu 9th May" — short weekday + day with English ordinal + short month. */
 export function sydneyDateShort(d: Date = new Date()): string {
 	const day = parseInt(
-		new Intl.DateTimeFormat('en-AU', { timeZone: TZ, day: 'numeric' }).format(d),
+		new Intl.DateTimeFormat('en-AU', { timeZone: SYDNEY_TZ, day: 'numeric' }).format(d),
 		10
 	);
-	const weekday = new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short' }).format(d);
-	const month = new Intl.DateTimeFormat('en-AU', { timeZone: TZ, month: 'short' }).format(d);
+	const weekday = new Intl.DateTimeFormat('en-AU', {
+		timeZone: SYDNEY_TZ,
+		weekday: 'short'
+	}).format(d);
+	const month = new Intl.DateTimeFormat('en-AU', { timeZone: SYDNEY_TZ, month: 'short' }).format(d);
 	return `${weekday} ${day}${ordinal(day)} ${month}`;
+}
+
+/** `YYYY-MM-DD` plus `n` calendar days (negative goes back). Calendar
+ *  arithmetic, not instant + 24h, so a 23- or 25-hour DST day can't skip one. */
+export function ymdAddDays(ymd: string, n: number): string {
+	const [y, m, d] = ymd.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** Whole calendar days from `from` to `to` (both `YYYY-MM-DD`); negative if `to` is earlier. */
+export function ymdDiffDays(from: string, to: string): number {
+	return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
+/** The Sydney date `n` days from `d`'s Sydney date: 1 = tomorrow, -1 = yesterday. */
+export function sydneyYMDOffset(n: number, d: Date = new Date()): string {
+	return ymdAddDays(sydneyYMD(d), n);
 }
 
 /**
@@ -144,7 +165,7 @@ export function sydneyNoon(ymd: string): Date {
 /** Returns the Sydney UTC offset for the given moment, e.g. "+10:00" or "+11:00". */
 export function sydneyOffset(d: Date = new Date()): string {
 	const parts = new Intl.DateTimeFormat('en-GB', {
-		timeZone: TZ,
+		timeZone: SYDNEY_TZ,
 		timeZoneName: 'longOffset'
 	}).formatToParts(d);
 	const tzName = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT+10:00';

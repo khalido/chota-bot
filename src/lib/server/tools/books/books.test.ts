@@ -3,7 +3,7 @@ import type { BookHit } from './types';
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 vi.mock('$lib/server/config', () => ({ getConfig: () => ({}) }));
-vi.mock('$lib/server/log', () => ({ log: vi.fn(), logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { holdings, matchLibrary, nearbyCopies, pickBook } = await import('./index');
 const { parseAvailability, parseTitles } = await import('./library');

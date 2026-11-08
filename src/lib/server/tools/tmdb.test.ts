@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$env/static/private', () => ({ TMDB_READ_ACCESS_TOKEN: 'test' }));
-vi.mock('$lib/server/log', () => ({ log: vi.fn(), logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { auReleases, pickMatch, pickProviders, pickRating } = await import('./tmdb');
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import { SYDNEY_TZ } from '$lib/time';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -8,7 +9,7 @@
 	function fmtTime(iso: string | null): string {
 		if (!iso) return '—';
 		return new Date(iso).toLocaleString('en-AU', {
-			timeZone: 'Australia/Sydney',
+			timeZone: SYDNEY_TZ,
 			hour: '2-digit',
 			minute: '2-digit',
 			second: '2-digit',

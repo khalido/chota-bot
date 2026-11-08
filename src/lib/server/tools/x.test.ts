@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Schemas } from '@xdevplatform/xdk';
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/log', () => ({ log: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 const { postId, linkedPostId, toPost } = await import('./x');
 
 describe('postId', () => {

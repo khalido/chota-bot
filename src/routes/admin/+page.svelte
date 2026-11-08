@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorMessage } from '$lib/utils';
 	import { resolve } from '$app/paths';
 	import { version } from '$app/environment';
 	import { authClient } from '$lib/auth-client';
@@ -41,7 +42,7 @@
 				: `✗ ${r.ms}ms · ${r.error ?? 'failed'}`;
 			pingJson = JSON.stringify(r, null, 2);
 		} catch (e) {
-			pingSummary = `✗ ${e instanceof Error ? e.message : String(e)}`;
+			pingSummary = `✗ ${errorMessage(e)}`;
 		} finally {
 			pinging = false;
 		}
@@ -60,7 +61,7 @@
 				? `✓ ${label}: ${meta} (${body.mode})`
 				: `✗ ${label}: ${body.error ?? 'failed'}`;
 		} catch (e) {
-			printResult = `✗ ${label}: ${e instanceof Error ? e.message : String(e)}`;
+			printResult = `✗ ${label}: ${errorMessage(e)}`;
 		} finally {
 			printing = null;
 		}

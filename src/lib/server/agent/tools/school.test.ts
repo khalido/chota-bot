@@ -25,7 +25,7 @@ vi.mock('$lib/server/tools/schoolterms', () => ({
 	getSchoolBreak: async () => st.brk,
 	getUpcomingSchoolEvents: async () => st.upcoming
 }));
-vi.mock('$lib/server/log', () => ({ errorMessage: (e: unknown) => String(e), logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { schoolDatesTool } = await import('./school');
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

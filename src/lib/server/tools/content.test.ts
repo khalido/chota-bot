@@ -11,7 +11,7 @@ sqlite.exec(`CREATE TABLE content (
 	text text NOT NULL, tags text NOT NULL, note text, model text, created_at integer NOT NULL)`);
 const db = drizzle(sqlite, { schema });
 vi.mock('$lib/server/db', () => ({ db }));
-vi.mock('$lib/server/log', () => ({ log: vi.fn(), logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { saveContent, searchContent, scopeFor } = await import('./content');
 const { savedTool } = await import('$lib/server/agent/tools/content');

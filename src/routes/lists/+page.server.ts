@@ -1,14 +1,14 @@
 import { getConfig } from '$lib/server/config';
 import { getFamilyLists } from '$lib/server/tools/ticktick';
-import { sydneyYMD, sydneyDayOfWeek } from '$lib/time';
-import { logErr } from '$lib/server/log';
+import { sydneyYMD, sydneyYMDOffset, sydneyDayOfWeek } from '$lib/time';
+import { logErr, errorMessage } from '$lib/server/log';
 import type { PageServerLoad } from './$types';
 
 /** "today" / "yesterday" / weekday (Sydney-local) for a completion date. */
 function relativeDay(completedAt: Date, now: Date): string {
 	const ymd = sydneyYMD(completedAt);
 	if (ymd === sydneyYMD(now)) return 'today';
-	if (ymd === sydneyYMD(new Date(now.getTime() - 86_400_000))) return 'yesterday';
+	if (ymd === sydneyYMDOffset(-1, now)) return 'yesterday';
 	return sydneyDayOfWeek(completedAt);
 }
 
@@ -35,7 +35,7 @@ export const load: PageServerLoad = async () => {
 		return {
 			configured: true as const,
 			lists: [],
-			error: err instanceof Error ? err.message : String(err)
+			error: errorMessage(err)
 		};
 	}
 };

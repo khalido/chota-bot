@@ -8,8 +8,30 @@ import {
 	sydneyTimeCompact,
 	sydneyTimeOnDay,
 	sydneyTimeRange,
-	sydneyYMD
+	sydneyYMD,
+	sydneyYMDOffset,
+	ymdAddDays,
+	ymdDiffDays
 } from './time';
+
+describe('calendar-day arithmetic', () => {
+	it('adds days across month, year and leap-day edges', () => {
+		expect(ymdAddDays('2026-01-31', 1)).toBe('2026-02-01');
+		expect(ymdAddDays('2026-12-31', 1)).toBe('2027-01-01');
+		expect(ymdAddDays('2028-03-01', -1)).toBe('2028-02-29');
+	});
+	it('counts whole days either way', () => {
+		expect(ymdDiffDays('2026-10-01', '2026-10-08')).toBe(7);
+		expect(ymdDiffDays('2026-10-08', '2026-10-01')).toBe(-7);
+	});
+	it('gives Sydney tomorrow on the 23-hour spring-forward day', () => {
+		// 3 Oct 2026 23:30 AEST; 4 Oct has 23 hours, so +24h of instants lands on 5 Oct.
+		const lateNight = new Date('2026-10-03T13:30:00Z');
+		expect(sydneyYMD(new Date(lateNight.getTime() + 86_400_000))).toBe('2026-10-05');
+		expect(sydneyYMDOffset(1, lateNight)).toBe('2026-10-04');
+		expect(sydneyYMDOffset(-1, lateNight)).toBe('2026-10-02');
+	});
+});
 
 describe('sydneyHHMM', () => {
 	it('formats Sydney local time in 24h HH:MM', () => {

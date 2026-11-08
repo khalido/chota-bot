@@ -8,6 +8,7 @@
 // often the cookie actually expires and tune this (or drop it).
 import { defineJob } from '$lib/server/scheduler';
 import { configuredSentralKids, refreshSentralCookie } from '$lib/server/tools/sentral';
+import { errorMessage } from '$lib/utils';
 
 defineJob('sentral-login', '0 4 * * 1', async () => {
 	const kids = configuredSentralKids();
@@ -18,7 +19,7 @@ defineJob('sentral-login', '0 4 * * 1', async () => {
 			await refreshSentralCookie(kid);
 			out.push(`${kid}: ok`);
 		} catch (err) {
-			out.push(`${kid}: FAILED (${err instanceof Error ? err.message : String(err)})`);
+			out.push(`${kid}: FAILED (${errorMessage(err)})`);
 		}
 	}
 	return out.join('; ');

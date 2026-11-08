@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { gatherBrief } from '$lib/server/print/brief';
 import { recipientToSections, isPrintRecipient } from '$lib/server/print/sections';
 import { getSchedule } from '$lib/server/tools/sentral';
-import { sydneyYMD } from '$lib/time';
+import { sydneyYMDOffset } from '$lib/time';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -29,8 +29,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	}
 	const day = url.searchParams.get('day') === 'tomorrow' ? 'tomorrow' : 'today';
 	const date =
-		url.searchParams.get('date') ??
-		(day === 'tomorrow' ? sydneyYMD(new Date(Date.now() + 86_400_000)) : undefined);
+		url.searchParams.get('date') ?? (day === 'tomorrow' ? sydneyYMDOffset(1) : undefined);
 	const d = await gatherBrief({ day });
 	const schedule = await getSchedule(who, date);
 	return {

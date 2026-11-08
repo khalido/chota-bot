@@ -36,10 +36,7 @@ vi.mock('./triage', () => ({ triage: vi.fn(), triageHint: vi.fn(), photoIsAction
 vi.mock('./files', () => ({ pdfText: vi.fn(), saveFile: vi.fn() }));
 vi.mock('$lib/server/transcribe', () => ({ transcribeAudio: vi.fn() }));
 vi.mock('$lib/server/agent/prompts', () => ({ GROUP_HINT: '[group]' }));
-vi.mock('$lib/server/log', () => ({
-	event: () => ({ done: vi.fn(), fail: vi.fn() }),
-	logErr: vi.fn()
-}));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const runs: { messages: { role: string; content: unknown }[]; sessionId: string }[] = [];
 vi.mock('$lib/server/agent', () => ({

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/server/tools/calendar', () => ({}));
 vi.mock('$lib/server/config', () => ({}));
 vi.mock('$lib/server/people', () => ({}));
-vi.mock('$lib/server/log', () => ({}));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { mapsUrl } = await import('./calendar');
 

@@ -1,6 +1,7 @@
 import { TRANSPORT_NSW_API_KEY } from '$env/static/private';
 import { getConfig } from '$lib/server/config';
-import { log, logErr } from '$lib/server/log';
+import { log } from '$lib/server/log';
+import { fetchJson } from './http';
 import { sydneyHHMM, sydneyTimeCompact, sydneyTimeOnDay, sydneyYMD } from '$lib/time';
 
 const ENDPOINT = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon';
@@ -104,17 +105,10 @@ export async function refreshBus({
 		params.set('itdTime', sydneyHHMM(at).replace(':', ''));
 	}
 
-	const res = await fetch(`${ENDPOINT}?${params}`, {
-		headers: { Authorization: `apikey ${TRANSPORT_NSW_API_KEY}` },
-		signal: AbortSignal.timeout(10_000)
+	const data = await fetchJson<TfNswResponse>(`${ENDPOINT}?${params}`, {
+		label: 'TfNSW departure_mon',
+		headers: { Authorization: `apikey ${TRANSPORT_NSW_API_KEY}` }
 	});
-	if (!res.ok) {
-		const body = await res.text().catch(() => '');
-		logErr('bus', `TfNSW ${res.status}: ${body.slice(0, 100)}`);
-		throw new Error(`TfNSW departure_mon ${res.status}: ${body}`);
-	}
-
-	const data = (await res.json()) as TfNswResponse;
 	const now = Date.now();
 	const wanted = routes && routes.length > 0 ? new Set(routes) : null;
 

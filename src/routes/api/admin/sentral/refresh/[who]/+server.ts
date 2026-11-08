@@ -14,7 +14,7 @@
  */
 import { json } from '@sveltejs/kit';
 import { refreshTimetable } from '$lib/server/tools/sentral';
-import { logErr } from '$lib/server/log';
+import { logErr, errorMessage } from '$lib/server/log';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params }) => {
@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ params }) => {
 		const { bytes, events } = await refreshTimetable(who);
 		return json({ ok: true, who, bytes, events });
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
+		const message = errorMessage(err);
 		logErr('admin·sentral-refresh', `${who}: ${message}`);
 		return json({ ok: false, who, error: message }, { status: 500 });
 	}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorMessage } from '$lib/utils';
 	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
@@ -20,7 +21,7 @@
 			const meta = b.lines != null ? `${b.lines} lines, ${b.bytes}b` : `${b.bytes}b`;
 			result = b.ok ? `✓ ${label}: ${meta} (${b.mode})` : `✗ ${label}: ${b.error ?? 'failed'}`;
 		} catch (e) {
-			result = `✗ ${label}: ${e instanceof Error ? e.message : String(e)}`;
+			result = `✗ ${label}: ${errorMessage(e)}`;
 		} finally {
 			printing = null;
 		}

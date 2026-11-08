@@ -11,6 +11,8 @@ failure, `asOf`) — `schoolterms` and `beach` do. Older ones are a module-level
 `<tool>-refresh` job in `jobs/` — e.g. `bus.ts` holds a `Map` cache that
 `bus-refresh` repopulates every 5 min and `getBus()` reads.
 
+Fetch through `http.ts`: `fetchJson` / `fetchText` / `fetchOk` give every request a timeout and throw `<label> <status>: <the service's message>` on an error reply. Plain `fetch` only when the raw error reply matters (Sentral's redirect check, schoolterms' feed-status log); use `responseError` there. Dates: the `$lib/time` helpers (`sydneyYMDOffset(1)` for tomorrow, `ymdDiffDays`), never `+ 86_400_000`.
+
 Tools are pure data — no print or UI formatting belongs here (that lives in
 `print/`). Routes and jobs import tools directly; the agent's registry is the
 `tools: {}` map in `agent/index.ts`, fed by thin wrappers in `agent/tools/`.

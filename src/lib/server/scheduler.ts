@@ -14,9 +14,9 @@ import { building } from '$app/environment';
 import { clearAlert, raiseAlert } from '$lib/server/alerts';
 import { db } from '$lib/server/db';
 import { jobRun } from '$lib/server/db/schema';
+import { SYDNEY_TZ } from '$lib/time';
 import { errorMessage, event, logger } from '$lib/server/log';
 
-const TIMEZONE = 'Australia/Sydney';
 /** Default wall-clock cap per run. Clears the slowest jobs (morning-print
  *  screenshots each person; sentral-refresh may do a browser login). */
 const TIMEOUT_MS = 10 * 60_000;
@@ -100,7 +100,7 @@ export function defineJob(
 		pattern,
 		{
 			name,
-			timezone: TIMEZONE,
+			timezone: SYDNEY_TZ,
 			protect: (c) =>
 				jobLog.warning('job {job} blocked — previous still running since {since}', {
 					job: name,
@@ -109,7 +109,7 @@ export function defineJob(
 			catch: (err) =>
 				jobLog.error('job {job} caught error', {
 					job: name,
-					error: err instanceof Error ? err.message : String(err)
+					error: errorMessage(err)
 				})
 		},
 		async () => {
@@ -143,7 +143,7 @@ export function defineJob(
 				ev.set('runId', recordRun(name, { at, status: 'ok', durationMs, summary }));
 				if (logOk) ev.done({ summary });
 			} catch (err) {
-				error = err instanceof Error ? err.message : String(err);
+				error = errorMessage(err);
 				const durationMs = Date.now() - start;
 				ev.set('runId', recordRun(name, { at, status: 'error', durationMs, error }));
 				ev.fail(err);

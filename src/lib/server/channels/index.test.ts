@@ -7,7 +7,7 @@ vi.mock('./triage', () => ({ triage: vi.fn(), triageHint: vi.fn() }));
 vi.mock('$lib/server/agent', () => ({ runAgentStream: vi.fn() }));
 vi.mock('$lib/server/agent/history', () => ({}));
 vi.mock('$lib/server/agent/prompts', () => ({ GROUP_HINT: '' }));
-vi.mock('$lib/server/log', () => ({ event: vi.fn(), logErr: vi.fn() }));
+vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
 
 const { followsBot, shouldAnswer } = await import('./index');
 

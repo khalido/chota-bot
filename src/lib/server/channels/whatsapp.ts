@@ -15,17 +15,16 @@
  * Connection: a `close` means the socket is finished — build a new one,
  * except 401 (logged out: alert, stop) and 403 (temporary ban: wait it out).
  * `connecting` can last many minutes while the engine backs off; never
- * restart for that.
+ * restart for that. The states and those rules: `whatsapp-conn.ts`.
  */
 import makeWASocket, {
 	type ConnectionState,
-	DisconnectReason,
 	downloadMediaMessage,
 	fetchLatestWaWebVersion,
 	useMultiFileAuthState
 } from '@oxidezap/baileyrs';
 import { env } from '$env/dynamic/private';
-import { getConfig } from '$lib/server/config';
+import { getConfig, getFamily } from '$lib/server/config';
 import { clearAlert, raiseAlert, registerAlertChannel } from '$lib/server/alerts';
 import { finalText } from '$lib/server/agent';
 import { recordSent, sessionKeyFor } from '$lib/server/agent/history';
@@ -33,6 +32,7 @@ import { errorMessage, log, logErr } from '$lib/server/log';
 import { mediaOf, personByPhone, toIncoming, userOf, type WaMessage } from './whatsapp-message';
 import { toWhatsApp } from './whatsapp-format';
 import { FAILED, THINKING, toolEmoji, WRITE_TOOLS } from './reactions';
+import { afterClose, afterConnectFailed, notConnected, type Conn } from './whatsapp-conn';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'whatsapp';
@@ -79,6 +79,7 @@ export function whatsappChannel(): Channel | null {
 	}
 	const botNumber: string = configured;
 	let sock: Socket | undefined;
+	let conn: Conn = { kind: 'idle' };
 	let stopped = false;
 	/** The alert key of the pairing code last sent — each code is its own
 	 *  alert, so a fresh code after a restart isn't swallowed as a repeat. */
@@ -86,7 +87,7 @@ export function whatsappChannel(): Channel | null {
 	let retry: ReturnType<typeof setTimeout> | undefined;
 
 	const requireSock = () => {
-		if (!sock) throw new Error('WhatsApp not connected');
+		if (!sock) throw new Error(notConnected(conn));
 		return sock;
 	};
 
@@ -118,7 +119,10 @@ export function whatsappChannel(): Channel | null {
 					if (failures >= 2) {
 						await raiseAlert(ALERT_KEY, `WhatsApp can't connect: ${errorMessage(err)}. Retrying.`);
 					}
-					if (!stopped) scheduleConnect(onMessage, Math.min(5_000 * 2 ** failures, 15 * 60_000));
+					if (stopped) return;
+					const next = afterConnectFailed(failures, Date.now());
+					conn = next;
+					scheduleConnect(onMessage, next.until - Date.now());
 				});
 			},
 			Math.min(delay, 2 ** 31 - 1)
@@ -126,6 +130,7 @@ export function whatsappChannel(): Channel | null {
 	}
 
 	async function connect(onMessage: (m: Incoming) => Promise<void>) {
+		conn = { kind: 'connecting' };
 		const { state } = await useMultiFileAuthState(AUTH_DIR);
 		// The bundled WA Web version is rejected (405); ask web.whatsapp.com.
 		const { version } = await fetchLatestWaWebVersion();
@@ -138,6 +143,7 @@ export function whatsappChannel(): Channel | null {
 		const onUpdate = async ({ connection, lastDisconnect, qr }: Partial<ConnectionState>) => {
 			if (qr && !state.creds.registered && !askedCode) {
 				askedCode = true;
+				conn = { kind: 'pairing' };
 				const code = await s.requestPairingCode(botNumber.replace(/\D/g, ''));
 				const pretty = `${code.slice(0, 4)}-${code.slice(4)}`;
 				log(SCOPE, `pairing code ${pretty}`);
@@ -150,6 +156,7 @@ export function whatsappChannel(): Channel | null {
 				);
 			}
 			if (connection === 'open') {
+				conn = { kind: 'open' };
 				failures = 0;
 				log(SCOPE, `connected as ${userOf(s.user?.id)}`);
 				if (pairKey) await clearAlert(pairKey, { recovered: 'WhatsApp linked' });
@@ -163,34 +170,26 @@ export function whatsappChannel(): Channel | null {
 				| undefined;
 			const code = err?.output?.statusCode;
 			log(SCOPE, `closed (${code ?? '?'}: ${err?.message ?? 'no reason'})`);
-			if (code === DisconnectReason.loggedOut) {
+			const next = afterClose(code, err?.data?.expire, Date.now());
+			conn = next;
+			if (next.kind === 'dead') {
 				await raiseAlert(
 					ALERT_KEY,
-					`WhatsApp logged out (unlinked on the phone). Delete ${AUTH_DIR} and restart to re-link.`
-				);
-				return;
-			}
-			// Another connection on the same login took over — a second app
-			// instance (the Mac and the box both linked, or a dev reload). Fighting
-			// back makes the two kick each other off every few seconds.
-			if (code === DisconnectReason.connectionReplaced) {
-				await raiseAlert(
-					ALERT_KEY,
-					'WhatsApp connection replaced by another instance — this one stopped. Restart it if that was wrong.'
+					next.reason === 'logged-out'
+						? `WhatsApp logged out (unlinked on the phone). Delete ${AUTH_DIR} and restart to re-link.`
+						: 'WhatsApp connection replaced by another instance — this one stopped. Restart it if that was wrong.'
 				);
 				return;
 			}
 			// A plain close usually reconnects at once — only a failed reconnect
 			// alerts (scheduleConnect). A temporary ban waits until it lifts.
-			if (code === DisconnectReason.forbidden) {
-				const until = (err?.data?.expire ?? 0) * 1000;
+			if (next.reason === 'banned') {
 				await raiseAlert(
 					ALERT_KEY,
-					`WhatsApp temporarily banned until ${new Date(until).toISOString()}`
+					`WhatsApp temporarily banned until ${new Date(next.until).toISOString()}`
 				);
 			}
-			const banUntil = code === DisconnectReason.forbidden ? (err?.data?.expire ?? 0) * 1000 : 0;
-			if (!stopped) scheduleConnect(onMessage, Math.max(5_000, banUntil - Date.now()));
+			if (!stopped) scheduleConnect(onMessage, next.until - Date.now());
 		};
 		// The library doesn't await listeners: catch here, or a throw (say the
 		// pairing-code request) is an unhandled rejection.
@@ -200,7 +199,7 @@ export function whatsappChannel(): Channel | null {
 
 		s.ev.on('messages.upsert', ({ messages, type }) => {
 			const bot = { phone: userOf(s.user?.id), lid: userOf(s.user?.lid) };
-			const family = getConfig().family ?? [];
+			const family = getFamily();
 			for (const raw of messages) {
 				const m = toIncoming(raw as WaMessage, type, bot, family);
 				if (!m) continue;
@@ -228,7 +227,7 @@ export function whatsappChannel(): Channel | null {
 				for (const n of to) {
 					const jid = phoneJid(n);
 					await requireSock().sendMessage(jid, { text });
-					const person = personByPhone(getConfig().family ?? [], n);
+					const person = personByPhone(getFamily(), n);
 					recordSent(
 						sessionKeyFor({ threadId: `wa:${jid}`, isDM: true, person }),
 						text,
@@ -241,6 +240,7 @@ export function whatsappChannel(): Channel | null {
 
 		async stop() {
 			stopped = true;
+			conn = { kind: 'idle' };
 			clearTimeout(retry);
 			sock?.end(undefined);
 			sock = undefined;

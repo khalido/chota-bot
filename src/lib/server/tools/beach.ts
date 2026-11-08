@@ -19,6 +19,7 @@ import * as cheerio from 'cheerio';
 import { withTtl } from '$lib/server/cache';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
+import { fetchText } from './http';
 
 const FEED_URL = 'https://www.randwick.nsw.gov.au/integration/feeds/lifeguard-reports';
 const FETCH_TIMEOUT_MS = 10_000;
@@ -49,12 +50,11 @@ export interface BeachReport {
 }
 
 async function fetchFeed(): Promise<string> {
-	const res = await fetch(FEED_URL, {
+	return fetchText(FEED_URL, {
+		label: 'lifeguard feed',
 		headers: { 'user-agent': UA },
-		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+		timeoutMs: FETCH_TIMEOUT_MS
 	});
-	if (!res.ok) throw new Error(`lifeguard feed ${res.status}`);
-	return res.text();
 }
 
 /** "18 C" / "18°C" / "18" → 18; anything without a number → null. */

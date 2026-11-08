@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorMessage } from '$lib/utils';
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -41,7 +42,7 @@
 			const b = await (await fetch(`/api/print/${who}?mode=image`, { method: 'POST' })).json();
 			result = b.ok ? `✓ ${who}: ${b.bytes}b` : `✗ ${who}: ${b.error ?? 'failed'}`;
 		} catch (e) {
-			result = `✗ ${who}: ${e instanceof Error ? e.message : String(e)}`;
+			result = `✗ ${who}: ${errorMessage(e)}`;
 		} finally {
 			printing = null;
 		}

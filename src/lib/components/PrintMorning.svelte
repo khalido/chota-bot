@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { errorMessage } from '$lib/utils';
 	// Dashboard widget: preview any family member's printed brief as plain text.
 	// Before midday it previews today's (morning) brief; after midday, tomorrow's
 	// (the evening print) — the same names, the day that's actually relevant.
+	import { sydneyHour } from '$lib/time';
+
 	let { recipients }: { recipients: readonly string[] } = $props();
 
 	let preview = $state<string | null>(null);
@@ -11,7 +14,7 @@
 
 	const title = (who: string) => who[0].toUpperCase() + who.slice(1);
 	/** Which brief to preview: today's before noon, tomorrow's after. */
-	const briefDay = (): 'today' | 'tomorrow' => (new Date().getHours() < 12 ? 'today' : 'tomorrow');
+	const briefDay = (): 'today' | 'tomorrow' => (sydneyHour() < 12 ? 'today' : 'tomorrow');
 
 	async function fetchPreview(who: string) {
 		loading = true;
@@ -23,7 +26,7 @@
 			if (!r.ok) throw new Error(`HTTP ${r.status}`);
 			preview = await r.text();
 		} catch (e) {
-			error = e instanceof Error ? e.message : String(e);
+			error = errorMessage(e);
 			preview = null;
 		} finally {
 			loading = false;

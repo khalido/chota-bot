@@ -99,6 +99,20 @@ export const chotaAgent = new ToolLoopAgent({
 /** UIMessage type for the typed `useChat` admin chat + Telegram handlers. */
 export type ChotaAgentUIMessage = InferAgentUIMessage<typeof chotaAgent>;
 
+/** Tokens, steps and cost onto a run's wide event. v7: `usage` aggregates across
+ *  steps (`totalUsage` is deprecated). */
+function recordRun(
+	ev: ReturnType<typeof event>,
+	usage: { inputTokens?: number; outputTokens?: number },
+	steps: Parameters<typeof turnStats>[0]
+) {
+	ev.set('tokens_in', usage.inputTokens ?? 0)
+		.set('tokens_out', usage.outputTokens ?? 0)
+		.set('steps', steps.length);
+	const { costUsd } = turnStats(steps);
+	if (costUsd !== null) ev.set('cost_usd', costUsd);
+}
+
 /**
  * Thin wrapper around `chotaAgent.generate(...)` that emits one
  * `agent.run` wide event per call. Pass through whatever generate
@@ -108,12 +122,7 @@ export async function runAgent(args: Parameters<typeof chotaAgent.generate>[0]) 
 	const ev = event('agent', 'run {model}', { model: MODEL });
 	try {
 		const result = await chotaAgent.generate(args);
-		// v7: `usage` aggregates across steps (`totalUsage` is deprecated).
-		ev.set('tokens_in', result.usage.inputTokens ?? 0)
-			.set('tokens_out', result.usage.outputTokens ?? 0)
-			.set('steps', result.steps.length);
-		const { costUsd } = turnStats(result.steps);
-		if (costUsd !== null) ev.set('cost_usd', costUsd);
+		recordRun(ev, result.usage, result.steps);
 		ev.done();
 		return result;
 	} catch (err) {
@@ -160,14 +169,7 @@ export async function runAgentStream(
 	try {
 		const result = await chotaAgent.stream(args);
 		await consume(result);
-		// v7: `usage` aggregates across steps (`totalUsage` is deprecated).
-		const usage = await result.usage;
-		const steps = await result.steps;
-		ev.set('tokens_in', usage.inputTokens ?? 0)
-			.set('tokens_out', usage.outputTokens ?? 0)
-			.set('steps', steps.length);
-		const { costUsd } = turnStats(steps);
-		if (costUsd !== null) ev.set('cost_usd', costUsd);
+		recordRun(ev, await result.usage, await result.steps);
 		ev.done();
 		return result;
 	} catch (err) {

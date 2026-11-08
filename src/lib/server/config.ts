@@ -8,10 +8,15 @@
  * no runtime validation needed for a TS literal we control.
  */
 import config from '../../../chota.config';
-import type { ChotaConfig, Kid } from '$lib/config';
+import type { ChotaConfig, FamilyMember, Kid } from '$lib/config';
 
 export function getConfig(): ChotaConfig {
 	return config;
+}
+
+/** Everyone in `family`, or none when it isn't set. */
+export function getFamily(): FamilyMember[] {
+	return getConfig().family ?? [];
 }
 
 export function findKid(name: string, c: ChotaConfig = getConfig()): Kid | undefined {

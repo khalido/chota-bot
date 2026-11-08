@@ -5,6 +5,7 @@
  * good subjects and ratings, sometimes wrong first-publish years.
  */
 import type { BookHit } from './types';
+import { fetchJson } from '../http';
 
 const BASE = 'https://openlibrary.org';
 const UA = 'chota-bot/1.0 (family kiosk; github.com/khalido/chota-bot)';
@@ -13,12 +14,10 @@ const FIELDS =
 
 export async function searchOpenLibrary(query: string, max = 5): Promise<BookHit[]> {
 	const params = new URLSearchParams({ q: query, limit: String(max), fields: FIELDS });
-	const res = await fetch(`${BASE}/search.json?${params}`, {
-		headers: { 'user-agent': UA },
-		signal: AbortSignal.timeout(10_000)
+	const data = await fetchJson<{ docs?: Doc[] }>(`${BASE}/search.json?${params}`, {
+		label: 'Open Library',
+		headers: { 'user-agent': UA }
 	});
-	if (!res.ok) throw new Error(`Open Library ${res.status}`);
-	const data = (await res.json()) as { docs?: Doc[] };
 	return (data.docs ?? []).map(toHit);
 }
 

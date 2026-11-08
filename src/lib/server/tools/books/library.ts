@@ -11,6 +11,7 @@
  * `c` is the page size. Reserving needs the member login (not built).
  */
 import * as cheerio from 'cheerio';
+import { fetchJson } from '../http';
 
 const BASE = 'https://library.cityofsydney.nsw.gov.au/Montage';
 const PAGE_SIZE = 6;
@@ -51,7 +52,9 @@ export const librarySearchUrl = (keyword: string) =>
 	`${BASE}/All.aspx?${new URLSearchParams({ keyword })}`;
 
 export async function searchLibrary(keyword: string): Promise<LibraryTitle[]> {
-	const res = await fetch(`${BASE}/webmethods.aspx/GetTitlesAll`, {
+	const { d } = await fetchJson<{ d?: string }>(`${BASE}/webmethods.aspx/GetTitlesAll`, {
+		label: 'Library catalogue',
+		timeoutMs: 15_000,
 		method: 'POST',
 		headers: { 'content-type': 'application/json; charset=utf-8' },
 		body: JSON.stringify({
@@ -70,11 +73,8 @@ export async function searchLibrary(keyword: string): Promise<LibraryTitle[]> {
 			stats: 0,
 			listid: '',
 			frm: ''
-		}),
-		signal: AbortSignal.timeout(15_000)
+		})
 	});
-	if (!res.ok) throw new Error(`Library catalogue ${res.status}`);
-	const { d } = (await res.json()) as { d?: string };
 	return d ? parseTitles(d) : [];
 }
 

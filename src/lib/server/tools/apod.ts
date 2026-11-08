@@ -11,6 +11,7 @@
  */
 import { env } from '$env/dynamic/private';
 import { log } from '$lib/server/log';
+import { fetchJson } from './http';
 
 const APOD_URL = 'https://api.nasa.gov/planetary/apod';
 
@@ -39,9 +40,7 @@ interface ApodResponse {
 export async function getApod(date?: string): Promise<Apod> {
 	const qs = new URLSearchParams({ api_key: env.NASA_API_KEY || 'DEMO_KEY' });
 	if (date) qs.set('date', date);
-	const res = await fetch(`${APOD_URL}?${qs}`, { signal: AbortSignal.timeout(10_000) });
-	if (!res.ok) throw new Error(`NASA APOD ${res.status}: ${await res.text().catch(() => '')}`);
-	const d = (await res.json()) as ApodResponse;
+	const d = await fetchJson<ApodResponse>(`${APOD_URL}?${qs}`, { label: 'NASA APOD' });
 	log('apod', `${d.date ?? '?'}: ${d.title ?? '?'}`);
 	return {
 		title: d.title ?? 'Astronomy Picture of the Day',

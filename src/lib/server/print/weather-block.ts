@@ -15,7 +15,7 @@ import {
 	type ForecastHour,
 	type Weather
 } from '$lib/server/tools/weather';
-import { sydneyHour, sydneyTimeOnDay, sydneyYMD } from '$lib/time';
+import { sydneyHour, sydneyNoon, sydneyTimeOnDay, sydneyYMD, sydneyYMDOffset } from '$lib/time';
 import type { WeatherThresholds } from '$lib/config';
 
 export interface WeatherBlock {
@@ -133,7 +133,7 @@ export function formatTomorrowWeather(weather: Weather, now: Date = new Date()):
 	// Rain — same window logic as today, anchored at midday tomorrow so the
 	// 7am-7pm window resolves to the right day.
 	const thresholds = getConfig().home?.weather;
-	const anchor = sydneyTimeOnDay('12:00', new Date(now.getTime() + 86_400_000));
+	const anchor = sydneyTimeOnDay('12:00', sydneyNoon(sydneyYMDOffset(1, now)));
 	const rain = rainSummaryToday(weather.hourly, anchor, thresholds);
 	if (rain) {
 		lines.push(`${rain.text}  ${rain.sparkline}`);
@@ -155,7 +155,7 @@ export function formatTomorrowWeather(weather: Weather, now: Date = new Date()):
 
 /** Tomorrow's forecast hours (Sydney local) — the single source of "which hours are tomorrow". */
 function tomorrowHours(weather: Weather, now: Date): ForecastHour[] {
-	const tomKey = sydneyYMD(new Date(now.getTime() + 86_400_000));
+	const tomKey = sydneyYMDOffset(1, now);
 	return weather.hourly.filter((h) => sydneyYMD(h.at) === tomKey);
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorMessage } from '$lib/utils';
 	import { invalidateAll } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -34,7 +35,7 @@
 				: `✗ ${body.error ?? 'failed'}`;
 			if (body.ok) await invalidateAll(); // refresh the file-state display
 		} catch (e) {
-			result[who] = `✗ ${e instanceof Error ? e.message : String(e)}`;
+			result[who] = `✗ ${errorMessage(e)}`;
 		} finally {
 			refreshing = null;
 		}

@@ -12,7 +12,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { addToList, completeOnList, getList } from '$lib/server/tools/ticktick';
 import { errorMessage } from '$lib/server/log';
-import { getConfig } from '$lib/server/config';
+import { getFamily } from '$lib/server/config';
 import { parseTaskPeople } from '$lib/server/people';
 import { sydneyYMD } from '$lib/time';
 import { ymd as ymdSchema } from './schemas';
@@ -29,7 +29,7 @@ export const ticktickTool = tool({
 		const data = await getList(list);
 		if (!data) return { list, name: null, tasks: [] };
 		const section = (id?: string | null) => data.columns?.find((c) => c.id === id)?.name ?? null;
-		const family = getConfig().family ?? [];
+		const family = getFamily();
 		return {
 			list,
 			name: data.project.name,
@@ -79,7 +79,7 @@ export const ticktickAddTool = tool({
 	}),
 	execute: async ({ list, title, due, note, section, for: who }) => {
 		// Assignment needs the person's TickTick email (`family[].email`).
-		const family = getConfig().family ?? [];
+		const family = getFamily();
 		const person = who
 			? family.find((m) => m.aliases.some((a) => a.toLowerCase() === who.toLowerCase()))
 			: undefined;

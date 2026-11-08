@@ -25,7 +25,7 @@ import { withTtl } from '$lib/server/cache';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
 import { parseIcsDays, type IcsDay } from '$lib/server/ics';
-import { sydneyYMD } from '$lib/time';
+import { sydneyYMD, sydneyYMDOffset, ymdAddDays, ymdDiffDays } from '$lib/time';
 
 const pageUrl = (year: number) => `https://education.nsw.gov.au/schooling/calendars/${year}`;
 
@@ -122,9 +122,7 @@ export async function getSchoolWeek(
 	const { terms } = await loadSchoolYear(Number(ymd.slice(0, 4)));
 	const term = terms.find((t) => ymd >= t.start && ymd <= t.end);
 	if (!term) return null;
-	const days = Math.round(
-		(Date.parse(`${ymd}T00:00:00Z`) - Date.parse(`${term.start}T00:00:00Z`)) / 86_400_000
-	);
+	const days = ymdDiffDays(term.start, ymd);
 	return { term: term.term, week: Math.floor(days / 7) + 1 };
 }
 
@@ -138,7 +136,7 @@ export async function getUpcomingSchoolEvents(
 	const fromDate = opts.from ?? new Date();
 	const withinDays = opts.withinDays ?? DEFAULT_WINDOW_DAYS;
 	const from = sydneyYMD(fromDate);
-	const until = sydneyYMD(new Date(fromDate.getTime() + withinDays * 86_400_000));
+	const until = sydneyYMDOffset(withinDays, fromDate);
 	const inWindow = (ymd: string) => ymd >= from && ymd <= until;
 
 	const { devDays, holidays } = await loadSchoolYear(Number(from.slice(0, 4)));
@@ -166,7 +164,7 @@ export async function getSchoolBreak(date: Date = new Date()): Promise<SchoolBre
 		.map((t) => t.start)
 		.filter((s) => s > block.end)
 		.sort()[0];
-	return { until: block.end, resumes: nextTerm ?? nextWeekday(addDay(block.end)) };
+	return { until: block.end, resumes: nextTerm ?? nextWeekday(ymdAddDays(block.end, 1)) };
 }
 
 /** Force a re-fetch of `year`, bypassing the cache. The weekly refresh job calls this. */
@@ -387,7 +385,7 @@ function devDaysFromIcs(events: IcsDay[], division: 'E' | 'W'): { start: string;
 		.filter((e) => e.title === 'School Development Day' || e.title === named)
 		.sort((a, b) => (a.start < b.start ? -1 : 1))) {
 		const last = runs[runs.length - 1];
-		if (last && addDay(last.end) === e.start) last.end = e.end;
+		if (last && ymdAddDays(last.end, 1) === e.start) last.end = e.end;
 		else runs.push({ start: e.start, end: e.end });
 	}
 	return runs;
@@ -395,20 +393,13 @@ function devDaysFromIcs(events: IcsDay[], division: 'E' | 'W'): { start: string;
 
 // ── date helpers ─────────────────────────────────────────────────────────────
 
-/** Next day after a `YYYY-MM-DD` date, as `YYYY-MM-DD`. */
-function addDay(ymd: string): string {
-	const d = new Date(`${ymd}T00:00:00Z`);
-	d.setUTCDate(d.getUTCDate() + 1);
-	return d.toISOString().slice(0, 10);
-}
-
 /** `ymd` itself if it's already Mon–Fri, otherwise the next weekday. */
 function nextWeekday(ymd: string): string {
 	let d = ymd;
 	for (let i = 0; i < 7; i++) {
 		const dow = new Date(`${d}T00:00:00Z`).getUTCDay();
 		if (dow >= 1 && dow <= 5) return d;
-		d = addDay(d);
+		d = ymdAddDays(d, 1);
 	}
 	return d;
 }

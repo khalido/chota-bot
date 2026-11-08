@@ -17,12 +17,8 @@ import {
 	getUpcomingSchoolEvents
 } from '$lib/server/tools/schoolterms';
 import { errorMessage } from '$lib/server/log';
-import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange, sydneyYMD } from '$lib/time';
+import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange, sydneyYMD, ymdDiffDays } from '$lib/time';
 import { ymd as ymdSchema } from './schemas';
-
-/** Whole days from `a` to `b` (both YYYY-MM-DD). */
-const daysBetween = (a: string, b: string) =>
-	Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
 export const schoolDayTool = tool({
 	description:
@@ -107,7 +103,7 @@ export const schoolDatesTool = tool({
 							term: current.term,
 							week: week!.week,
 							lastDay: current.end,
-							daysToLastDay: daysBetween(today, current.end)
+							daysToLastDay: ymdDiffDays(today, current.end)
 						}
 					: brk
 						? { holidays: true, lastDayOfHolidays: brk.until, backOn: brk.resumes }

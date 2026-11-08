@@ -23,7 +23,8 @@ import * as cheerio from 'cheerio';
 import type { Kid } from '$lib/config';
 import { getConfig } from '$lib/server/config';
 import { log, logErr } from '$lib/server/log';
-import { sydneyDayOfWeek, sydneyYMD } from '$lib/time';
+import { sydneyDayOfWeek, sydneyYMD, ymdAddDays } from '$lib/time';
+import { fetchText } from './http';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const CACHE_TTL_MS = 6 * 60 * 60_000;
@@ -95,12 +96,11 @@ export interface KidFixture {
 const cache = new Map<string, { at: number; round: VolleyballRound | null }>();
 
 async function fetchHtml(url: string): Promise<string> {
-	const res = await fetch(url, {
+	return fetchText(url, {
+		label: `volleyball fetch ${url}`,
 		headers: { 'user-agent': UA },
-		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+		timeoutMs: FETCH_TIMEOUT_MS
 	});
-	if (!res.ok) throw new Error(`volleyball fetch ${res.status} for ${url}`);
-	return res.text();
 }
 
 /**
@@ -377,8 +377,7 @@ export function weekendDates(ref: Date): string[] {
 			// would otherwise land instant math on Monday and silently drop
 			// every real Sunday fixture.
 			const sat = sydneyYMD(d);
-			const [y, m, dd] = sat.split('-').map(Number);
-			return [sat, new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)];
+			return [sat, ymdAddDays(sat, 1)];
 		}
 	}
 	return [];

@@ -24,7 +24,7 @@ import { getChores } from '$lib/server/chores';
 import { getConfig } from '$lib/server/config';
 import { getCalendar } from '$lib/server/tools/calendar';
 import { cleanListName, getFamilyLists } from '$lib/server/tools/ticktick';
-import { logger } from '$lib/server/log';
+import { logger, errorMessage } from '$lib/server/log';
 import { sydneyDateLong, sydneyTimeCompact, sydneyYMD } from '$lib/time';
 
 const log = logger('agent/prompts');
@@ -101,11 +101,11 @@ function householdBlock(): string {
 async function todaySnapshot(now: Date): Promise<string> {
 	const [events, lists] = await Promise.all([
 		getCalendar({ range: 'today' }).catch((err) => {
-			log.warn('snapshot calendar fetch failed: {error}', { error: errText(err) });
+			log.warn('snapshot calendar fetch failed: {error}', { error: errorMessage(err) });
 			return [];
 		}),
 		getFamilyLists().catch((err) => {
-			log.warn('snapshot ticktick fetch failed: {error}', { error: errText(err) });
+			log.warn('snapshot ticktick fetch failed: {error}', { error: errorMessage(err) });
 			return [];
 		})
 	]);
@@ -173,8 +173,4 @@ function loadSoul(): string {
 	}
 	log.warn('no soul.md or soul.example.md at repo root — agent will run soulless');
 	return '';
-}
-
-function errText(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
 }

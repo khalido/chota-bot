@@ -1,7 +1,7 @@
 import { gatherBrief } from '$lib/server/print/brief';
 import { recipientToSections, getRecipients } from '$lib/server/print/sections';
 import { getSchedule } from '$lib/server/tools/sentral';
-import { sydneyYMD } from '$lib/time';
+import { sydneyYMD, sydneyYMDOffset } from '$lib/time';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -21,8 +21,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	// Tomorrow's per-kid schedule needs tomorrow's Sydney date, not today's —
 	// otherwise the SCHOOL section shows today's classes under a "tomorrow"
 	// brief. The .ics holds the whole week, so this is just a date pick.
-	const ref =
-		day === 'tomorrow' ? sydneyYMD(new Date(Date.now() + 86_400_000)) : sydneyYMD(new Date());
+	const ref = day === 'tomorrow' ? sydneyYMDOffset(1) : sydneyYMD();
 	const briefs = await Promise.all(
 		getRecipients().map(async (who) => ({
 			who,

@@ -36,7 +36,10 @@ import {
 	sydneyDayOfWeek,
 	sydneyTimeCompact,
 	sydneyTimeOnDay,
-	sydneyYMD
+	sydneyYMD,
+	sydneyYMDOffset,
+	ymdDiffDays,
+	sydneyNoon
 } from '$lib/time';
 import { logErr } from '$lib/server/log';
 import { weatherBlock } from './weather-block';
@@ -144,7 +147,7 @@ export async function gatherBrief({
 	const tomorrow = day === 'tomorrow';
 	// Every date-keyed lookup (calendar, chores, school bus, masthead, todos)
 	// pivots on `ref` — `now` for the morning brief, tomorrow for the evening one.
-	const ref = tomorrow ? new Date(now.getTime() + 86_400_000) : now;
+	const ref = tomorrow ? sydneyNoon(sydneyYMDOffset(1, now)) : now;
 
 	const weather = await getWeather().catch((err) => {
 		logErr('brief', 'weather lookup failed:', err);
@@ -203,11 +206,7 @@ export async function gatherBrief({
 	const schoolBreak = await getSchoolBreak(ref)
 		.then((b) => {
 			if (!b) return null;
-			const days = Math.round(
-				(Date.parse(`${b.resumes}T00:00:00Z`) - Date.parse(`${sydneyYMD(ref)}T00:00:00Z`)) /
-					86_400_000
-			);
-			return { resumesLabel: fmtDay(b.resumes), days };
+			return { resumesLabel: fmtDay(b.resumes), days: ymdDiffDays(sydneyYMD(ref), b.resumes) };
 		})
 		.catch((err) => {
 			logErr('brief', 'school break lookup failed:', err);
@@ -291,7 +290,7 @@ function taskWhen(dueDate: string | undefined, ref: Date): 'today' | 'tomorrow' 
 	const due = sydneyYMD(d);
 	const day = sydneyYMD(ref);
 	if (due === day) return 'today';
-	if (due === sydneyYMD(new Date(ref.getTime() + 86_400_000))) return 'tomorrow';
+	if (due === sydneyYMDOffset(1, ref)) return 'tomorrow';
 	if (due < day) return 'overdue';
 	return null;
 }
@@ -306,11 +305,7 @@ function daysSince(dueDate: string | undefined, ref: Date): number {
 	if (!dueDate) return 0;
 	const d = new Date(dueDate);
 	if (Number.isNaN(d.getTime())) return 0;
-	// Parse both YMDs back to UTC midnights for a clean integer-day diff —
-	// avoids the DST hour-shift that subtracting raw Dates would smuggle in.
-	const dueMs = Date.parse(`${sydneyYMD(d)}T00:00:00Z`);
-	const refMs = Date.parse(`${sydneyYMD(ref)}T00:00:00Z`);
-	return Math.max(0, Math.round((refMs - dueMs) / 86_400_000));
+	return Math.max(0, ymdDiffDays(sydneyYMD(d), sydneyYMD(ref)));
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -331,7 +326,7 @@ function fmtDay(ymd: string): string {
 function schoolWhen(e: { start: string; end: string }, ref: Date): string {
 	if (e.start !== e.end) return `${fmtDay(e.start)}–${fmtDay(e.end)}`;
 	if (e.start === sydneyYMD(ref)) return 'today';
-	if (e.start === sydneyYMD(new Date(ref.getTime() + 86_400_000))) return 'tomorrow';
+	if (e.start === sydneyYMDOffset(1, ref)) return 'tomorrow';
 	return fmtDay(e.start);
 }
 

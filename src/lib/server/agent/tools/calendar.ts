@@ -21,7 +21,7 @@ import {
 	searchEvents,
 	type CalendarEvent
 } from '$lib/server/tools/calendar';
-import { getConfig } from '$lib/server/config';
+import { getFamily } from '$lib/server/config';
 import { parseEventPeople } from '$lib/server/people';
 import { errorMessage } from '$lib/server/log';
 import {
@@ -78,7 +78,7 @@ export const calendarTool = tool({
 			message: 'pass exactly one of `range`, `date`, or `search`'
 		}),
 	execute: async ({ range, date, search, past }) => {
-		const family = getConfig().family ?? [];
+		const family = getFamily();
 		let events: CalendarEvent[];
 		try {
 			events = search

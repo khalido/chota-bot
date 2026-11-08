@@ -9,6 +9,7 @@
  */
 import { env } from '$env/dynamic/private';
 import type { BookHit } from './types';
+import { fetchJson } from '../http';
 
 const BASE = 'https://www.googleapis.com/books/v1/volumes';
 const FIELDS =
@@ -24,12 +25,9 @@ export async function searchGoogleBooks(query: string, max = 10): Promise<BookHi
 		fields: FIELDS
 	});
 	if (env.GOOGLE_BOOKS_API_KEY) params.set('key', env.GOOGLE_BOOKS_API_KEY);
-	const res = await fetch(`${BASE}?${params}`, { signal: AbortSignal.timeout(10_000) });
-	if (!res.ok) {
-		const err = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-		throw new Error(`Google Books ${res.status}: ${err?.error?.message ?? res.statusText}`);
-	}
-	const data = (await res.json()) as { items?: Volume[] };
+	const data = await fetchJson<{ items?: Volume[] }>(`${BASE}?${params}`, {
+		label: 'Google Books'
+	});
 	return (data.items ?? []).map(toHit);
 }
 

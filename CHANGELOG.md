@@ -19,6 +19,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Changed
 
+- **Shared helpers:** calendar-day arithmetic (`ymdAddDays`, `ymdDiffDays`, `sydneyYMDOffset`) and `SYDNEY_TZ` live in `$lib/time`, so "tomorrow" no longer adds 24 hours (wrong late on a DST day). Tool fetches go through `tools/http.ts` (`fetchJson`/`fetchText`: one timeout and one error shape, with the service's own message). `errorMessage` moved to `$lib/utils` for pages too; `getFamily()` in config; one test log mock (`log.mock.ts`).
+- **WhatsApp says why it's down:** the connection has explicit states (`channels/whatsapp-conn.ts`), so a send while logged out, replaced or banned says so instead of "not connected".
 - **One chat per person:** a family member's WhatsApp and Telegram DMs are now one conversation (Telegram once their id is in `chota.config.ts`); each group keeps its own. The first deploy started chat history fresh, with the old messages in `data/chat_message-before-sessions.sql`.
 - **A new soul:** short behaviour rules in `soul.example.md`, in place of the butler paragraph.
 - **WAL on `home.db`:** reads carry on during a write. Copy the live database with `sqlite3 .backup`, not `cp`.
@@ -148,6 +150,8 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
   `usb` 3 (untested against the printer).
 
 ### Fixed
+
+- The dashboard's brief preview picked today or tomorrow by the browser's clock, not Sydney's.
 
 - WhatsApp: a dev reload opened a second socket on the same login, and the two knocked each other off every few seconds (a reply was lost). Channels now stop before booting again, and a `440 Connection replaced` stops reconnecting and alerts instead of fighting.
 - `/admin/jobs` showed RUNNING on every job (croner's `isRunning()` means scheduled; `isBusy()` means running).
