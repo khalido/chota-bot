@@ -3,7 +3,8 @@
  * asks chota to keep, each with a title, summary, full text and tags, so the
  * agent can find them again ("that article about sleep I saved").
  *
- * Saving: a link's page text comes from Exa; a PDF's text from unpdf (on the
+ * Saving: a link's page text comes from Exa, an X post's from the X API
+ * (`tools/x.ts`) plus the page it links to; a PDF's text from unpdf (on the
  * box); a voice note's from its transcript. One small vision model then writes
  * the title, summary and, for a photo or a scanned PDF, the text it can see.
  * Jev tags the item from that (decisions/content-tags.json), and the verdict
@@ -21,6 +22,7 @@ import { randomUUID } from 'node:crypto';
 import { and, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { generateText, Output } from 'ai';
 import { exa } from '$lib/server/exa';
+import { getPost, linkedPostId } from '$lib/server/tools/x';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { content, decision } from '$lib/server/db/schema';
@@ -83,6 +85,30 @@ async function fetchPage(url: string): Promise<{ title: string; text: string }> 
 	const page = r.results[0];
 	if (!page?.text) throw new Error(`no text for ${url}`);
 	return { title: page.title ?? url, text: page.text };
+}
+
+/**
+ * An X post from the X API (Exa returns nothing for x.com): the post, an
+ * attached X Article's text, then the first page it links to, when Exa can
+ * read it. A link that won't read leaves the post on its own.
+ */
+async function fetchXPost(url: string): Promise<{ title: string; text: string }> {
+	const post = await getPost(url);
+	const parts = [
+		`@${post.author} on X${post.createdAt ? `, ${post.createdAt.slice(0, 10)}` : ''}:\n${post.text}`
+	];
+	if (post.article)
+		parts.push([post.article.title, post.article.text].filter(Boolean).join('\n\n'));
+	const link = post.links[0];
+	if (link) {
+		try {
+			const page = await fetchPage(link);
+			parts.push(`Linked page: ${page.title} (${link})\n\n${page.text}`);
+		} catch (err) {
+			logErr(SCOPE, `X post ${post.id}: its link ${link} didn't read; keeping the post alone`, err);
+		}
+	}
+	return { title: post.article?.title ?? `@${post.author} on X`, text: parts.join('\n\n') };
 }
 
 const Described = z.object({
@@ -191,15 +217,20 @@ export async function saveContent(input: SaveInput, asker: Asker | undefined): P
 
 	let item: Omit<typeof content.$inferInsert, keyof typeof base | 'tags'>;
 	if (input.url) {
-		const url = input.url.trim();
+		// One X post arrives under many links (twitter.com, ?s=20, another author path): keep one.
+		const xId = linkedPostId(input.url);
+		const url = xId ? `https://x.com/i/status/${xId}` : input.url.trim();
 		const [dupe] = await db
 			.select()
 			.from(content)
 			.where(and(eq(content.url, url), eq(content.sender, asker.sender), eq(content.scope, scope)))
 			.limit(1);
 		if (dupe) return dupe;
-		const page = await fetchPage(url);
-		const d = await describe('web page', base.note ?? undefined, { text: page.text });
+		const onX = xId !== undefined;
+		const page = onX ? await fetchXPost(url) : await fetchPage(url);
+		const d = await describe(onX ? 'post on X' : 'web page', base.note ?? undefined, {
+			text: page.text
+		});
 		item = { kind: 'link', url, title: d.title || page.title, summary: d.summary, text: page.text };
 	} else if (input.attachment) {
 		const a = asker.attachment;

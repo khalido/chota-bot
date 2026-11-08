@@ -125,3 +125,14 @@ describe('privacy through the tools', () => {
 		).rejects.toThrow(/only when someone asks/);
 	});
 });
+
+describe('saving X links', () => {
+	it('one X post under another link is the same save, with no fetch', async () => {
+		await db
+			.insert(schema.content)
+			.values({ ...row('Parent1', 'private', 'Saved X post'), url: 'https://x.com/i/status/42' });
+		const asker = { sender: 'Parent1', isDM: true, channel: 't', threadId: 't', messageId: 'm' };
+		const saved = await saveContent({ url: 'https://twitter.com/someone/status/42?s=20' }, asker);
+		expect(saved.title).toBe('Saved X post');
+	});
+});
