@@ -1,0 +1,29 @@
+# Spotify Soloist — the box as a Spotify Connect speaker (docs/spotify.md).
+#
+# A systemd USER unit for ko (PipeWire runs in ko's user session). Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/soloist.service deploy/soloist-update.service deploy/soloist-update.timer ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now soloist soloist-update.timer
+# Needs `sudo loginctl enable-linger ko` so it runs without a login.
+[Unit]
+Description=Spotify Soloist (Spotify Connect speaker)
+After=pipewire.service pipewire-pulse.service wireplumber.service
+Wants=pipewire.service pipewire-pulse.service wireplumber.service
+
+[Service]
+Type=simple
+# SOLOIST_API_KEY=... (chmod 600). Soloist only takes the key as a flag, so it
+# shows in `ps` (issue #24).
+EnvironmentFile=%h/.config/soloist/env
+# -w opens the WebSocket API chota talks to. It has no auth: loopback only.
+# Keep -n the same as chota.config.ts > music.deviceName.
+ExecStart=%h/.local/bin/soloist -n "Chota" -k ${SOLOIST_API_KEY} -w 127.0.0.1:9091 -D %h/.local/share/soloist -C %h/.cache/soloist
+Restart=on-failure
+RestartSec=5
+# Exit 10 = this build expired (90 days). Restarting won't help; the weekly
+# soloist-update.timer installs a fresh build and restarts us.
+RestartPreventExitStatus=10
+
+[Install]
+WantedBy=default.target

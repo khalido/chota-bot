@@ -22,6 +22,7 @@ import { db } from '$lib/server/db';
 import { buildCommit } from '$lib/server/version';
 import { JOBS, recentRuns, type JobRecord } from '$lib/server/scheduler';
 import { sydneyHHMM } from '$lib/time';
+import { musicHealth } from '$lib/server/tools/spotify';
 import type { RequestHandler } from './$types';
 
 const PROCESS_START = Date.now();
@@ -98,6 +99,9 @@ function snapshot() {
 		rss: mem.rss,
 		memUsed: os.totalmem() - os.freemem(),
 		memTotal: os.totalmem(),
+		// The Soloist speaker; offline is normal (not running, or an expired
+		// build that exited), so it doesn't change `status`.
+		music: musicHealth(),
 		jobs
 	};
 }
@@ -116,6 +120,16 @@ function asText(s: ReturnType<typeof snapshot>): string {
 		row('load', s.load.join('  ')),
 		row('memory', `rss ${mb(s.rss)} · sys ${gb(s.memUsed)} of ${gb(s.memTotal)}`),
 		row('cpu', `${s.cpus} cores`),
+		...(s.music
+			? [
+					row(
+						'music',
+						s.music.speaker === 'online'
+							? `${s.music.deviceName ?? 'speaker'} · ${s.music.status}`
+							: s.music.speaker
+					)
+				]
+			: []),
 		'',
 		`  jobs (${s.jobs.length})`
 	];

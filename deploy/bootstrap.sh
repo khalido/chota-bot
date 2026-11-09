@@ -11,8 +11,8 @@
 #
 # Order of operations:
 #   1. Sudo cache warm-up (one password prompt for the whole run)
-#   2. apt prereqs: sqlite3
-#   3. plugdev membership for $USER (re-login takes effect)
+#   2. apt prereqs: sqlite3, avahi-utils, pipewire-audio, ffmpeg
+#   3. plugdev + audio groups for $USER, PipeWire as user services from boot
 #   4. CUPS off (service + socket + path) + usblp blacklisted — printer claim defence
 #   5. sudoers entry for unattended `bun run deploy`
 #   6. udev rule for the MUNBYN printer
@@ -39,22 +39,36 @@ say "Bootstrap will use sudo for several steps — entering password once now."
 sudo -v
 
 # ── 2. apt prereqs ─────────────────────────────────────────────────────────
-say "Step 2/9 — apt prereqs (sqlite3)"
-if have_pkg sqlite3; then
-	echo "✓ sqlite3 already installed"
+# avahi-utils: @khalido/home finds Cast devices and printers with avahi-browse.
+# pipewire-audio: the box's sound server (docs/audio.md).
+# ffmpeg: speech clips as MP3 for the Google speakers, and pace changes.
+say "Step 2/9 — apt prereqs (sqlite3, avahi-utils, pipewire-audio, ffmpeg)"
+apt_pkgs=()
+for p in sqlite3 avahi-utils pipewire-audio ffmpeg; do
+	have_pkg "$p" || apt_pkgs+=("$p")
+done
+if [ "${#apt_pkgs[@]}" -eq 0 ]; then
+	echo "✓ apt prereqs already installed"
 else
 	sudo apt-get update -qq
-	sudo apt-get install -y sqlite3
+	sudo apt-get install -y "${apt_pkgs[@]}"
 fi
 
-# ── 3. plugdev membership ──────────────────────────────────────────────────
-say "Step 3/9 — plugdev membership for $USER"
-if id -nG "$USER" | tr ' ' '\n' | grep -qx plugdev; then
-	echo "✓ $USER already in plugdev"
-else
-	sudo usermod -aG plugdev "$USER"
-	echo "✓ Added $USER to plugdev — will take effect on next login (exit + re-ssh)."
-fi
+# ── 3. Groups + sound ──────────────────────────────────────────────────────
+say "Step 3/9 — plugdev + audio groups, PipeWire from boot"
+# A lingered session has no seat, so without `audio` WirePlumber sees no cards.
+for g in plugdev audio; do
+	if id -nG "$USER" | tr ' ' '\n' | grep -qx "$g"; then
+		echo "✓ $USER already in $g"
+	else
+		sudo usermod -aG "$g" "$USER"
+		echo "✓ Added $USER to $g — takes effect on next login; reboot once for sound."
+	fi
+done
+# Linger: $USER's services (PipeWire, Soloist) run from boot with nobody logged in.
+sudo loginctl enable-linger "$USER"
+XDG_RUNTIME_DIR="/run/user/$(id -u)" systemctl --user enable --now pipewire pipewire-pulse wireplumber
+echo "✓ PipeWire enabled as user services"
 
 # ── 4. CUPS + usblp off ────────────────────────────────────────────────────
 say "Step 4/9 — disable CUPS + blacklist usblp (so neither claims the MUNBYN)"
@@ -173,3 +187,4 @@ echo "Next:"
 echo "  - Open http://$(hostname):8000/ from another machine on the tailnet"
 echo "  - Sign in with Google at /admin to wire up the calendar tool"
 echo "  - From the Mac, future updates are just: bun run deploy"
+echo "  - With the speaker plugged in: wpctl status, then wpctl set-default <id>"

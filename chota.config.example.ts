@@ -121,5 +121,26 @@ export default defineChota({
 	// Telegram chat IDs — token + username are in .env. notifyChatIds receive
 	// proactive pushes (alerts etc); allowedChatIds whitelist who
 	// the bot will answer back to once inbound (Phase 3) lands.
-	telegram: { notifyChatIds: [], allowedChatIds: [] }
+	telegram: { notifyChatIds: [], allowedChatIds: [] },
+	// Speaking on the box's speaker (docs/audio.md). volume is chota's own level
+	// (0–1); the speaker's knob and the output stay at full.
+	speech: {
+		model: 'google/gemini-3.8-flash-tts',
+		voice: 'Kore',
+		style: 'Warm, dry and unhurried, like a family butler; a little brighter with the kids.',
+		volume: 0.55,
+		quietHours: { from: '21:00', to: '07:00' },
+		perHour: 6,
+		announcers: ['Parent1', 'Parent2']
+	},
+	// Spotify via the Soloist speaker (docs/spotify.md). Favourites map a word
+	// the family uses to a Spotify link or URI; these IDs are placeholders.
+	music: {
+		deviceName: 'Chota',
+		maxVolume: 60,
+		favourites: {
+			friday: 'https://open.spotify.com/playlist/PLACEHOLDER0000000000001',
+			dinner: 'spotify:playlist:PLACEHOLDER0000000000002'
+		}
+	}
 });

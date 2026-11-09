@@ -36,6 +36,8 @@ import { bookTool } from './tools/books';
 import { titleInfoTool, watchIdeasTool } from './tools/tmdb';
 import { volleyballTool } from './tools/volleyball';
 import { webFetchTool, webSearchTool } from './tools/web';
+import { musicControlTool, musicNowTool, musicPlayTool } from './tools/spotify';
+import { announceTool } from './tools/speech';
 
 export { describeChatError, EMPTY_REPLY } from './errors';
 
@@ -65,7 +67,13 @@ export const chotaAgent = new ToolLoopAgent({
 	prepareCall: async ({ options, ...settings }) => ({
 		...settings,
 		instructions: await buildSystemPrompt(),
-		toolsContext: { save: { asker: options?.asker }, saved: { asker: options?.asker } },
+		toolsContext: {
+			save: { asker: options?.asker },
+			saved: { asker: options?.asker },
+			announce: { asker: options?.asker },
+			music_control: { asker: options?.asker },
+			music_play: { asker: options?.asker }
+		},
 		...(options?.sessionId
 			? { providerOptions: { gateway: { sessionId: options.sessionId } } }
 			: {})
@@ -73,7 +81,7 @@ export const chotaAgent = new ToolLoopAgent({
 	// A hard step cap, and the last step answers without tools (see ./loop.ts).
 	stopWhen: STOP_WHEN,
 	prepareStep: answerWhenDone,
-	toolsContext: { save: {}, saved: {} },
+	toolsContext: { save: {}, saved: {}, announce: {}, music_control: {}, music_play: {} },
 	tools: {
 		weather: weatherTool,
 		calendar: calendarTool,
@@ -90,6 +98,10 @@ export const chotaAgent = new ToolLoopAgent({
 		volleyball: volleyballTool,
 		save: saveTool,
 		saved: savedTool,
+		music_now: musicNowTool,
+		music_control: musicControlTool,
+		music_play: musicPlayTool,
+		announce: announceTool,
 		// AI Gateway's own web tools — work with any model (see tools/web.ts).
 		web_search: webSearchTool,
 		web_fetch: webFetchTool

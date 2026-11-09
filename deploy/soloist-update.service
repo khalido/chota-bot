@@ -1,0 +1,10 @@
+# Installs the latest Soloist build and restarts the speaker. Run by
+# soloist-update.timer; by hand: `systemctl --user start soloist-update`.
+[Unit]
+Description=Update Spotify Soloist
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/code/chota-bot/deploy/soloist-update.sh

@@ -1,6 +1,8 @@
 [install]
-# Skip any release under 2 days old: supply-chain worms ship as fresh releases.
-minimumReleaseAge = 172800
+# Off for now (KO, 8 Nov: on the bleeding edge, and @khalido/home is ours). To guard
+# against supply-chain worms in fresh releases again, restore the 2-day wait, and
+# exempt our own packages with minimumReleaseAgeExcludes = ["@khalido/home"].
+# minimumReleaseAge = 172800
 
 [run]
 # `bun run <script>` runs node-shebang CLIs (vite, vitest, drizzle-kit) on Bun too.

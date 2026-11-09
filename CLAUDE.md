@@ -28,7 +28,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 
 ## Stack
 
-- **Bun** — runtime and package manager (`bun.lock`; `bunfig.toml` skips releases under 2 days old). Switched from Node 28 Oct 2026 after tests, build, pages and USB prints passed on the X230
+- **Bun** — runtime and package manager (`bun.lock`; `bunfig.toml`'s 2-day release wait is off for now, 8 Nov). Switched from Node 28 Oct 2026 after tests, build, pages and USB prints passed on the X230
 - **SvelteKit** TS, Tailwind, adapter-node (its output runs on Bun) — UI + API in one process
 - **Drizzle + better-sqlite3** at `data/home.db`
 - **Better-auth** Google OAuth — powers the calendar tool AND the admin gate: `hooks.server.ts` is **deny-by-default** — `/admin` and every `/api/*` need a session whose email is in `chota.config.ts > adminEmails`, except the public `/api/auth`, `/api/health`, `/api/print`. New API routes are gated unless allow-listed. Sign-in at `/login`
@@ -110,6 +110,8 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot: chat + streaming + on-demand prints shipped (June 2026); voice still ahead.
 - [`docs/artifacts.md`](docs/artifacts.md) — idea: quick phone-friendly pages built from a chat ask, at `<word>.<domain>`. Not built.
 - [`docs/frame.md`](docs/frame.md) — photo frames: a A$75 Frameo frame opened with ADB, and a Pico 2 W e-ink panel that shows a PNG chota draws. Not built.
+- [`docs/spotify.md`](docs/spotify.md) — the box as a Spotify Connect speaker through Spotify Soloist; chota reads and controls it over Soloist's local WebSocket. Built, not yet on the Pi.
+- [`docs/audio.md`](docs/audio.md) — the box's sound: PipeWire + WirePlumber setup, the USB speaker, how chota will play sound.
 - [`docs/whatsapp.md`](docs/whatsapp.md) — WhatsApp: baileyrs as a linked device on a dedicated number, in the family group + 1-to-1. Channel built (`channels/whatsapp.ts`), tested from the Mac; on the box next.
 - [`docs/jaldi.md`](docs/jaldi.md) — working with jaldi (KO's Mac app) over Tailscale: saved content, an MCP endpoint, pings. Agreed, not built.
 - [`CHANGELOG.md`](CHANGELOG.md) — keepachangelog-style log of shipped changes; add an entry when you ship something notable.

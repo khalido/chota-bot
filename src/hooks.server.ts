@@ -9,6 +9,7 @@ import { bootJobs, stopJobs } from '$lib/server/scheduler';
 import { bootChannels, stopChannels } from '$lib/server/channels';
 import { configureLogging, shutdownLogging } from '$lib/server/log';
 import { runPreflight } from '$lib/server/preflight';
+import { bootMusic, stopMusic } from '$lib/server/tools/spotify';
 
 // Runs once at server startup (not during build) — env vars are available.
 export const init: ServerInit = async () => {
@@ -24,6 +25,9 @@ export const init: ServerInit = async () => {
 	// per token: see channels/telegram.ts.
 	await bootChannels();
 	await bootJobs();
+	// Spotify speaker (Soloist): connects in the background, retries forever,
+	// and an absent speaker is just "offline". No-op without `music` in config.
+	bootMusic();
 
 	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
 	// cron timers (croner's intervals outlive adapter-node's server.close()
@@ -34,6 +38,7 @@ export const init: ServerInit = async () => {
 	for (const signal of ['SIGTERM', 'SIGINT'] as const) {
 		process.once(signal, async () => {
 			await stopJobs();
+			stopMusic(); // its reconnect timer would otherwise keep the process up
 			await stopChannels();
 			await shutdownLogging();
 		});

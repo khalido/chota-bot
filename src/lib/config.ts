@@ -194,6 +194,39 @@ export interface ChotaConfig {
 		/** Numbers (E.164) that get alerts when WhatsApp carries them. */
 		notify?: string[];
 	};
+	/** Spotify through the Soloist speaker on the box (docs/spotify.md).
+	 *  Omit to leave music off. */
+	music?: {
+		/** Label for the speaker when Soloist hasn't said its name; keep it the
+		 *  same as the `-n` name in deploy/soloist.service. */
+		deviceName?: string;
+		/** Volume ceiling 0–100: requested volumes are held to it, and the first
+		 *  play after idle is lowered to it (Soloist starts at 100%). */
+		maxVolume: number;
+		/** Friendly name → Spotify link or `spotify:` URI, for "play friday". */
+		favourites: Record<string, string>;
+	};
+	/** Speaking on the box's speaker (`$lib/server/speech.ts`, docs/audio.md).
+	 *  Omit to keep chota silent. */
+	speech?: {
+		/** AI Gateway speech model, e.g. 'google/gemini-3.8-flash-tts'. */
+		model: string;
+		/** The model's voice name or id; omit for the model's default. */
+		voice?: string;
+		/** How chota sounds, passed to models that take directions; each
+		 *  announcement can add its own mood. */
+		style?: string;
+		/** 0–1, PipeWire's per-stream volume. The output and the speaker's knob
+		 *  stay at full; this is chota's level. KO, 8 Nov: 0.5–0.6. */
+		volume: number;
+		/** Sydney "HH:MM" span when chota doesn't speak, e.g. 21:00–07:00. */
+		quietHours?: { from: string; to: string };
+		/** The most `announce` calls in an hour (the agent tool, not jobs). */
+		perHour?: number;
+		/** Family names who may ask chota to announce something; omit for anyone
+		 *  in the family. */
+		announcers?: string[];
+	};
 	/** Telegram bot wiring. Token + username live in `.env` (the token's a
 	 *  secret); chat IDs live here because they're per-family and typed. */
 	telegram?: {
