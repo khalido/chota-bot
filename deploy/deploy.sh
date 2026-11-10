@@ -171,14 +171,15 @@ if echo "$CHANGED" | grep -qE '^(drizzle/|src/lib/server/db/.*\.schema\.ts$|src/
 		# destructive change would need that local confirmation before it ships.
 		echo "drizzle schema changed → drizzle-kit push --force"
 		PUSH_LOG=$(mktemp)
-		# `|| …`: under pipefail a non-zero exit would end the script here, before
-		# the message below; record it in the log instead and let the check decide.
-		bunx drizzle-kit push --force 2>&1 | tee "$PUSH_LOG" \
-			|| echo "Error: drizzle-kit push exited non-zero" | tee -a "$PUSH_LOG"
+		PUSH_FAILED=0
+		# `||`: under pipefail a non-zero exit would end the script here, before
+		# the message below.
+		bunx drizzle-kit push --force 2>&1 | tee "$PUSH_LOG" || PUSH_FAILED=1
 		# push can print an error and still exit 0 (a change it wants to ask about
 		# has no TTY to ask on), so read what it said. It always re-creates the
 		# partial index chat_session_open_key, so "Changes applied" is normal.
-		if grep -q '^Error' "$PUSH_LOG" || ! grep -qE 'Changes applied|No changes detected' "$PUSH_LOG"; then
+		if [ "$PUSH_FAILED" -eq 1 ] || grep -q '^Error' "$PUSH_LOG" \
+				|| ! grep -qE 'Changes applied|No changes detected' "$PUSH_LOG"; then
 			rm -f "$PUSH_LOG"
 			echo "✗ drizzle-kit push did not finish. chota was NOT restarted." >&2
 			if [ "$SWAP" -eq 1 ]; then
@@ -197,8 +198,14 @@ fi
 # Swap and restart back to back: once build/ moves, the old process can no
 # longer load a route it hasn't loaded yet.
 if [ "$SWAP" -eq 1 ]; then
-	rm -rf build.prev
-	[ -d build ] && mv build build.prev
+	if [ -f build/.unhealthy ]; then
+		# The build in place failed its check last time and wasn't put back (a
+		# schema change). build.prev is still the last good one: keep it.
+		rm -rf build
+	else
+		rm -rf build.prev
+		[ -d build ] && mv build build.prev
+	fi
 	mv build.next build
 fi
 echo "Restarting chota.service…"
@@ -206,31 +213,33 @@ sudo systemctl restart chota
 
 # Verify the whole boot path landed:
 #   1. systemd active — process is up
-#   2. HTTP 200 on / — adapter-node bound the port and is serving
-#   3. /api/health reports this commit — it's this build, not the old one
+#   2. /api/health answers — adapter-node bound the port and is serving
+#   3. it reports this commit — it's this build, not the old one
 #   4. journal shows the job-boot banner — every cron job got registered (soft)
 # Boot takes ~2s + ~3s warm-up on first request, so poll up to 15s.
-WANT=$(git rev-parse --short HEAD)
+# /api/health, not /: the dashboard's load waits on weather, calendar, lists
+# and buses, and a slow one of those must not fail a good build.
+HEALTH='http://localhost:8000/api/health?format=json'
+# healthy <short sha>: active, answering, and built from that commit.
 healthy() {
-	local i running
-	for i in $(seq 1 15); do
-		if systemctl is-active --quiet chota && curl -fsS -o /dev/null -m 2 http://localhost:8000/; then
-			echo "✓ HTTP 200 after ${i}s"
-			running=$(curl -fsS -m 5 'http://localhost:8000/api/health?format=json' || true)
-			if echo "$running" | grep -q "\"version\":\"$WANT\""; then
-				echo "✓ running $WANT"
+	local want="$1" i running
+	for i in $(seq 1 20); do
+		if systemctl is-active --quiet chota && running=$(curl -fsS -m 3 "$HEALTH" 2>/dev/null); then
+			echo "✓ answering after ${i}s"
+			if echo "$running" | grep -q "\"version\":\"$want\""; then
+				echo "✓ running $want"
 				return 0
 			fi
-			echo "✗ chota answers, but its version isn't $WANT: $(echo "$running" | head -c 200)" >&2
+			echo "✗ chota answers, but its version isn't $want: $(echo "$running" | head -c 200)" >&2
 			return 1
 		fi
 		sleep 1
 	done
-	echo "✗ chota didn't answer on :8000 within 15s (journalctl -u chota -n 30 --no-pager)" >&2
+	echo "✗ chota didn't answer on :8000 within 20s (journalctl -u chota -n 30 --no-pager)" >&2
 	return 1
 }
 
-if ! healthy; then
+if ! healthy "$(git rev-parse --short HEAD)"; then
 	# Put the previous build back when that is safe: it was moved aside by this
 	# run, and the database is as that build knows it.
 	if [ "$SWAP" -eq 1 ] && [ -d build.prev ] && [ "$SCHEMA_PUSHED" -eq 0 ]; then
@@ -239,7 +248,17 @@ if ! healthy; then
 		mv build.prev build
 		sudo systemctl restart chota
 		echo "↩ Put the previous build back and restarted. The failed one is in build.failed/." >&2
+		if echo "$CHANGED" | grep -q '^bun\.lock$'; then
+			echo "⚠ bun.lock changed in this run, so the previous build is running on the NEW node_modules." >&2
+			echo "  If it misbehaves: git checkout $DEPLOYED_SHA -- bun.lock && bun install --frozen-lockfile, then restart." >&2
+		fi
+		if healthy "$(git rev-parse --short "$DEPLOYED_SHA" 2>/dev/null || echo unknown)"; then
+			echo "  The previous build is up." >&2
+		else
+			echo "✗ The previous build did NOT come back up either. The bot is down: look at the journal now." >&2
+		fi
 	elif [ "$SCHEMA_PUSHED" -eq 1 ]; then
+		touch build/.unhealthy 2>/dev/null || true
 		echo "  The schema was changed in this run, so the previous build (build.prev/) was NOT put back:" >&2
 		echo "  it may not work on the new schema. Fix forward, or restore the snapshot in $BACKUPS/ and" >&2
 		echo "  then: mv build build.failed && mv build.prev build && sudo systemctl restart chota" >&2
