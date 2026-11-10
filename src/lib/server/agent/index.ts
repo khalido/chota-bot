@@ -20,7 +20,7 @@
  */
 import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
 import { event } from '#lib/server/log.ts';
-import { answerWhenDone, STOP_WHEN } from './loop';
+import { answerWhenDone, QUIET_TOOLS, STOP_WHEN, TURN_TIMEOUT } from './loop';
 import { buildSystemPrompt } from './prompts';
 import { turnStats } from './turns';
 import { weatherTool } from './tools/weather';
@@ -39,7 +39,7 @@ import { webFetchTool, webSearchTool } from './tools/web';
 import { musicControlTool, musicNowTool, musicPlayTool } from './tools/spotify';
 import { announceTool } from './tools/speech';
 
-export { describeChatError, EMPTY_REPLY } from './errors';
+export { changedSomething, describeChatError, EMPTY_REPLY, failureMessage } from './errors';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
@@ -74,10 +74,13 @@ export const chotaAgent = new ToolLoopAgent({
 			music_control: { asker: options?.asker },
 			music_play: { asker: options?.asker }
 		},
+		// A quiet turn gets the list tools only (see QUIET_TOOLS).
+		...(options?.asker?.quiet ? { activeTools: [...QUIET_TOOLS] } : {}),
 		...(options?.sessionId
 			? { providerOptions: { gateway: { sessionId: options.sessionId } } }
 			: {})
 	}),
+	timeout: TURN_TIMEOUT,
 	// A hard step cap, and the last step answers without tools (see ./loop.ts).
 	stopWhen: STOP_WHEN,
 	prepareStep: answerWhenDone,

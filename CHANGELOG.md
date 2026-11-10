@@ -15,6 +15,9 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 - **Tomorrow's weather:** the forecast now covers the full 48 hours. Google sends 24 hours a page and only the first page was read, so a morning brief judged tomorrow on its first few hours.
 - **A stuck printer no longer blocks later prints:** every USB transfer has a time limit, so a printer that stops taking data fails that print instead of holding the printer for good.
 - **Deploys:** a config-only change now rebuilds; the new build is made beside the running one and swapped in at the restart, and the old one is put back if the new one doesn't start; the database is snapshotted before any schema change and a failed schema push stops the deploy before the restart; a run that failed part-way redoes its steps when run again; `bun run deploy <sha>` rolls back; the deploy checks the box is running the commit it built.
+- **A failed reply says what it had already done.** If chota added to a list or started music before something went wrong, it says so and no longer tells you to ask again.
+- **A stuck reply ends after 4 minutes** and no longer blocks that chat.
+- **Untagged group messages can only touch the lists.** chota no longer has web, music, saving or speaking available on a message nobody addressed to it.
 - **Admin sign-in works on every name the box answers to** under SvelteKit 3 (it returned 404 on all but one).
 - **A broken brief page is no longer printed.** The screenshot checks it captured the brief; if not, the plain sheet prints and an alert says so. An alert whose send failed is sent again.
 - **Friday's weekend sheet shows the calendar as it is at 18:00,** not as it was at 06:45: the calendar is cached for 20 minutes, not all day.

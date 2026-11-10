@@ -34,7 +34,7 @@ Read CLAUDE.md first, then this. The whole bot on one page: the private [Chota M
 2. A nightly database backup off the SD card.
 3. A week of real family use before any new agent machinery.
 4. A dozen example chats, run against the real model by hand at first: the common asks, two private-data cases (a DM save asked for in the group; a kid asking about a parent's item), one prompt-injection in a forwarded page, one "do it twice" case. Every later prompt, model or tool change is checked against them.
-5. The interface fixes above: tools per turn, a time limit, one result shape, the honest failure message.
+5. ~~Tools per turn, a time limit, the honest failure message~~ (done 10 Nov, group 9). Still open: one result shape for every tool, and an add that can't duplicate.
 6. Bot-first messages and reminders.
 7. Memory as files, then the rest of the Agent design section, only where the week of use and the example chats show a need.
 
@@ -61,6 +61,8 @@ The full review is in `docs/private/review-2026-11-10.html` (gitignored on purpo
 7. **House speaker on `@khalido/home`** [`tools/music.ts`, `tools/music.test.ts`, `agent/tools/spotify.ts` and its test, `speech.ts`, `speech.test.ts`, `hooks.server.ts`, `routes/api/health/+server.ts`, `tools/CLAUDE.md`, `docs/spotify.md`; `tools/spotify.ts` and its test are deleted]. chota's own Soloist client is replaced by the library's connector behind a thin wrapper. The wrapper's own rule: music playing on another device is left alone (`nowPlaying().here`). `play(link)` moves it to the box, and so does `resume` when nothing is playing anywhere: live, it took KO's session that was paused on the Front room speaker and played it on the box. **KO to say whether `resume` should do that.** `music.ts` was copied to the Pi and drove the real speaker: gate refusals, play, the cap (90 held to 60), skip, duck, interrupt, pause. The checks that stop `duck` and `interrupt` touching music on another device were added after that run and are tested on a fake socket only. **Not proven:** the app's own wiring (boot hook, agent tools) on a real speaker, because `chota.config.ts` has no `music` block; adding one is KO's edit. KO's announcement rule is built for the box speaker [`speech.ts`, `agent/tools/speech.ts`, their tests, `lib/config.ts` (`speech.duckTo`)]: a regular announcement is spoken over the music turned down to `speech.duckTo` (default 20), an `important` one pauses it, and anyone in `announcers` may mark one important (my default; KO hasn't confirmed). Tested on mocks; the lowering itself was proven on the real speaker through `music.ts`. The Cast half (free speakers only for a regular one) waits for `castFree` in home 0.1.3 and for `ffmpeg` on the Pi.
 8. **Tools** (bugs 10, 11, 13, 21) [`tools/ticktick.ts` and its test, `tools/calendar.ts`, `cache.ts`]. TickTick retries reads only, re-tries a failed session setup, and its refresh keeps the stale copy but fails the job when it had to use it. That last part is two module-wide flags with no test; the second review would rather the three TickTick caches moved onto `withTtl`, which does this per key. Not done. The calendar is on `withTtl` (20 min fresh, 6 h last-good, keyed by Sydney date), with a 15 s limit on the Google call, and its refresh fails the job on a stale result. `withTtl` now reports `stale` from the value's age as well as lru-cache's flag, because a refresh that joined a failing fetch came back looking fresh. Cache errors carry their cause.
 
+9. **Agent interface** (review C1, C2 and the turn time limit) [`agent/loop.ts`, `agent/index.ts`, `agent/errors.ts`, `channels/index.ts`, `channels/reactions.ts`, tests]. A quiet turn gets the list tools only (`QUIET_TOOLS`, set per call with `activeTools`; a real model run confirmed it sees `ticktick_add` and not `web_search` or `music_play`). A turn is limited to 4 minutes, 60 s for the model to start and 60 s of silence (`TURN_TIMEOUT`); there is no per-tool limit because chota's tools don't read the SDK's abort signal. When a turn fails after a write tool changed something, the reply says what was done and not "Ask again" (`failureMessage`, `changedSomething`; writes are noted as each tool finishes, since a step cut off by the time limit never reaches the stored steps). Not done from that review pass: `deploy/chota.service` has no `TimeoutStopSec`, so systemd's 90 s stop limit ends a draining turn before the 4 minutes does; no test covers the failure path in `runTurn`.
+
 **Alerts go to** `alerts.channel`, else `channels.default`. The Mac's `chota.config.ts` (which `push.sh` copies to the Pi) says `default: 'telegram', fallback: 'whatsapp'`. KO said WhatsApp is the default; that line is his to change.
 
 **Telegram groups (bug 20):** the config allows one chat and no groups, and no family member has a `telegram` id, so there is no exposure today and a sender check would silence any future group. Add the ids first.
@@ -71,7 +73,7 @@ The full review is in `docs/private/review-2026-11-10.html` (gitignored on purpo
 
 - Branch `sveltekit-3` holds the Kit 3 migration, the package updates and every fix above, with `origin/main` merged in. Left out of the commit on purpose: `docs/page-watch.md` (a draft for another repo) and `docs/chota-overview.html` (source of a private artifact; committing publishes it, KO's call).
 - The Pi runs `origin/main` on SvelteKit 2 (`curl chota/api/health` shows the commit).
-- Baseline on `sveltekit-3` (10 Nov): 331 tests pass, `bun run check` has 0 errors, `bun run lint` passes, and a rebuilt local boot serves pages with no errors in its log.
+- Baseline on `sveltekit-3` (10 Nov): 351 tests pass, `bun run check` has 0 errors, `bun run lint` passes, and a rebuilt local boot serves pages with no errors in its log.
 - Not reviewed by a second reader: the fixes made after `/ko-review` (calendar on `withTtl`, which has no test; the TickTick stale flag; the `duck`/`interrupt` checks).
 - This handover is far over its size guide (setup item S5 in the review). Cut it when the fixes are committed.
 - On the Mac: every `agent-browser screenshot` fails (see group 4), and the dev database has an open `print:screenshot` alert from that. A copy of the Pi's database from 10 Nov is in `~/chota-backups/`.
@@ -158,7 +160,7 @@ The Pi 5 is the main box and all further work targets it.
 
 Proposed order (7 Nov; KO to pick). Backup is deferred for now (KO): a few days of lost data is fine while developing.
 
-- **Quick fixes:** a turn time limit with the SDK's `timeout`, a duplicate guard in `ticktick_add`, delete the one-off block in `deploy.sh`, add `telegram` ids to the config.
+- **Quick fixes:** a duplicate guard in `ticktick_add`, add `telegram` ids to the config. (Done 10 Nov: the turn time limit, and the one-off block in `deploy.sh` is gone.)
 - **Home folder and memory:** soul, `memory.md`, person files, write tools, then dreaming (`memory.md`).
 - **Bot messages first, and reminders:** `user_jobs`, `dispatch-user-jobs.ts` and a per-person default channel; `next.md` calls this the biggest gap against yaad.
 - **Shared content store:** the plan under Agent design.

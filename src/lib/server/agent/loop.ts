@@ -18,6 +18,32 @@ export const MAX_STEPS = 20;
 
 export const STOP_WHEN = isStepCount(MAX_STEPS);
 
+/**
+ * The tools of a quiet turn: an untagged group message (or photo) the triage
+ * passed on, which nobody asked chota about. It may read the lists, the
+ * calendar and the school dates, and add to or tick off a list. Nothing else:
+ * no web, no saving, no music, no speaking. Set per call in `prepareCall`, so a
+ * new tool is off for quiet turns unless it is added here. The write tools
+ * also still refuse a quiet asker themselves, as a second guard.
+ */
+export const QUIET_TOOLS = [
+	'ticktick',
+	'ticktick_add',
+	'ticktick_done',
+	'calendar',
+	'school_dates'
+] as const;
+
+/**
+ * How long a turn may take. Without a limit one hung model stream or tool
+ * blocked that chat's queue for good, and made a deploy's shutdown wait.
+ * `firstChunkMs` is how long the model may take to start answering, `chunkMs`
+ * the longest silence once it has. No per-tool limit: the SDK enforces one only
+ * through the abort signal it hands a tool, and chota's tools don't read it, so
+ * a hung tool is ended by `totalMs` (and keeps running in the background).
+ */
+export const TURN_TIMEOUT = { totalMs: 4 * 60_000, firstChunkMs: 60_000, chunkMs: 60_000 };
+
 /** Said to the model on the step where its tools are taken away. */
 export const ANSWER_NOW =
 	'NO MORE TOOLS: the lookups for this question are over. Write the answer now from the tool ' +

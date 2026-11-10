@@ -5,6 +5,7 @@
  * Telegram's live thinking line. WhatsApp accepts any emoji; Telegram only
  * its default set, so a Telegram user would need yaad's _TG_REACTION_MAP.
  */
+import { WRITE_DONE } from '#lib/server/agent/errors.ts';
 export const THINKING = '🤔';
 export const FAILED = '💔';
 const DEFAULT = '⚙️';
@@ -36,10 +37,4 @@ const TOOL_EMOJI: Record<string, string> = {
 export const toolEmoji = (tool: string) => TOOL_EMOJI[tool] ?? DEFAULT;
 
 /** Tools that change something — the only ones a quiet turn shows. */
-export const WRITE_TOOLS = new Set([
-	'ticktick_add',
-	'ticktick_done',
-	'music_control',
-	'music_play',
-	'announce'
-]);
+export const WRITE_TOOLS = new Set(Object.keys(WRITE_DONE));

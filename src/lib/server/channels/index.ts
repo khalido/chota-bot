@@ -6,7 +6,9 @@
  * Design: docs/agent.md §Channels.
  */
 import {
+	changedSomething,
 	describeChatError,
+	failureMessage,
 	EMPTY_REPLY,
 	finalText,
 	runAgentStream
@@ -249,6 +251,8 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 	const stopTyping = channel.typing(m);
 	const turnId = newTurnId();
 	const steps: StepLike[] = [];
+	/** Write tools that changed something, noted as each one finishes. */
+	const wrote: string[] = [];
 	let sessionId: string | undefined;
 	try {
 		// Record the user message(s), load the recent window, stream the reply,
@@ -300,7 +304,18 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 			quiet: !!m.triage
 		};
 		const result = await runAgentStream(
-			{ messages, options: { asker, sessionId }, onStepEnd: (step) => void steps.push(step) },
+			{
+				messages,
+				options: { asker, sessionId },
+				onStepEnd: (step) => void steps.push(step),
+				onToolExecutionEnd: ({ toolCall, toolOutput }) => {
+					if (
+						toolOutput.type === 'tool-result' &&
+						changedSomething(toolCall.toolName, toolOutput.output)
+					)
+						wrote.push(toolCall.toolName);
+				}
+			},
 			(r) => channel.reply(m, r)
 		);
 		const reply = await finalText(result);
@@ -323,7 +338,10 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 			logErr(SCOPE, `couldn't keep the failed run (${m.threadId})`, e);
 		}
 		// A quiet (triaged) turn fails silently — nobody asked.
-		if (!m.triage) await channel.send(m.threadId, { markdown: failure.message }).catch(() => {});
+		if (!m.triage) {
+			// Say what had already been done, so "ask again" doesn't do it twice.
+			await channel.send(m.threadId, { markdown: failureMessage(failure, wrote) }).catch(() => {});
+		}
 	} finally {
 		stopTyping();
 	}

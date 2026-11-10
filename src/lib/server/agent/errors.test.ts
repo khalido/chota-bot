@@ -6,7 +6,7 @@ import {
 	NoSuchToolError,
 	RetryError
 } from 'ai';
-import { describeChatError } from './errors';
+import { describeChatError, changedSomething, failureMessage, WRITE_DONE } from './errors';
 
 const apiError = (statusCode: number, isRetryable: boolean) =>
 	new APICallError({
@@ -70,5 +70,74 @@ describe('describeChatError', () => {
 		const f = describeChatError(empty);
 		expect(f.kind).toBe('provider-402');
 		expect(f.detail).toContain('gateway said no');
+	});
+});
+
+describe('a turn that ran out of time', () => {
+	it('is its own kind, and says so', () => {
+		const err = new Error('The operation timed out');
+		err.name = 'TimeoutError';
+		expect(describeChatError(err)).toMatchObject({
+			kind: 'timeout',
+			message: expect.stringMatching(/took too long/)
+		});
+	});
+});
+
+describe('failureMessage', () => {
+	const busy = describeChatError(Object.assign(new Error('x'), { statusCode: 503 }));
+
+	it('is the plain message when nothing had been done', () => {
+		expect(failureMessage(busy, [])).toBe(busy.message);
+		expect(failureMessage(busy, ['weather', 'calendar'])).toBe(busy.message);
+	});
+
+	it('says what was already done instead of "ask again"', () => {
+		const said = failureMessage(busy, ['weather', 'ticktick_add', 'ticktick_add']);
+		expect(said).toBe(
+			'The AI service is busy or down (503). Before that I had already added to a list, so check before asking again.'
+		);
+		expect(said).not.toMatch(/Ask again/);
+	});
+
+	it('names each kind of change once', () => {
+		expect(failureMessage(busy, ['music_play', 'announce'])).toMatch(
+			/already started music and made an announcement,/
+		);
+	});
+});
+
+describe('WRITE_DONE', () => {
+	it('covers every tool the agent has that changes something', async () => {
+		// A new write tool must be added here, or a failed turn tells the person to
+		// ask again after it ran, and a quiet turn would not show its reaction.
+		expect(Object.keys(WRITE_DONE).sort()).toEqual(
+			['announce', 'music_control', 'music_play', 'save', 'ticktick_add', 'ticktick_done'].sort()
+		);
+	});
+});
+
+describe('changedSomething', () => {
+	it.each([
+		['ticktick_add', { added: 'milk', list: 'Shopping' }],
+		['ticktick_done', { done: ['milk'] }],
+		['music_play', { ok: true, playing: 'jazz' }],
+		['music_control', { ok: true }],
+		['announce', { said: true, text: 'dinner' }],
+		['save', { saved: 12, title: 'A page' }]
+	])('%s that worked counts', (tool, output) => {
+		expect(changedSomething(tool, output)).toBe(true);
+	});
+
+	it.each([
+		['ticktick_add', { error: "couldn't add to Shopping: timeout" }],
+		['ticktick_done', { done: [] }],
+		['music_play', { show: 'A Pod', episodes: [], next: 'Ask which one' }],
+		['music_control', { error: 'the house speaker is offline' }],
+		['announce', { said: false, reason: "it's quiet hours" }],
+		['weather', { tempC: 20 }],
+		['ticktick_add', 'added']
+	])('%s that failed, asked back or only read does not', (tool, output) => {
+		expect(changedSomething(tool, output)).toBe(false);
 	});
 });

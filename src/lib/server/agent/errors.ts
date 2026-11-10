@@ -42,9 +42,66 @@ function statusOf(e: unknown): number | undefined {
 	return typeof s === 'number' ? s : undefined;
 }
 
+/**
+ * The tools that change something, with what each did in the family's words.
+ * The one list of "write tools": the quiet-turn reactions use its keys.
+ */
+export const WRITE_DONE: Record<string, string> = {
+	ticktick_add: 'added to a list',
+	ticktick_done: 'ticked something off a list',
+	music_play: 'started music',
+	music_control: 'changed the music',
+	announce: 'made an announcement',
+	save: 'saved something'
+};
+
+/**
+ * Did this tool call change something? The write tools report a failure as a
+ * result, not a throw (`{ error }`, `{ said: false }`), and some results are a
+ * question back (`music_play` listing episodes to choose from), so the name
+ * alone isn't enough.
+ */
+export function changedSomething(tool: string, output: unknown): boolean {
+	if (!(tool in WRITE_DONE) || typeof output !== 'object' || output === null) return false;
+	const o = output as Record<string, unknown>;
+	if ('error' in o || o.said === false) return false;
+	if (tool === 'music_play' || tool === 'music_control') return o.ok === true;
+	if (tool === 'ticktick_done') return Array.isArray(o.done) && o.done.length > 0;
+	if (tool === 'ticktick_add') return typeof o.added === 'string';
+	if (tool === 'announce') return o.said === true;
+	if (tool === 'save') return o.saved !== undefined;
+	return false;
+}
+
+/**
+ * What to tell the person when a turn failed after some of it had worked.
+ * "Ask again" is wrong then: asking again adds the milk twice. `done` is the
+ * names of the write tools that changed something before the failure
+ * (`changedSomething`), gathered as each tool finishes: a step cut off by the
+ * time limit never reaches the stored steps.
+ */
+export function failureMessage(failure: ChatFailure, done: readonly string[]): string {
+	const did = [...new Set(done.map((name) => WRITE_DONE[name]).filter(Boolean))];
+	if (did.length === 0) return failure.message;
+	const first = failure.message.replace(
+		/\s*(Ask again[^.]*|Try asking it a different way)\.\s*$/,
+		''
+	);
+	return `${first} Before that I had already ${did.join(' and ')}, so check before asking again.`;
+}
+
 export function describeChatError(outer: unknown): ChatFailure {
 	const error = rootOf(outer);
 	const detail = error === outer ? textOf(outer) : `${textOf(outer)} <- ${textOf(error)}`;
+
+	// The turn's own time limit (TURN_TIMEOUT), or a tool's.
+	if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+		return {
+			kind: 'timeout',
+			detail,
+			message: 'That took too long, so I stopped. Ask again, maybe for less at once.'
+		};
+	}
 
 	// The provider or the gateway.
 	const status = statusOf(error);

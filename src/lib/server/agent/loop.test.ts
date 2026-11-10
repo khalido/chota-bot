@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ANSWER_NOW, MAX_STEPS, answerWhenDone, lookupsAsText } from './loop';
+import {
+	ANSWER_NOW,
+	MAX_STEPS,
+	answerWhenDone,
+	lookupsAsText,
+	QUIET_TOOLS,
+	TURN_TIMEOUT
+} from './loop';
 
 describe('answerWhenDone', () => {
 	it('leaves every step but the last alone', () => {
@@ -47,5 +54,20 @@ describe('lookupsAsText', () => {
 			{ role: 'assistant', content: 'Checking.' },
 			{ role: 'user', content: 'Lookup bus {"who":"Kid1"} returned: {"next":"7:42"}' }
 		]);
+	});
+});
+
+describe('QUIET_TOOLS', () => {
+	it('lets a quiet turn read and edit lists, and nothing that reaches outside or makes noise', () => {
+		expect([...QUIET_TOOLS].sort()).toEqual(
+			['calendar', 'school_dates', 'ticktick', 'ticktick_add', 'ticktick_done'].sort()
+		);
+	});
+});
+
+describe('TURN_TIMEOUT', () => {
+	it('bounds the whole turn, and a model that never starts or goes silent sooner', () => {
+		expect(TURN_TIMEOUT.totalMs).toBeGreaterThan(TURN_TIMEOUT.firstChunkMs);
+		expect(TURN_TIMEOUT.totalMs).toBeGreaterThan(TURN_TIMEOUT.chunkMs);
 	});
 });
