@@ -4,7 +4,7 @@
 # Reaching the box needs Tailscale, which has TWO independent gates — so we
 # check them separately and print a clear, actionable message for each:
 #   1. Is this Mac on the tailnet at all?  (`tailscale status`) — if it's
-#      stopped/logged out, no `pop-os` hostname resolves. Fix: `tailscale up`.
+#      stopped/logged out, no `chota` hostname resolves. Fix: `tailscale up`.
 #   2. Is Tailscale *SSH* still authenticated?  This is a periodic re-auth
 #      check that expires faster than the tunnel; when due, ssh prints
 #      "To authenticate, visit <URL>". We open it and wait a short window,
@@ -80,10 +80,31 @@ ensure_ssh() {
 	return 1
 }
 
+# `bun run deploy <sha>` pins the box to that commit (a rollback).
+TARGET="${1:-}"
+if [ -n "$TARGET" ] && ! [[ "$TARGET" =~ ^[0-9a-f]{7,40}$ ]]; then
+	echo "✗ '$TARGET' isn't a commit sha. Usage: bun run deploy [<sha>]" >&2
+	exit 1
+fi
+
 check_tailnet
 ensure_ssh
+
+# deploy.sh pulls origin/main on the box. Say so when that isn't what's checked
+# out here, so "deployed" is never read as "my working copy is live".
+if [ -z "$TARGET" ]; then
+	git fetch --quiet origin main || echo "⚠ couldn't fetch origin/main; comparing against the last fetch" >&2
+	REMOTE=$(git rev-parse --short origin/main)
+	LOCAL=$(git rev-parse --short HEAD)
+	DIRTY=""
+	[ -n "$(git status --porcelain --untracked-files=no)" ] && DIRTY=" with uncommitted changes"
+	if [ "$LOCAL" != "$REMOTE" ] || [ -n "$DIRTY" ]; then
+		echo "⚠ Deploying origin/main ($REMOTE). This checkout is $(git branch --show-current) at $LOCAL$DIRTY;"
+		echo "  none of that ships until it is pushed to main. chota.config.ts does ship."
+	fi
+fi
 
 echo "Syncing chota.config.ts → ${HOST}..."
 scp -q chota.config.ts "$HOST":~/code/chota-bot/chota.config.ts
 
-ssh "$HOST" 'cd ~/code/chota-bot && bash deploy/deploy.sh'
+ssh "$HOST" "cd ~/code/chota-bot && bash deploy/deploy.sh $TARGET"
