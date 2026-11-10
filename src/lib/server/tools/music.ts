@@ -17,7 +17,7 @@
  * No env, config or logging in here (the boot hook passes the URL and the
  * cap), so a script can drive a real Soloist with it. See docs/spotify.md.
  */
-import { ConnectorError, createHome } from '@khalido/home';
+import { ConnectorError, createHome, type ConnectorCode } from '@khalido/home';
 import {
 	positionMs,
 	speakerState,
@@ -77,16 +77,20 @@ const NOTHING_HERE = 'nothing is playing on the house speaker';
 function reword(err: unknown): Error {
 	if (err instanceof MusicError) return err;
 	if (!(err instanceof ConnectorError)) return err instanceof Error ? err : new Error(String(err));
-	const say: Record<string, string> = {
+	const refused = `the house speaker refused: ${err.message}`;
+	// Every code the library sets: a new one fails to compile here.
+	const say: Record<ConnectorCode, string> = {
 		offline: 'the house speaker is offline',
 		waiting: 'nobody is signed in to Spotify on the house speaker',
 		inactive: NOTHING_HERE,
 		timeout: "the house speaker didn't answer",
-		invalid: err.message
+		invalid: err.message,
+		refused,
+		// Hue's and the printers' codes; the Spotify connector never sets them.
+		link_button: refused,
+		ipp: refused
 	};
-	return new MusicError(say[err.code ?? ''] ?? `the house speaker refused: ${err.message}`, {
-		cause: err
-	});
+	return new MusicError(err.code ? say[err.code] : refused, { cause: err });
 }
 
 export function createMusic(opts: MusicOptions = {}) {
