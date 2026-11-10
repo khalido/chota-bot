@@ -48,7 +48,17 @@ The full review is in `docs/private/review-2026-11-10.html` (gitignored on purpo
 
 **Shipped: the Telegram allowlist (bug 1).** Live on the Pi since 10 Nov. Not checked from outside: KO can send `/starter hi` to the bot from a Telegram account that is not on the list; it should answer "Not authorised yet".
 
-**Kit 3 goes to the Pi only with KO at the printer.** It needs `PROTOCOL_HEADER=x-forwarded-proto` in the Pi's `.env` first, a test print after (the print path was reworked and has not printed), and KO's choice of sign-in origin. Merge `sveltekit-3` into `main`, then `bun run deploy`. That deploy is the first to use the build swap for real, and `bun.lock` changes in it.
+**Next: Kit 3 to the Pi, 11 Nov, with KO at the printer** (KO, 10 Nov: he has to do the Google sign-in himself, so it waits for him). In order:
+
+1. KO picks the sign-in origin: `http://localhost:8000` through an SSH tunnel to Caddy's port 80 (`ssh -L 8000:localhost:80 chota`; the redirect already registered with Google), or an https tailnet name through Tailscale Serve (a new redirect in the Google console, and `ORIGIN` changed on the Pi).
+2. Add `PROTOCOL_HEADER=x-forwarded-proto` to the Pi's `.env` (a Pi write: KO's OK at the time).
+3. Pull a fresh database copy to `~/chota-backups/`.
+4. Merge `sveltekit-3` into `main`, push, `bun run deploy`. Watch it: this is the first real run of the build swap, and `bun.lock` changes. Schema files are unchanged since the Pi's commit unless `git diff origin/main sveltekit-3 -- src/lib/server/db` says otherwise; check before deploying.
+5. Check `/api/health` shows the new commit, Telegram is polling and WhatsApp reconnected.
+6. A test print from `/admin/print`, then one brief, with KO at the printer. The print path was reworked and has not printed.
+7. KO signs in with Google and opens `/admin`.
+8. Within 15 minutes `printer-check` should have run (`/admin/jobs`). Open the printer cover for one tick to see the alert arrive, then close it for two ticks to see "working again".
+9. Then add the `music` block to `chota.config.ts` and ask the bot what's playing.
 
 **Fixed, by group** (files in brackets). Most of these files also carry Kit 3 migration changes, so the groups can't be committed apart without splitting hunks; only `deploy/deploy.sh`, `deploy/push.sh`, `.gitignore` and the new files separate cleanly. Plan on one "Kit 3 plus fixes" commit unless KO wants them pulled apart. Only the Telegram fix is ported to `main`; `deploy.sh` is not.
 
