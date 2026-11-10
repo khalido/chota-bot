@@ -15,9 +15,9 @@
 import { describe, it, expect } from 'vitest';
 import { recipientToSections, sectionsToText } from './sections';
 import type { BriefData } from './brief';
-import type { CalendarEvent } from '$lib/server/tools/calendar';
-import type { FamilyMember } from '$lib/config';
-import type { SchedulePeriod } from '$lib/server/tools/sentral';
+import type { CalendarEvent } from '#lib/server/tools/calendar.ts';
+import type { FamilyMember } from '#lib/config.ts';
+import type { SchedulePeriod } from '#lib/server/tools/sentral.ts';
 
 const FAMILY: FamilyMember[] = [
 	{ name: 'Parent1', role: 'parent', aliases: ['Parent1', 'P1'] },

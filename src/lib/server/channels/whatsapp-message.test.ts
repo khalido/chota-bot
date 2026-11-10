@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mediaOf, toIncoming, type WaMessage } from './whatsapp-message';
-import type { FamilyMember } from '$lib/config';
+import type { FamilyMember } from '#lib/config.ts';
 
 const bot = { phone: '61400000000', lid: '111111111111111' };
 const family: FamilyMember[] = [

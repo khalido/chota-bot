@@ -20,10 +20,10 @@
  * data; print formatting lives in print/sections.ts.
  */
 import * as cheerio from 'cheerio';
-import type { Kid } from '$lib/config';
-import { getConfig } from '$lib/server/config';
-import { log, logErr } from '$lib/server/log';
-import { sydneyDayOfWeek, sydneyYMD, ymdAddDays } from '$lib/time';
+import type { Kid } from '#lib/config.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { log, logErr } from '#lib/server/log.ts';
+import { sydneyDayOfWeek, sydneyYMD, ymdAddDays } from '#lib/time.ts';
 import { fetchText } from './http';
 
 const FETCH_TIMEOUT_MS = 15_000;

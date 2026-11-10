@@ -9,8 +9,26 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Telegram allowlist (live 10 Nov):** only the exact `/start` command is answered for a chat that isn't on the list; everything else from that chat is dropped.
+- **Tomorrow's weather:** the forecast now covers the full 48 hours. Google sends 24 hours a page and only the first page was read, so a morning brief judged tomorrow on its first few hours.
+- **A stuck printer no longer blocks later prints:** every USB transfer has a time limit, so a printer that stops taking data fails that print instead of holding the printer for good.
+- **Deploys:** a config-only change now rebuilds; the new build is made beside the running one and swapped in at the restart, and the old one is put back if the new one doesn't start; the database is snapshotted before any schema change and a failed schema push stops the deploy before the restart; a run that failed part-way redoes its steps when run again; `bun run deploy <sha>` rolls back; the deploy checks the box is running the commit it built.
+- **Admin sign-in works on every name the box answers to** under SvelteKit 3 (it returned 404 on all but one).
+- **A broken brief page is no longer printed.** The screenshot checks it captured the brief; if not, the plain sheet prints and an alert says so. An alert whose send failed is sent again.
+- **Friday's weekend sheet shows the calendar as it is at 18:00,** not as it was at 06:45: the calendar is cached for 20 minutes, not all day.
+- **Lists:** adding an item can no longer add it twice after a timeout, and lists recover on their own after a failed start.
+
+### Changed
+
+- **SvelteKit 3:** the app runs on SvelteKit 3.1 and adapter-node 6, with every package updated (`typescript` stays on 6, `usb` on 2). The box needs `PROTOCOL_HEADER=x-forwarded-proto` in `.env`, or form posts through Caddy are refused.
+
 ### Added
 
+- **Announcements talk over the music.** A regular announcement turns the music down while chota speaks and puts it back; one marked important pauses it.
+- **The house speaker runs on `@khalido/home`.** chota's own Spotify speaker code is replaced by the library's. chota now knows when the family's music is on a phone or another speaker and leaves it alone.
+- **Printer check:** every 15 minutes chota asks the thermal printer how it is and sends an alert when it can't print (not connected, cover open, paper out, an error), then "working again" once it can. No paper used.
 - **Spotify speaker:** the box can be a Spotify Connect speaker through Spotify Soloist; chota knows what's playing and can pause, skip, set the volume (held to `music.maxVolume`), play a favourite or a link, and pause the music for an announcement. New `music` config, `music_now` / `music_control` / `music_play` tools, a `music` line in `/api/health`, and Soloist units in `deploy/`. Not yet installed on the Pi (`docs/spotify.md`).
 - **Full chat history:** every message, tool call and result is kept, with each run's model, tokens and cost on its reply. What the agent sees stays the last 50 messages; a run with no text shows as a short note of its tools.
 - **Save and find things:** send chota a link (or a photo, voice note or PDF with "save this") and it keeps it with a title, summary, the full text and tags; "that article I saved about…" finds it. A vision model reads photos and scanned PDFs; Jev picks the tags (`decisions/content-tags.json`). Saved in a direct message it's private to the sender; in a group it's the family's, and group answers never show anyone's private items. New `content` table.

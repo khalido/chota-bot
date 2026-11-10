@@ -6,8 +6,9 @@
  *   await speak(line, { mood: 'cheerful, it is Friday' });
  *
  * The clip is made first, then the music (Soloist, if `music` is configured)
- * pauses, a short chime plays to wake the speaker, the clip plays at
- * `speech.volume`, and the music resumes. Clips are kept under `data/speech/`
+ * is turned down (or paused, for an important announcement), a short chime
+ * plays to wake the speaker, the clip plays at `speech.volume`, and the music
+ * is put back. Clips are kept under `data/speech/`
  * by a hash of model, voice, directions and text, so a fixed phrase is paid
  * for once. One thing is said at a time. During `speech.quietHours` it refuses.
  *
@@ -22,11 +23,11 @@ import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { generateSpeech } from 'ai';
-import { getConfig } from '$lib/server/config';
-import { inQuietHours } from '$lib/server/alerts';
-import { log } from '$lib/server/log';
-import { soloist } from '$lib/server/tools/spotify';
-import { sydneyHHMM } from '$lib/time';
+import { getConfig } from '#lib/server/config.ts';
+import { inQuietHours } from '#lib/server/alerts.ts';
+import { log, logErr } from '#lib/server/log.ts';
+import { houseSpeaker } from '#lib/server/tools/music.ts';
+import { sydneyHHMM } from '#lib/time.ts';
 
 const SCOPE = 'speech';
 const DIR = 'data/speech';
@@ -155,11 +156,20 @@ export function cannotSpeak(now = new Date()): string | undefined {
 
 let queue: Promise<unknown> = Promise.resolve();
 
-/** Say `text` on the speaker. Throws SpeechRefused when speech is off or it's
- *  quiet hours; other errors are real failures. */
+/** Where the music is turned down to around a regular announcement (0–100). */
+const DUCK_TO = 20;
+
+/**
+ * Say `text` on the speaker. Throws SpeechRefused when speech is off or it's
+ * quiet hours; other errors are real failures.
+ *
+ * The music on the house speaker (KO, 10 Nov 2026): a regular announcement is
+ * spoken over it with the music turned down, then put back; an `important` one
+ * pauses it. Music playing on another device is never touched (tools/music.ts).
+ */
 export async function speak(
 	text: string,
-	opts: { mood?: string; chime?: boolean } = {}
+	opts: { mood?: string; chime?: boolean; important?: boolean } = {}
 ): Promise<{ cached: boolean; ms: number }> {
 	const why = cannotSpeak();
 	if (why) throw new SpeechRefused(why);
@@ -176,7 +186,17 @@ export async function speak(
 			if (opts.chime !== false) await play(await chimePath(), volume);
 			await play(path, volume);
 		};
-		await (getConfig().music ? soloist().interrupt(out) : out());
+		if (!getConfig().music) await out();
+		else {
+			const aside = opts.important
+				? await houseSpeaker().interrupt(out)
+				: await houseSpeaker().duck(out, getConfig().speech!.duckTo ?? DUCK_TO);
+			// 'failed' or 'kept': the music may be left quiet or paused. Say so.
+			if (aside.music !== 'restored' && aside.music !== 'untouched') {
+				const why = 'why' in aside && aside.why ? `: ${aside.why}` : '';
+				logErr(SCOPE, `music ${aside.music} after an announcement${why}`);
+			}
+		}
 		const ms = Date.now() - started;
 		log(SCOPE, `said ${words.length} chars${cached ? ' (cached)' : ''} in ${ms}ms`);
 		return { cached, ms };

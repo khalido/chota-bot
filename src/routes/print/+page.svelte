@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { errorMessage } from '$lib/utils';
+	import { errorMessage } from '#lib/utils.ts';
 	import { resolve } from '$app/paths';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { ButtonGroup } from '$lib/components/ui/button-group';
-	import BriefSheet from '$lib/components/print/BriefSheet.svelte';
+	import { ButtonGroup } from '#lib/components/ui/button-group/index.ts';
+	import BriefSheet from '#lib/components/print/BriefSheet.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -17,10 +17,15 @@
 	// at /print/family — a different route + render, hence a navigation,
 	// not a URL-param swap.
 	const dayTabs = [
-		{ label: 'Today', href: resolve('/print'), active: () => data.day === 'today' },
+		{
+			label: 'Today',
+			href: resolve('print'),
+			active: () => data.day === 'today'
+		},
+
 		{
 			label: 'Tomorrow',
-			href: resolve('/print') + '?day=tomorrow',
+			href: resolve('print') + '?day=tomorrow',
 			active: () => data.day === 'tomorrow'
 		},
 		{ label: 'Weekend', href: resolve('/print/[who]', { who: 'family' }), active: () => false }
@@ -31,7 +36,7 @@
 	// fresh as weather / bus / calendar tick over through the day. Same
 	// pattern as the main dashboard at /.
 	onMount(() => {
-		const refresh = setInterval(() => invalidateAll(), 60_000);
+		const refresh = setInterval(() => refreshAll(), 60_000);
 		return () => clearInterval(refresh);
 	});
 

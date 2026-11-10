@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseIcsEvents } from '$lib/server/ics';
+import { parseIcsEvents } from '#lib/server/ics.ts';
 
 // Sentral exports all-UTC `DTSTART:...Z`; SUMMARY carries a subject code prefix.
 const SAMPLE = [

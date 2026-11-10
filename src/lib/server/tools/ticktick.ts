@@ -12,10 +12,10 @@
  * The bot only sees lists matching that filter — your private GTD lists,
  * shopping for-yourself notes, etc. stay invisible.
  */
-import { TICKTICK_API_KEY } from '$env/static/private';
-import { getConfig } from '$lib/server/config';
-import { log, logErr, errorMessage } from '$lib/server/log';
-import { SYDNEY_TZ, sydneyNoon, sydneyOffset, sydneyTimeOnDay } from '$lib/time';
+import { TICKTICK_API_KEY } from '$app/env/private';
+import { getConfig } from '#lib/server/config.ts';
+import { log, logErr, errorMessage } from '#lib/server/log.ts';
+import { SYDNEY_TZ, sydneyNoon, sydneyOffset, sydneyTimeOnDay } from '#lib/time.ts';
 
 const ENDPOINT = 'https://mcp.ticktick.com/';
 const PROTOCOL_VERSION = '2025-06-18';
@@ -101,13 +101,21 @@ const completedCache: { data: Map<string, CompletedTask[]>; at: number } = {
 	at: 0
 };
 
+/** Set while the refresh job runs: every read fetches, but the cached entries
+ *  stay, so a fetch that times out still has its last good copy to fall back on. */
+let refreshing = false;
+/** Set when a read inside a refresh had to serve its old copy. */
+let fellBack = false;
+
 function fresh<T>(entry: { data: T; at: number } | undefined): T | null {
+	if (refreshing) return null;
 	if (!entry || entry.at === 0 || Date.now() - entry.at > CACHE_TTL_MS) return null;
 	return entry.data;
 }
 
 function staleOk<T>(entry: { data: T; at: number } | undefined): T | null {
 	if (!entry || entry.at === 0 || Date.now() - entry.at > STALE_OK_MS) return null;
+	if (refreshing) fellBack = true;
 	return entry.data;
 }
 
@@ -131,10 +139,18 @@ export async function getFamilyLists(): Promise<ProjectWithTasks[]> {
 
 /** Force-refresh. Job calls this. */
 export async function refreshFamilyLists(): Promise<ProjectWithTasks[]> {
-	projectsCache.at = 0;
-	projectDataCache.clear();
-	completedCache.at = 0;
-	return getFamilyLists();
+	// Not by clearing the caches: the hosted MCP times out often, and clearing
+	// first threw away the stale copy the failed fetch would have served.
+	refreshing = true;
+	fellBack = false;
+	try {
+		const lists = await getFamilyLists();
+		// Readers keep the old copy, but the job has to see the failure to alert.
+		if (fellBack) throw new Error('TickTick refresh failed; serving the last copy');
+		return lists;
+	} finally {
+		refreshing = false;
+	}
 }
 
 /**
@@ -166,7 +182,13 @@ async function getCompletedByProject(projectIds: string[]): Promise<Map<string, 
 		const byProject = new Map<string, CompletedTask[]>();
 		for (const t of raw) {
 			if (!t.completedTime) continue;
-			const task = { id: t.id, title: t.title, completedAt: new Date(t.completedTime) };
+
+			const task = {
+				id: t.id,
+				title: t.title,
+				completedAt: new Date(t.completedTime)
+			};
+
 			byProject.set(t.projectId, [...(byProject.get(t.projectId) ?? []), task]);
 		}
 		for (const tasks of byProject.values()) {
@@ -464,13 +486,15 @@ export async function pingTickTick(): Promise<{
 	try {
 		const r = await callTool<{ result: Project[] }>('list_projects', {});
 		const names = (r.result ?? []).map((p) => p.name);
-		return { ok: true, ms: Date.now() - start, projects: names.length, names };
-	} catch (err) {
+
 		return {
-			ok: false,
+			ok: true,
 			ms: Date.now() - start,
-			error: errorMessage(err)
+			projects: names.length,
+			names
 		};
+	} catch (err) {
+		return { ok: false, ms: Date.now() - start, error: errorMessage(err) };
 	}
 }
 
@@ -485,7 +509,14 @@ let nextId = 1;
 
 async function ensureInitialized(): Promise<void> {
 	if (sessionId) return;
-	if (!initPromise) initPromise = doInitialize();
+	// A failed setup must not be kept: one failure at boot (no network yet) would
+	// otherwise fail every later call until a restart.
+	if (!initPromise) {
+		initPromise = doInitialize().catch((err) => {
+			initPromise = null;
+			throw err;
+		});
+	}
 	return initPromise;
 }
 
@@ -590,19 +621,30 @@ async function rawCall(method: string, params: unknown): Promise<unknown> {
 
 	// One cheap retry — the hosted MCP throws transient `fetch failed` /
 	// timeouts fairly often. Protocol errors (JSON-RPC error, 4xx) don't retry.
+	// Nor does a write: a create that timed out may have landed, and sending it
+	// again adds the item twice.
 	try {
 		return await attempt();
 	} catch (err) {
-		if (!isTransient(err)) throw err;
+		if (!isTransient(err) || !repeatable(method, params)) throw err;
 		log('ticktick', `${method} transient failure (${errorMessage(err)}) — retrying once`);
 		await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
 		return attempt();
 	}
 }
 
+/** Safe to send twice? Everything but a tool call that changes something
+ *  (`create_task`, `complete_task`, …). Exported for tests. */
+export function repeatable(method: string, params: unknown): boolean {
+	if (method !== 'tools/call') return true;
+	const name = String((params as { name?: unknown } | null)?.name ?? '');
+	return /^(list|get|search|filter)_/.test(name);
+}
+
 function isTransient(err: unknown): boolean {
 	if ((err as { retryable?: boolean })?.retryable) return true;
 	const m = errorMessage(err).toLowerCase();
+
 	return /fetch failed|aborted|timeout|timed ?out|econnreset|socket hang|network|enotfound|eai_again/.test(
 		m
 	);

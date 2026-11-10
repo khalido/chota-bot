@@ -2,7 +2,7 @@
  * save + saved agent-tools — keep a link, photo, voice note, document or note,
  * and find it again later.
  *
- * Wraps `$lib/server/tools/content`. Who is asking, whether it's a DM, and the
+ * Wraps `#lib/server/tools/content`. Who is asking, whether it's a DM, and the
  * file that came with the message arrive as tool context from the channel
  * router, never from the model — that is what keeps a DM save private to its
  * sender and keeps private items out of group answers. Called without context
@@ -10,8 +10,8 @@
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { sydneyYMD } from '$lib/time';
-import { AskerSchema, saveContent, searchContent, TAG_NAMES } from '$lib/server/tools/content';
+import { sydneyYMD } from '#lib/time.ts';
+import { AskerSchema, saveContent, searchContent, TAG_NAMES } from '#lib/server/tools/content.ts';
 
 export const saveTool = tool({
 	description:

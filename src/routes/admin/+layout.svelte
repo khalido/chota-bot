@@ -1,9 +1,3 @@
-<!--
-  /admin sub-navigation — sibling-tabs across the admin debug sub-routes.
-  Same nav-link pattern as the root +layout.svelte (pathname-based active
-  state). Skipping shadcn Tabs since each tab maps 1:1 to a route, not to
-  in-page state — URL-routed tabs are clickable links, not state buttons.
--->
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -11,19 +5,26 @@
 	let { children } = $props();
 
 	const tabs = [
-		{ href: resolve('/admin'), label: 'Overview' },
-		{ href: resolve('/admin/sentral'), label: 'Sentral' },
-		{ href: resolve('/admin/jobs'), label: 'Jobs' },
-		{ href: resolve('/admin/print'), label: 'Print' },
-		{ href: resolve('/admin/agent'), label: 'Agent' },
-		{ href: resolve('/admin/logs'), label: 'Logs' }
+		{ href: resolve('admin'), label: 'Overview' },
+		{ href: resolve('admin/sentral'), label: 'Sentral' },
+		{ href: resolve('admin/jobs'), label: 'Jobs' },
+		{ href: resolve('admin/print'), label: 'Print' },
+		{ href: resolve('admin/agent'), label: 'Agent' },
+		{ href: resolve('admin/logs'), label: 'Logs' }
 	];
 
 	function isActive(href: string, current: string): boolean {
-		if (href === resolve('/admin')) return current === resolve('/admin');
+		if (href === resolve('admin')) return current === resolve('admin');
 		return current.startsWith(href);
 	}
 </script>
+
+<!--
+  /admin sub-navigation — sibling-tabs across the admin debug sub-routes.
+  Same nav-link pattern as the root +layout.svelte (pathname-based active
+  state). Skipping shadcn Tabs since each tab maps 1:1 to a route, not to
+  in-page state — URL-routed tabs are clickable links, not state buttons.
+-->
 
 <div class="border-b border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 	<div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">

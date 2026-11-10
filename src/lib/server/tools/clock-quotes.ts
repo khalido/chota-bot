@@ -10,7 +10,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { sydneyHHMM } from '$lib/time';
+import { sydneyHHMM } from '#lib/time.ts';
 
 const PATH = resolve(process.cwd(), '../curios/dist/clock-quotes.json');
 

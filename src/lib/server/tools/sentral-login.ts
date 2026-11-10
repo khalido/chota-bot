@@ -21,8 +21,8 @@
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { withBrowser } from '$lib/server/browser-lock';
-import { log } from '$lib/server/log';
+import { withBrowser } from '#lib/server/browser-lock.ts';
+import { log } from '#lib/server/log.ts';
 
 const exec = promisify(execFile);
 const CMD_TIMEOUT_MS = 45_000;

@@ -1,6 +1,5 @@
-import { json } from '@sveltejs/kit';
-import { getSchedule, refreshTimetable } from '$lib/server/tools/sentral';
-import { logErr, errorMessage } from '$lib/server/log';
+import { getSchedule, refreshTimetable } from '#lib/server/tools/sentral.ts';
+import { logErr, errorMessage } from '#lib/server/log.ts';
 import type { RequestHandler } from './$types';
 
 /**
@@ -9,17 +8,17 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async ({ params }) => {
 	const periods = await getSchedule(params.person);
-	return json({ person: params.person, count: periods.length, periods });
+	return Response.json({ person: params.person, count: periods.length, periods });
 };
 
 export const POST: RequestHandler = async ({ params }) => {
 	try {
 		const r = await refreshTimetable(params.person);
 		const periods = await getSchedule(params.person);
-		return json({ ok: true, person: params.person, ...r, today: periods.length, periods });
+		return Response.json({ ok: true, person: params.person, ...r, today: periods.length, periods });
 	} catch (err) {
 		const message = errorMessage(err);
 		logErr('sentral', `refresh ${params.person} failed:`, err);
-		return json({ ok: false, person: params.person, error: message }, { status: 502 });
+		return Response.json({ ok: false, person: params.person, error: message }, { status: 502 });
 	}
 };

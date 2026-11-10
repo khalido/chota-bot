@@ -17,11 +17,11 @@
  * Alerting never throws: a broken channel must not fail the job that called it.
  */
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { alert } from '$lib/server/db/schema';
-import { getConfig } from '$lib/server/config';
-import { log, logErr } from '$lib/server/log';
-import { sydneyHHMM } from '$lib/time';
+import { db } from '#lib/server/db/index.ts';
+import { alert } from '#lib/server/db/schema.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { log, logErr } from '#lib/server/log.ts';
+import { sydneyHHMM } from '#lib/time.ts';
 
 const SCOPE = 'alerts';
 /** A still-open problem is re-sent after this long. */
@@ -91,6 +91,28 @@ export async function raiseAlert(key: string, text: string, now = new Date()): P
 		logErr(SCOPE, `raiseAlert ${key} failed`, err);
 		return false;
 	}
+}
+
+/**
+ * Send every open alert that never went out: the send failed (Wi-Fi down, a
+ * channel outage, the channel not registered yet at boot). Without this the
+ * key is only raised again if the job fails again, and its next ok run closes
+ * it without a word. Called from the job-check tick. Resolves how many it sent.
+ */
+export async function resendUnsent(now = new Date()): Promise<number> {
+	let sentCount = 0;
+	try {
+		const rows = db.select().from(alert).where(eq(alert.status, 'open')).all();
+		for (const row of rows) {
+			if (row.sentAt) continue;
+			if (!(await send(`⚠️ ${row.text}`, now))) break; // still down: try next tick
+			db.update(alert).set({ sentAt: now }).where(eq(alert.key, row.key)).run();
+			sentCount++;
+		}
+	} catch (err) {
+		logErr(SCOPE, 'resendUnsent failed', err);
+	}
+	return sentCount;
 }
 
 /**

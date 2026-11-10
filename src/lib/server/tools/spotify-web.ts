@@ -21,7 +21,7 @@
  * Australian market, so they're playable here. Someone's own playlists and
  * library (`/me/...`) need their sign-in, so they aren't here.
  */
-import { env } from '$env/dynamic/private';
+import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from '$app/env/private';
 import { fetchJson, responseError } from './http';
 
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
@@ -37,8 +37,8 @@ let token: { value: string; until: number } | undefined;
 
 async function accessToken(fresh: boolean): Promise<string> {
 	if (!fresh && token && Date.now() < token.until) return token.value;
-	const id = env.SPOTIFY_CLIENT_ID;
-	const secret = env.SPOTIFY_CLIENT_SECRET;
+	const id = SPOTIFY_CLIENT_ID;
+	const secret = SPOTIFY_CLIENT_SECRET;
 	if (!id || !secret) throw new Error('Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env');
 	const body = await fetchJson<{ access_token: string; expires_in: number }>(TOKEN_URL, {
 		label: 'Spotify sign-in',
@@ -100,6 +100,7 @@ type Item = {
 
 function byLine(kind: Kind, item: NonNullable<Item>): string | undefined {
 	if (kind === 'playlist') return item.owner?.display_name;
+
 	return (
 		item.artists
 			?.map((a) => a.name)
@@ -113,7 +114,14 @@ export function toFound(kind: Kind, item: Item): Found | undefined {
 	if (!item?.uri || !item.name) return undefined;
 	const by = byLine(kind, item);
 	const album = kind === 'track' ? item.album?.name : undefined;
-	return { kind, uri: item.uri, name: item.name, ...(by && { by }), ...(album && { album }) };
+
+	return {
+		kind,
+		uri: item.uri,
+		name: item.name,
+		...(by && { by }),
+		...(album && { album })
+	};
 }
 
 /** Search the catalogue; results in the order of `kinds`, best match first within each. */
@@ -123,11 +131,13 @@ export async function searchSpotify(
 ): Promise<Found[]> {
 	const q = query.trim();
 	if (!q) return [];
+
 	const body = await get<Record<string, { items?: Item[] } | undefined>>('search', {
 		q,
 		type: kinds.join(','),
 		limit: limitParam(limit)
 	});
+
 	return kinds.flatMap((kind) =>
 		(body[`${kind}s`]?.items ?? []).map((i) => toFound(kind, i)).filter((f): f is Found => !!f)
 	);

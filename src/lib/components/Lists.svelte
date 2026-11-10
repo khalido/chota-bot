@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ProjectWithTasks } from '$lib/server/tools/ticktick';
+	import type { ProjectWithTasks } from '#lib/server/tools/ticktick.ts';
 	import { resolve } from '$app/paths';
 
 	let { lists }: { lists: ProjectWithTasks[] } = $props();
@@ -15,7 +15,7 @@
 </script>
 
 <a
-	href={resolve('/lists')}
+	href={resolve('lists')}
 	class="block rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300 dark:bg-neutral-900 dark:ring-neutral-800 dark:hover:ring-neutral-700"
 >
 	<h2 class="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-neutral-500">

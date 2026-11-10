@@ -6,7 +6,7 @@
  * lucide icon a brief shows. `weatherBlock()` is the entry point `gatherBrief`
  * calls; everything else supports it.
  */
-import { getConfig } from '$lib/server/config';
+import { getConfig } from '#lib/server/config.ts';
 import {
 	weatherGlyph,
 	todayRange,
@@ -14,9 +14,9 @@ import {
 	DEFAULT_THRESHOLDS,
 	type ForecastHour,
 	type Weather
-} from '$lib/server/tools/weather';
-import { sydneyHour, sydneyNoon, sydneyTimeOnDay, sydneyYMD, sydneyYMDOffset } from '$lib/time';
-import type { WeatherThresholds } from '$lib/config';
+} from '#lib/server/tools/weather.ts';
+import { sydneyHour, sydneyNoon, sydneyTimeOnDay, sydneyYMD, sydneyYMDOffset } from '#lib/time.ts';
+import type { WeatherThresholds } from '#lib/config.ts';
 
 export interface WeatherBlock {
 	/** Pre-formatted compact weather lines, or null if there's nothing to show. */

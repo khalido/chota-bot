@@ -129,6 +129,9 @@ export default defineChota({
 		voice: 'Kore',
 		style: 'Warm, dry and unhurried, like a family butler; a little brighter with the kids.',
 		volume: 0.55,
+		// Where the music is turned down to (0–100) while chota speaks. Default 20.
+		// An announcement marked important pauses the music.
+		duckTo: 20,
 		quietHours: { from: '21:00', to: '07:00' },
 		perHour: 6,
 		announcers: ['Parent1', 'Parent2']

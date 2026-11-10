@@ -21,14 +21,14 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { and, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { generateText, Output } from 'ai';
-import { exa } from '$lib/server/exa';
-import { getPost, linkedPostId } from '$lib/server/tools/x';
+import { exa } from '#lib/server/exa.ts';
+import { getPost, linkedPostId } from '#lib/server/tools/x.ts';
 import { z } from 'zod';
-import { db } from '$lib/server/db';
-import { content, decision } from '$lib/server/db/schema';
-import { decideBooleans, questionsHash, type Question } from '$lib/server/decide';
-import spec from '$lib/server/decisions/content-tags.json';
-import { log, logErr } from '$lib/server/log';
+import { db } from '#lib/server/db/index.ts';
+import { content, decision } from '#lib/server/db/schema.ts';
+import { decideBooleans, questionsHash, type Question } from '#lib/server/decide.ts';
+import spec from '#lib/server/decisions/content-tags.json';
+import { log, logErr } from '#lib/server/log.ts';
 
 const SCOPE = 'content';
 /** Reads photos and PDFs; the same small model as the group photo gate. */

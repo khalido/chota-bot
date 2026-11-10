@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Clock from '$lib/components/Clock.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import Clock from '#lib/components/Clock.svelte';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
@@ -8,7 +8,7 @@
 
 	// Refresh quote + weather once a minute (the clock itself ticks client-side).
 	$effect(() => {
-		const id = setInterval(() => invalidateAll(), 60_000);
+		const id = setInterval(() => refreshAll(), 60_000);
 		return () => clearInterval(id);
 	});
 </script>

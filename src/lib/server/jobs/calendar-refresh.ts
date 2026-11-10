@@ -1,7 +1,7 @@
 // Refresh calendar cache every 15 min for the two ranges we actually use:
 // 'today' (morning print) and 'week' (dashboard CalendarCard).
-import { defineJob } from '$lib/server/scheduler';
-import { refreshCalendar } from '$lib/server/tools/calendar';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { refreshCalendar } from '#lib/server/tools/calendar.ts';
 
 defineJob(
 	'calendar-refresh',

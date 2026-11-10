@@ -1,6 +1,6 @@
 # Jobs folder
 
-Each `.ts` file in here is one scheduled job. Files self-register via `defineJob()` at module top-level — no exports, no manual registry. Auto-discovered by `$lib/server/scheduler.ts > bootJobs()` when the server starts.
+Each `.ts` file in here is one scheduled job. Files self-register via `defineJob()` at module top-level — no exports, no manual registry. Auto-discovered by `#lib/server/scheduler.ts > bootJobs()` when the server starts.
 
 ## Adding a job
 
@@ -8,7 +8,7 @@ Drop a TS file. Three lines + import + a top comment:
 
 ```ts
 // Warm the widget cache every 10 minutes (illustrative — pick your own name).
-import { defineJob } from '$lib/server/scheduler';
+import { defineJob } from '#lib/server/scheduler.ts';
 
 defineJob('widget-refresh', '*/10 * * * *', async () => {
 	invalidateCache();
@@ -73,7 +73,7 @@ defineJob('weekly-news', '0 7 * * 1', async () => {
 });
 ```
 
-`runAgent` lives in `$lib/server/agent` — built and exported (Telegram drives the streaming variant `runAgentStream`); no cron job calls it yet. See `docs/agent.md` for the exact signature before wiring the first agent job.
+`runAgent` lives in `#lib/server/agent` — built and exported (Telegram drives the streaming variant `runAgentStream`); no cron job calls it yet. See `docs/agent.md` for the exact signature before wiring the first agent job.
 
 ## Future: user-defined jobs
 
@@ -82,6 +82,6 @@ Eventually one job here will be `run-user-jobs.ts` — every 5 min, read a `user
 ## Don't
 
 - Don't import jobs from outside this folder — they're side-effect modules
-- Don't `console.log` inside `fn`, and don't hand-log the run — `defineJob`'s wrapper emits one `job.run` wide event per fire (return a summary string and it rides along). For an incidental line use `logger('jobs')` from `$lib/server/log`.
+- Don't `console.log` inside `fn`, and don't hand-log the run — `defineJob`'s wrapper emits one `job.run` wide event per fire (return a summary string and it rides along). For an incidental line use `logger('jobs')` from `#lib/server/log.ts`.
 - Don't re-throw inside `fn` — the wrapper records errors and the job continues on the next tick
-- Don't add a "framework" file here — `defineJob` lives in `$lib/server/scheduler`. This folder is jobs only.
+- Don't add a "framework" file here — `defineJob` lives in `#lib/server/scheduler.ts`. This folder is jobs only.

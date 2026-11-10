@@ -1,16 +1,16 @@
-import { collectTripReports } from '$lib/server/print/brief';
-import { getRecipients } from '$lib/server/print/sections';
-import { quoteForTime } from '$lib/server/tools/clock-quotes';
-import { getConfig } from '$lib/server/config';
-import { getChores } from '$lib/server/chores';
-import { getWeather } from '$lib/server/tools/weather';
-import { getCalendar, getCalendarList } from '$lib/server/tools/calendar';
+import { collectTripReports } from '#lib/server/print/brief.ts';
+import { getRecipients } from '#lib/server/print/sections.ts';
+import { quoteForTime } from '#lib/server/tools/clock-quotes.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { getChores } from '#lib/server/chores.ts';
+import { getWeather } from '#lib/server/tools/weather.ts';
+import { getCalendar, getCalendarList } from '#lib/server/tools/calendar.ts';
 import {
 	listProjects,
 	listConfiguredVsActual,
 	getProjectWithTasks
-} from '$lib/server/tools/ticktick';
-import { getDeployStatus } from '$lib/server/version';
+} from '#lib/server/tools/ticktick.ts';
+import { getDeployStatus } from '#lib/server/version.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { BookHit } from './types';
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/config', () => ({ getConfig: () => ({}) }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('$app/env/private', () => ({ GOOGLE_BOOKS_API_KEY: '', EXA_API_KEY: '' }));
+vi.mock('#lib/server/config.ts', () => ({ getConfig: () => ({}) }));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const { holdings, matchLibrary, nearbyCopies, pickBook } = await import('./index');
 const { parseAvailability, parseTitles } = await import('./library');

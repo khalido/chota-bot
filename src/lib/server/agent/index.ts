@@ -19,7 +19,7 @@
  * streaming path (Telegram + the admin chat).
  */
 import { ToolLoopAgent, type InferAgentUIMessage } from 'ai';
-import { event } from '$lib/server/log';
+import { event } from '#lib/server/log.ts';
 import { answerWhenDone, STOP_WHEN } from './loop';
 import { buildSystemPrompt } from './prompts';
 import { turnStats } from './turns';
@@ -27,7 +27,7 @@ import { weatherTool } from './tools/weather';
 import { calendarTool } from './tools/calendar';
 import { z } from 'zod';
 import { savedTool, saveTool } from './tools/content';
-import { AskerSchema } from '$lib/server/tools/content';
+import { AskerSchema } from '#lib/server/tools/content.ts';
 import { ticktickAddTool, ticktickDoneTool, ticktickTool } from './tools/ticktick';
 import { busTool } from './tools/bus';
 import { choresTool } from './tools/chores';

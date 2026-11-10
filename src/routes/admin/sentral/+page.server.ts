@@ -9,8 +9,8 @@
  */
 import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { configuredSentralKids, getSchedule } from '$lib/server/tools/sentral';
-import { parseIcsEvents } from '$lib/server/ics';
+import { configuredSentralKids, getSchedule } from '#lib/server/tools/sentral.ts';
+import { parseIcsEvents } from '#lib/server/ics.ts';
 import type { PageServerLoad } from './$types';
 
 export interface SentralKidStatus {

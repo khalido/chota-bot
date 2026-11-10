@@ -96,8 +96,8 @@ agent-browser install                 # downloads Chromium (~150MB, one-time; no
 
 # 4. Copy secrets from your Mac (one-time)
 #    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
-#    Then on the box, append PORT + KIOSK to .env (these aren't in your dev .env):
-printf '\nPORT=8000\nKIOSK="true"\n' >> .env
+#    Then on the box, append PORT, KIOSK and PROTOCOL_HEADER to .env (these aren't in your dev .env):
+printf '\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\n' >> .env
 #    Also sanity-check DATABASE_URL — sv create scaffolds it as `local.db` but
 #    .env.example uses `data/home.db`. Whichever you pick, the kiosk's .env and
 #    the path in deploy.sh's first-time DB init must match. Recommend:
@@ -119,7 +119,7 @@ sudo systemctl status chota          # should be active (running)
 
 # 8. Verify
 curl -s http://localhost:8000/ | head -1               # should return HTML
-curl -s -X POST http://localhost:8000/api/print/test   # column ruler — should print
+curl -s -X POST -H 'content-type: application/json' http://localhost:8000/api/print/test   # column ruler — should print
 journalctl -u chota -f                                 # tail server logs
 
 ```
@@ -167,7 +167,7 @@ From your Mac:
 
 ```bash
 bun run deploy    # = bash deploy/push.sh  (preflight, then deploy.sh on the kiosk)
-bun run logs      # = ssh chota 'sudo journalctl -u chota -f'
+bun run logs      # = ssh chota 'journalctl -u chota -f'
 ```
 
 (`chota` is an SSH alias for the kiosk box — see `~/.ssh/config`.) `push.sh` is
@@ -188,48 +188,56 @@ things:
 `.env` stays per-machine — it carries SP5-only `KIOSK=true` and the OAuth
 `ORIGIN`. Edit those on the box.
 
-The deploy script (`deploy.sh`, on the kiosk) is idempotent (re-running with no new commits is a no-op):
+The deploy script (`deploy.sh`, on the kiosk) compares the box against `data/.deployed`: the commit and `chota.config.ts` that last passed the health check. If neither differs, it does nothing. A run that fails part-way leaves that stamp alone, so running it again redoes every step.
 
-1. `git fetch` + `git pull --ff-only origin main` (fails loudly on a non-fast-forward — investigate, don't paper over)
-2. If `bun.lock` changed → `bun install --frozen-lockfile`
-3. If `drizzle/` or `src/lib/server/db/auth.schema.ts` changed → `bunx drizzle-kit push`
-4. `bun run build` (always)
-5. `mkdir -p data data/logs` (cheap; tool-specific subdirs like `data/sentral/` are created on demand by the writing code)
-6. `sudo systemctl restart chota` + verify it came up
+1. Preflight: `.env`, `chota.config.ts` and a database that has tables. An empty database stops the deploy.
+2. `git checkout main` + `git pull --ff-only origin main` (fails loudly on a non-fast-forward — investigate, don't paper over)
+3. If `bun.lock` differs → `bun install --frozen-lockfile`
+4. Build into `build.next/` (always). The running `build/` is not touched, so a failed build changes nothing.
+5. If schema files differ → snapshot the database to `data/backups/` (last three kept), then `bunx drizzle-kit push --force`. The script reads push's output, because push can print an error and still exit 0. If it didn't finish, the deploy stops here: no restart, and `build/` is still the old code.
+6. Swap: `build/` → `build.prev/`, `build.next/` → `build/`, then `sudo systemctl restart chota`
+7. Verify: active, HTTP 200, `/api/health` reports this commit, jobs registered. If it doesn't come up and no schema changed, the script puts `build.prev/` back and restarts (the failed build is kept in `build.failed/`). If the schema did change, it leaves things as they are and says how to go back by hand.
+8. Write `data/.deployed`
 
-If step 6 fails, the script exits non-zero and you'll see it in the SSH output. Then:
+`bun run deploy` ships `origin/main`, not your working copy. `push.sh` prints a warning when the two differ.
+
+If a step fails, the script exits non-zero and you'll see it in the SSH output. Then:
 
 ```bash
-ssh chota 'sudo journalctl -u chota -n 100 --no-pager'
+ssh chota 'journalctl -u chota -n 100 --no-pager'
 ```
 
 ## Updating secrets / config
 
-`.env` and `chota.config.ts` are gitignored — they don't ride the deploy script. To change them:
+`chota.config.ts` is compiled into the build, so a restart alone doesn't pick it up. Edit it on the Mac and deploy; `push.sh` copies it over and `deploy.sh` rebuilds when its hash changed, with or without a new commit:
 
 ```bash
-# Edit on the Mac, scp over, restart
-scp .env chota:~/code/chota-bot/.env
-ssh chota 'sudo systemctl restart chota'
+bun run deploy
+```
+
+`.env` is read at start, so it only needs a restart. It stays per-machine (the box has keys the Mac doesn't), so edit it on the box:
+
+```bash
+ssh -t chota 'nano ~/code/chota-bot/.env && sudo systemctl restart chota'
 ```
 
 Sentral session cookies expire periodically, but you don't have to do anything — `refreshTimetable` self-heals: when the cookie's dead it logs in via agent-browser using `SENTRAL_<NAME>_EMAIL` / `_PASSWORD` and re-caches the cookie. Only touch `.env` if a kid's NSW DoE password itself changes.
 
 ## Rollback
 
-Pin to a previous SHA and re-deploy:
+Pin the box to an earlier commit:
 
 ```bash
-ssh chota 'cd ~/code/chota-bot && git checkout <sha> && bash deploy/deploy.sh'
+bun run deploy <sha>
 ```
 
-(`deploy.sh` will see the SHA already matches origin and bail at the "nothing to deploy" check — so when rolling back, run the build + restart steps directly:)
+It checks that commit out (detached), reinstalls if `bun.lock` differs, rebuilds and restarts. It never changes the schema: if schema files differ, it says so and leaves the database alone. When the older code needs the older schema, stop chota and restore the snapshot the forward deploy took:
 
 ```bash
-ssh chota 'cd ~/code/chota-bot && git checkout <sha> && ~/.bun/bin/bun install --frozen-lockfile && ~/.bun/bin/bun run build && sudo systemctl restart chota'
+ssh chota 'ls -t ~/code/chota-bot/data/backups'
 ```
 
-Once main moves past the bad commit, a normal deploy will fast-forward back onto it.
+The next plain `bun run deploy` goes back to `main`.
 
 ## Useful commands on the box
 
@@ -246,9 +254,9 @@ tail -f data/logs/chota.log          # (when LogTape lands — see docs/logging.
 **From the Mac** (Tailscale SSH makes any of these one command — no need to keep an SP5 terminal open):
 
 ```bash
-ssh chota 'sudo journalctl -u chota -f'      # live tail, Ctrl-C to exit
+ssh chota 'journalctl -u chota -f'           # live tail, Ctrl-C to exit
 ssh chota 'sudo systemctl status chota'
-ssh chota 'curl -s -X POST http://localhost:8000/api/print/test'   # printer smoke test
+ssh chota "curl -s -X POST -H 'content-type: application/json' http://localhost:8000/api/print/test"   # printer smoke test
 ```
 
 ## Reverse proxy — portless URL

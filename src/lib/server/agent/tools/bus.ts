@@ -1,16 +1,16 @@
 /**
  * bus agent-tool — next live departures for the kids' configured trips.
  *
- * Wraps `$lib/server/tools/bus > getBus` over each unique trip in
+ * Wraps `#lib/server/tools/bus > getBus` over each unique trip in
  * `chota.config.ts > kids[].buses` (kids sharing a stop + routes are one
  * trip). Live TfNSW times from now; `realtime: false` means timetable only.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getConfig } from '$lib/server/config';
-import { getBus } from '$lib/server/tools/bus';
-import { errorMessage, logErr } from '$lib/server/log';
-import { sydneyHHMM } from '$lib/time';
+import { getConfig } from '#lib/server/config.ts';
+import { getBus } from '#lib/server/tools/bus.ts';
+import { errorMessage, logErr } from '#lib/server/log.ts';
+import { sydneyHHMM } from '#lib/time.ts';
 
 export const busTool = tool({
 	description:

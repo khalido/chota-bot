@@ -1,8 +1,8 @@
 import { desc } from 'drizzle-orm';
-import { JOBS, recentRuns } from '$lib/server/scheduler';
-import { clearAlert, raiseAlert } from '$lib/server/alerts';
-import { db } from '$lib/server/db';
-import { alert } from '$lib/server/db/schema';
+import { JOBS, recentRuns } from '#lib/server/scheduler.ts';
+import { clearAlert, raiseAlert } from '#lib/server/alerts.ts';
+import { db } from '#lib/server/db/index.ts';
+import { alert } from '#lib/server/db/schema.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import type { BlockName } from '$lib/server/tools/weather';
+	import type { BlockName } from '#lib/server/tools/weather.ts';
 
 	let { data }: { data: PageData } = $props();
 

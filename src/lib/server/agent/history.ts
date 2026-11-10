@@ -8,9 +8,9 @@
  */
 import { and, desc, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { generateId, type ModelMessage } from 'ai';
-import { db } from '$lib/server/db';
-import { chatMessage, chatSession } from '$lib/server/db/chat.schema';
-import type { ChannelName } from '$lib/server/channels/types';
+import { db } from '#lib/server/db/index.ts';
+import { chatMessage, chatSession } from '#lib/server/db/chat.schema.ts';
+import type { ChannelName } from '#lib/server/channels/types.ts';
 import { runNote, type ToolPart, type turnStats } from './turns';
 
 /** How many recent messages to feed back as context (~25 turns). Replies are

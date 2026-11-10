@@ -7,7 +7,7 @@
  * what we read (~1.3 KB). Key: GOOGLE_BOOKS_API_KEY (the weather key works
  * once Books API is enabled on it); keyless calls hit a shared daily quota.
  */
-import { env } from '$env/dynamic/private';
+import { GOOGLE_BOOKS_API_KEY } from '$app/env/private';
 import type { BookHit } from './types';
 import { fetchJson } from '../http';
 
@@ -24,10 +24,13 @@ export async function searchGoogleBooks(query: string, max = 10): Promise<BookHi
 		maxResults: String(max),
 		fields: FIELDS
 	});
-	if (env.GOOGLE_BOOKS_API_KEY) params.set('key', env.GOOGLE_BOOKS_API_KEY);
+
+	if (GOOGLE_BOOKS_API_KEY) params.set('key', GOOGLE_BOOKS_API_KEY);
+
 	const data = await fetchJson<{ items?: Volume[] }>(`${BASE}?${params}`, {
 		label: 'Google Books'
 	});
+
 	return (data.items ?? []).map(toHit);
 }
 

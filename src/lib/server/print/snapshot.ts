@@ -24,17 +24,24 @@ import { promisify } from 'node:util';
 import { readFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { env } from '$env/dynamic/private';
-import { withBrowser } from '$lib/server/browser-lock';
-import { log } from '$lib/server/log';
+import { PORT } from '$app/env/private';
+import { withBrowser } from '#lib/server/browser-lock.ts';
+import { log } from '#lib/server/log.ts';
 
 const exec = promisify(execFile);
 const WIDTH = 576; // MUNBYN 80mm print head @ 203dpi
 const CMD_TIMEOUT_MS = 35_000;
 
+/** This server on loopback. Never `ORIGIN`: that is the sign-in origin, and a
+ *  screenshot sent through it would leave the box or hit a login. `localhost`
+ *  rather than 127.0.0.1: the dev server binds one address, and on a Mac that
+ *  is ::1. */
 function baseUrl(): string {
-	return (env.ORIGIN || `http://localhost:${env.PORT || 8000}`).replace(/\/$/, '');
+	return `http://localhost:${PORT || 8000}`;
 }
+
+/** Thrown when the page that loaded isn't the brief (a 500, a 404, a login). */
+export class NotTheBrief extends Error {}
 
 /**
  * Screenshot `/print/<who>` → PNG bytes. Throws if agent-browser is
@@ -65,6 +72,18 @@ async function snapshot(
 	await ab(['set', 'viewport', String(WIDTH), '900']);
 	await ab(['open', url]);
 	await ab(['wait', '--load', 'networkidle']);
+
+	// The browser screenshots whatever loaded. Without this check an error page
+	// was captured, printed as the brief and reported ok.
+	const seen = await ab([
+		'eval',
+		"document.querySelector('[data-brief-sheet]') ? 'brief-sheet-ok' : 'not-brief: ' + document.title"
+	]);
+	if (!String(seen.stdout).includes('brief-sheet-ok')) {
+		throw new NotTheBrief(
+			`/print/${who} did not render the brief (${String(seen.stdout).trim().slice(0, 120)})`
+		);
+	}
 
 	// `screenshot --full` doesn't grow the viewport past its set height, so
 	// measure the rendered sheet and resize to fit before capturing.

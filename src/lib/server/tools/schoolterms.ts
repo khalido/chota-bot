@@ -21,11 +21,11 @@
  * header, the countdown) happens in the print pipeline, not here.
  */
 import * as cheerio from 'cheerio';
-import { withTtl } from '$lib/server/cache';
-import { getConfig } from '$lib/server/config';
-import { log, logErr } from '$lib/server/log';
-import { parseIcsDays, type IcsDay } from '$lib/server/ics';
-import { sydneyYMD, sydneyYMDOffset, ymdAddDays, ymdDiffDays } from '$lib/time';
+import { withTtl } from '#lib/server/cache.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { log, logErr } from '#lib/server/log.ts';
+import { parseIcsDays, type IcsDay } from '#lib/server/ics.ts';
+import { sydneyYMD, sydneyYMDOffset, ymdAddDays, ymdDiffDays } from '#lib/time.ts';
 
 const pageUrl = (year: number) => `https://education.nsw.gov.au/schooling/calendars/${year}`;
 

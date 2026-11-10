@@ -1,7 +1,7 @@
-import { error, json } from '@sveltejs/kit';
-import { composeText, composeImage } from '$lib/server/print/composers';
-import { printText, printPng } from '$lib/server/print/printer';
-import { event, errorMessage } from '$lib/server/log';
+import { error } from '@sveltejs/kit';
+import { composeText, composeImage } from '#lib/server/print/composers.ts';
+import { printText, printPng } from '#lib/server/print/printer.ts';
+import { event, errorMessage } from '#lib/server/log.ts';
 import type { RequestHandler } from './$types';
 
 /**
@@ -73,10 +73,17 @@ export const POST: RequestHandler = async ({ params, url }) => {
 		// `lines` only meaningful for text mode; null for image (no notion of lines in raster).
 		const lines = mode === 'text' && text ? text.split('\n').length : null;
 		ev.set('bytes', bytes).set('lines', lines).done();
-		return json({ ok: true, kind: params.kind, mode, bytes, lines, fallback: composed?.fallback });
+		return Response.json({
+			ok: true,
+			kind: params.kind,
+			mode,
+			bytes,
+			lines,
+			fallback: composed?.fallback
+		});
 	} catch (err) {
 		ev.fail(err);
 		const message = errorMessage(err);
-		return json({ ok: false, kind: params.kind, mode, error: message }, { status: 500 });
+		return Response.json({ ok: false, kind: params.kind, mode, error: message }, { status: 500 });
 	}
 };

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CalendarEvent } from '$lib/server/tools/calendar';
-	import { sydneyTimeCompact, sydneyYMD, sydneyYMDOffset, sydneyDayOfWeek } from '$lib/time';
+	import type { CalendarEvent } from '#lib/server/tools/calendar.ts';
+	import { sydneyTimeCompact, sydneyYMD, sydneyYMDOffset, sydneyDayOfWeek } from '#lib/time.ts';
 
 	type EventWithPeople = CalendarEvent & { people: string[] };
 

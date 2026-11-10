@@ -12,11 +12,11 @@
  * here — no JSON config / registry yet.
  */
 import type { BriefData } from './brief';
-import type { SchedulePeriod } from '$lib/server/tools/sentral';
-import { getConfig } from '$lib/server/config';
-import { parseEventPeople } from '$lib/server/people';
-import { beachSummary } from '$lib/server/tools/beach';
-import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange } from '$lib/time';
+import type { SchedulePeriod } from '#lib/server/tools/sentral.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { parseEventPeople } from '#lib/server/people.ts';
+import { beachSummary } from '#lib/server/tools/beach.ts';
+import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange } from '#lib/time.ts';
 import { scheduleSection, schoolBreakSection } from './school-section';
 
 type BodyByKind =
@@ -353,7 +353,8 @@ function shortItem(s: string): string {
 	return stripped.length > 20 ? `${stripped.slice(0, 19).trimEnd()}…` : stripped;
 }
 
-function puzzleSection(d: BriefData): PrintSectionBody {
+function puzzleSection(d: BriefData): PrintSectionBody | null {
+	if (!d.puzzle) return null;
 	return { title: 'PUZZLE', kind: 'puzzle', q: d.puzzle.question };
 }
 

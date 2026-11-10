@@ -6,7 +6,7 @@
  * and how to get on the list, instead of a bare 403.
  */
 import { redirect } from '@sveltejs/kit';
-import { isAdminEmail } from '$lib/server/config';
+import { isAdminEmail } from '#lib/server/config.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TripReport } from '$lib/server/print/brief';
-	import { sydneyTimeCompact, sydneyTimeOnDay } from '$lib/time';
+	import type { TripReport } from '#lib/server/print/brief.ts';
+	import { sydneyTimeCompact, sydneyTimeOnDay } from '#lib/time.ts';
 
 	let { trips }: { trips: TripReport[] } = $props();
 

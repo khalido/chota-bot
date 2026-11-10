@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BriefSheet from '$lib/components/print/BriefSheet.svelte';
+	import BriefSheet from '#lib/components/print/BriefSheet.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();

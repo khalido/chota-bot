@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { pickAroundTarget } from './brief';
-import { cleanListName } from '$lib/server/tools/ticktick';
+import { cleanListName } from '#lib/server/tools/ticktick.ts';
 import { wrapItems } from './sections';
-import type { BusDeparture } from '$lib/server/tools/bus';
+import type { BusDeparture } from '#lib/server/tools/bus.ts';
 
 function dep(isoTime: string, route = '501', dueMins = 0): BusDeparture {
 	const d = new Date(isoTime);

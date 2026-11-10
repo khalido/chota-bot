@@ -34,7 +34,7 @@ A job that does several things (a print per person, a refresh per kid) tries the
 
 ## Alerts
 
-`$lib/server/alerts.ts`: `raiseAlert(key, text)` and `clearAlert(key, { okNeeded, recovered })`. One row per key in the `alert` table — state, not history (the log has every event):
+`#lib/server/alerts.ts`: `raiseAlert(key, text)` and `clearAlert(key, { okNeeded, recovered })`. One row per key in the `alert` table — state, not history (the log has every event):
 
 - First raise sends `⚠️ text`; while open, quiet; a repeat only after 12h.
 - `clearAlert` closes after `okNeeded` good checks in a row (2 for a device that flaps) and sends `✅ …` only if the problem was sent.
@@ -46,7 +46,7 @@ A job that does several things (a print per person, a refresh per kid) tries the
 
 Planned on top: per-person targets (an alert to a kid, via their channel); `/mute <key>` once the commands registry exists.
 
-**Device checks (planned):** `printer-check` every 30 min asks the thermal printer for status (`DLE EOT`: paper out/low, cover open, error; unplugged counts) — free, local USB. Logging follows the rule above: ok runs aren't logged, a change of state is (`printer: ok → paper low`), and the alert carries it. The morning/weekend prints run the same check first and fail with the reason. The laser can get a reachability check the same way later — but as status, not an alert, since it's off most of the time.
+**Device checks:** `printer-check` (every 15 min at :05, :20, :35, :50, kiosk only) asks the thermal printer for status over USB (`DLE EOT 1–4`, read back on the bulk IN endpoint; `readPrinterStatus` in `print/printer.ts`). It uses no paper and skips a tick while a print is running. Paper out, cover open, a cutter or other error, or the printer missing from USB raises the `printer` alert (`Printer: paper out`); two good checks in a row send "Printer is working again". A low roll has its own key, `printer:paper-low`, so it can't mute "paper out" later. A status byte that doesn't fit Epson's layout goes into the alert as hex rather than being guessed at. Ok runs aren't logged. Read off the MUNBYN on the Pi (10 Nov 2026): `16 12 12 12` online with paper, `1e 36 12 72` cover open, `1e 32 12 72` roll out with the cover shut. With the cover open the paper sensor reads empty too, so that state is reported as "cover open" alone. This printer showed no near-end reading, so "paper low" may never fire on it. Not built: the morning/weekend prints running the same check first and failing with the reason. The laser can get a reachability check the same way later — but as status, not an alert, since it's off most of the time.
 
 Learned from hermes-agent (`refs/hermes-agent/cron/incidents.py`, `gateway/cron_store_notices.py`): alert on transitions, not on every poll; no lone "recovered"; close incidents on recovery or they pile up as "open" forever. Not taken: its run ledger, leases, retry queue, catch-up runs (a 06:45 print at 11:00 is worse than none) — that's multi-process machinery.
 
@@ -79,6 +79,7 @@ src/lib/server/
     bus-refresh.ts        # warm bus departures cache
     ticktick-refresh.ts   # warm TickTick lists cache
     job-check.ts          # every 30 min: alert when a print's slot passed with no run
+    printer-check.ts      # every 15 min: alert when the printer is offline, open or out of paper
     job-runs-prune.ts     # daily 03:30: drop job_run rows older than 30 days
     dreaming.ts           # daily 03:00: stub, will consolidate memory
 src/hooks.server.ts       # init hook: configureLogging + bootJobs + shutdown
@@ -136,22 +137,23 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 
 (one file per job in `src/lib/server/jobs/`)
 
-| Name                  | Pattern               | Kind     | Purpose                                                              |
-| --------------------- | --------------------- | -------- | -------------------------------------------------------------------- |
-| `heartbeat`           | `*/5 * * * *`         | scripted | Debug log                                                            |
-| `morning-print`       | `45 6 * * 1-5`        | scripted | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                   |
-| `weekend-print`       | `0 18 * * 5`          | scripted | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`)   |
-| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches (serialized)                     |
-| `schoolterms-refresh` | `0 4 * * 1`           | scripted | Refresh the NSW school-calendar cache                                |
-| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted | Warm the volleyball fixture cache before the Friday prints           |
-| `sentral-login`       | `0 4 * * 1`           | scripted | Mondays — pre-emptive Sentral cookie refresh                         |
-| `weather-refresh`     | `*/30 * * * *`        | scripted | Warm weather cache + the local beach lifeguard report                |
-| `calendar-refresh`    | refresh cadence       | scripted | Warm Google Calendar cache                                           |
-| `bus-refresh`         | refresh cadence       | scripted | Warm bus departures cache                                            |
-| `ticktick-refresh`    | refresh cadence       | scripted | Warm TickTick lists cache                                            |
-| `job-check`           | `*/30 * * * *`        | scripted | Alert when a print's slot passed with no run (gated by `KIOSK=true`) |
-| `job-runs-prune`      | `30 3 * * *`          | scripted | Drop `job_run` rows older than 30 days                               |
-| `dreaming`            | `0 3 * * *`           | stub     | No-op placeholder — will consolidate memory once agent-jobs land     |
+| Name                  | Pattern               | Kind     | Purpose                                                                                    |
+| --------------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `heartbeat`           | `*/5 * * * *`         | scripted | Debug log                                                                                  |
+| `morning-print`       | `45 6 * * 1-5`        | scripted | Per-person briefs, Mon–Fri (gated by `KIOSK=true`)                                         |
+| `weekend-print`       | `0 18 * * 5`          | scripted | Whole-family weekend sheet, Friday evening (gated by `KIOSK=true`)                         |
+| `sentral-refresh`     | `30 6,7,8,17 * * 1-5` | scripted | Refresh per-kid Sentral .ics caches (serialized)                                           |
+| `schoolterms-refresh` | `0 4 * * 1`           | scripted | Refresh the NSW school-calendar cache                                                      |
+| `volleyball-refresh`  | `30 6,17 * * 5`       | scripted | Warm the volleyball fixture cache before the Friday prints                                 |
+| `sentral-login`       | `0 4 * * 1`           | scripted | Mondays — pre-emptive Sentral cookie refresh                                               |
+| `weather-refresh`     | `*/30 * * * *`        | scripted | Warm weather cache + the local beach lifeguard report                                      |
+| `calendar-refresh`    | refresh cadence       | scripted | Warm Google Calendar cache                                                                 |
+| `bus-refresh`         | refresh cadence       | scripted | Warm bus departures cache                                                                  |
+| `ticktick-refresh`    | refresh cadence       | scripted | Warm TickTick lists cache                                                                  |
+| `job-check`           | `*/30 * * * *`        | scripted | Alert when a print's slot passed with no run (gated by `KIOSK=true`)                       |
+| `printer-check`       | `5-59/15 * * * *`     | scripted | Alert when the printer can't print: offline, cover open, paper out (gated by `KIOSK=true`) |
+| `job-runs-prune`      | `30 3 * * *`          | scripted | Drop `job_run` rows older than 30 days                                                     |
+| `dreaming`            | `0 3 * * *`           | stub     | No-op placeholder — will consolidate memory once agent-jobs land                           |
 
 Planned:
 

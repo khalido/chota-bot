@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { errorMessage } from '$lib/utils';
+	import { errorMessage } from '#lib/utils.ts';
 	import { resolve } from '$app/paths';
-	import { version } from '$app/environment';
-	import { authClient } from '$lib/auth-client';
-	import * as Card from '$lib/components/ui/card';
+	import { version } from '$app/env';
+	import { authClient } from '#lib/auth-client.ts';
+	import * as Card from '#lib/components/ui/card/index.ts';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -150,10 +150,30 @@
 	}
 
 	const sections: { title: string; summary: string; data: unknown }[] = $derived([
-		{ title: 'Weather', summary: summarizeWeather(data.weather), data: data.weather },
-		{ title: 'Bus trips', summary: summarizeTrips(data.trips), data: data.trips },
-		{ title: "Today's chores", summary: summarizeChores(data.chores), data: data.chores },
-		{ title: 'Calendar (week)', summary: summarizeCalendar(data.calendar), data: data.calendar },
+		{
+			title: 'Weather',
+			summary: summarizeWeather(data.weather),
+			data: data.weather
+		},
+
+		{
+			title: 'Bus trips',
+			summary: summarizeTrips(data.trips),
+			data: data.trips
+		},
+
+		{
+			title: "Today's chores",
+			summary: summarizeChores(data.chores),
+			data: data.chores
+		},
+
+		{
+			title: 'Calendar (week)',
+			summary: summarizeCalendar(data.calendar),
+			data: data.calendar
+		},
+
 		{
 			title: 'Calendar list (paste id into chota.config.ts)',
 			summary: summarizeCalendarList(data.calendarList),
@@ -326,9 +346,10 @@
 
 		<div class="mt-3 space-y-1 text-sm text-slate-700 dark:text-neutral-300">
 			<p>
-				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('/admin/print')}
+				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('admin/print')}
 					>/admin/print</a
 				>
+
 				— text + rendered image side by side.
 			</p>
 			<p>
@@ -350,15 +371,17 @@
 				— rendered image preview (the production "designed print" path).
 			</p>
 			<p>
-				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('/admin/jobs')}
+				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('admin/jobs')}
 					>/admin/jobs</a
 				>
+
 				— scheduler status + per-job last runs.
 			</p>
 			<p>
-				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('/admin/agent')}
+				<a class="text-blue-600 underline dark:text-blue-400" href={resolve('admin/agent')}
 					>/admin/agent</a
 				>
+
 				— poke the ToolLoopAgent: tools registered, env health, per-step loop inspector.
 			</p>
 		</div>

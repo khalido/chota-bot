@@ -24,7 +24,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { sydneyYMD } from '$lib/time';
+import { sydneyYMD } from '#lib/time.ts';
 
 export interface Quote {
 	/** Filename-derived kind: 'tv', 'comic', 'book', etc. */

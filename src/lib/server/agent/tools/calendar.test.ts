@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/server/tools/calendar', () => ({}));
-vi.mock('$lib/server/config', () => ({}));
-vi.mock('$lib/server/people', () => ({}));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/tools/calendar.ts', () => ({}));
+vi.mock('#lib/server/config.ts', () => ({}));
+vi.mock('#lib/server/people.ts', () => ({}));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const { mapsUrl } = await import('./calendar');
 

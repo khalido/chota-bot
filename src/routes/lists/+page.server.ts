@@ -1,7 +1,7 @@
-import { getConfig } from '$lib/server/config';
-import { getFamilyLists } from '$lib/server/tools/ticktick';
-import { sydneyYMD, sydneyYMDOffset, sydneyDayOfWeek } from '$lib/time';
-import { logErr, errorMessage } from '$lib/server/log';
+import { getConfig } from '#lib/server/config.ts';
+import { getFamilyLists } from '#lib/server/tools/ticktick.ts';
+import { sydneyYMD, sydneyYMDOffset, sydneyDayOfWeek } from '#lib/time.ts';
+import { logErr, errorMessage } from '#lib/server/log.ts';
 import type { PageServerLoad } from './$types';
 
 /** "today" / "yesterday" / weekday (Sydney-local) for a completion date. */

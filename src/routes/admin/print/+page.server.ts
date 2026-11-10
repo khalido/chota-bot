@@ -1,4 +1,4 @@
-import { composeText, getPrintKinds } from '$lib/server/print/composers';
+import { composeText, getPrintKinds } from '#lib/server/print/composers.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

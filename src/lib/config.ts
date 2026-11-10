@@ -167,7 +167,7 @@ export interface ChotaConfig {
 	};
 	/** Activity → packing-list mapping for the after-school gear tool (later). */
 	activities?: Activity[];
-	/** Chat channels (`$lib/server/channels`). `default` carries messages the
+	/** Chat channels (`#lib/server/channels`). `default` carries messages the
 	 *  bot starts itself — alerts, later nudges; `fallback` is tried when the
 	 *  default fails (its connection is down). */
 	channels?: {
@@ -175,7 +175,7 @@ export interface ChotaConfig {
 		default?: 'telegram' | 'whatsapp';
 		fallback?: 'telegram' | 'whatsapp';
 	};
-	/** Alerts (`$lib/server/alerts.ts`): problems the bot tells someone about —
+	/** Alerts (`#lib/server/alerts.ts`): problems the bot tells someone about —
 	 *  a failed job, the printer out of paper. */
 	alerts?: {
 		/** Override `channels.default` for alerts. Telegram sends to
@@ -206,7 +206,7 @@ export interface ChotaConfig {
 		/** Friendly name → Spotify link or `spotify:` URI, for "play friday". */
 		favourites: Record<string, string>;
 	};
-	/** Speaking on the box's speaker (`$lib/server/speech.ts`, docs/audio.md).
+	/** Speaking on the box's speaker (`#lib/server/speech.ts`, docs/audio.md).
 	 *  Omit to keep chota silent. */
 	speech?: {
 		/** AI Gateway speech model, e.g. 'google/gemini-3.8-flash-tts'. */
@@ -221,6 +221,9 @@ export interface ChotaConfig {
 		volume: number;
 		/** Sydney "HH:MM" span when chota doesn't speak, e.g. 21:00–07:00. */
 		quietHours?: { from: string; to: string };
+		/** 0–100: where the music on the house speaker is turned down to while a
+		 *  regular announcement plays. Default 20. An important one pauses it. */
+		duckTo?: number;
 		/** The most `announce` calls in an hour (the agent tool, not jobs). */
 		perHour?: number;
 		/** Family names who may ask chota to announce something; omit for anyone

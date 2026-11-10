@@ -4,6 +4,6 @@
 // docs/agent.md §Memory tool + §Sessions), this will read simplified session
 // logs + family.jsonl, consolidate via Sonnet, write family.jsonl.new, then
 // atomic-rename — Anthropic Dreams pattern (input never modified).
-import { defineJob } from '$lib/server/scheduler';
+import { defineJob } from '#lib/server/scheduler.ts';
 
 defineJob('dreaming', '0 3 * * *', () => 'stub — agent runtime + memory tool pending');

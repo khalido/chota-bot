@@ -10,19 +10,21 @@
 // acceptable; a dedicated 'weekend' gather mode isn't worth it yet.)
 //
 // No catch-up — a missed run is just missed; `job-check.ts` alerts on it.
-import { defineJob } from '$lib/server/scheduler';
-import { composeImage } from '$lib/server/print/composers';
-import { printPng } from '$lib/server/print/printer';
-import { FAMILY_RECIPIENT } from '$lib/server/print/sections';
-import { event } from '$lib/server/log';
-import { env } from '$env/dynamic/private';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { composeImage } from '#lib/server/print/composers.ts';
+import { printPng } from '#lib/server/print/printer.ts';
+import { FAMILY_RECIPIENT } from '#lib/server/print/sections.ts';
+import { event } from '#lib/server/log.ts';
+import { KIOSK } from '$app/env/private';
 
 defineJob('weekend-print', '0 18 * * 5', async () => {
-	if (env.KIOSK !== 'true') return 'skipped (KIOSK env not set)';
+	if (KIOSK !== 'true') return 'skipped (KIOSK env not set)';
+
 	const ev = event('print', 'printed {who} ({source})', {
 		who: FAMILY_RECIPIENT,
 		source: 'weekend-print'
 	});
+
 	try {
 		const composed = await composeImage(FAMILY_RECIPIENT, undefined, 'today');
 		if (!composed) throw new Error('composeImage returned null');

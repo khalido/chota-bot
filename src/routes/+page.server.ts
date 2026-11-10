@@ -1,14 +1,14 @@
-import { collectTripReports } from '$lib/server/print/brief';
-import { getRecipients } from '$lib/server/print/sections';
-import { quoteForTime } from '$lib/server/tools/clock-quotes';
-import { getQuote } from '$lib/server/tools/quotes';
-import { getChores } from '$lib/server/chores';
-import { getWeather, weatherSummary } from '$lib/server/tools/weather';
-import { getCalendar, type CalendarEvent } from '$lib/server/tools/calendar';
-import { getFamilyLists, type ProjectWithTasks } from '$lib/server/tools/ticktick';
-import { parseEventPeople } from '$lib/server/people';
-import { getConfig } from '$lib/server/config';
-import { logErr } from '$lib/server/log';
+import { collectTripReports } from '#lib/server/print/brief.ts';
+import { getRecipients } from '#lib/server/print/sections.ts';
+import { quoteForTime } from '#lib/server/tools/clock-quotes.ts';
+import { getQuote } from '#lib/server/tools/quotes.ts';
+import { getChores } from '#lib/server/chores.ts';
+import { getWeather, weatherSummary } from '#lib/server/tools/weather.ts';
+import { getCalendar, type CalendarEvent } from '#lib/server/tools/calendar.ts';
+import { getFamilyLists, type ProjectWithTasks } from '#lib/server/tools/ticktick.ts';
+import { parseEventPeople } from '#lib/server/people.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { logErr } from '#lib/server/log.ts';
 import type { PageServerLoad } from './$types';
 
 const CALENDAR_LIMIT = 8;

@@ -1,7 +1,7 @@
 /**
  * ticktick agent-tools — read a configured family list, and add to one.
  *
- * Wraps `$lib/server/tools/ticktick`. The list arg is the stable internal
+ * Wraps `#lib/server/tools/ticktick.ts`. The list arg is the stable internal
  * name from `chota.config.ts > ticktick.lists` (`shopping` etc.), never
  * the raw TickTick display name. Reads return titles, tags, a due date, who
  * it's for, its section (the family list has e.g. reminders and things to
@@ -10,11 +10,11 @@
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { addToList, completeOnList, getList } from '$lib/server/tools/ticktick';
-import { errorMessage } from '$lib/server/log';
-import { getFamily } from '$lib/server/config';
-import { parseTaskPeople } from '$lib/server/people';
-import { sydneyYMD } from '$lib/time';
+import { addToList, completeOnList, getList } from '#lib/server/tools/ticktick.ts';
+import { errorMessage } from '#lib/server/log.ts';
+import { getFamily } from '#lib/server/config.ts';
+import { parseTaskPeople } from '#lib/server/people.ts';
+import { sydneyYMD } from '#lib/time.ts';
 import { ymd as ymdSchema } from './schemas';
 
 const LISTS = ['shopping', 'family', 'watch', 'notes'] as const;

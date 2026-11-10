@@ -1,13 +1,13 @@
 /**
  * book agent-tool — "tell me about this book", "does the library have X".
  *
- * Wraps `$lib/server/tools/books` (`lookupBook`: Google Books / Open Library,
+ * Wraps `#lib/server/tools/books` (`lookupBook`: Google Books / Open Library,
  * the City of Sydney Library catalogue, one Exa search). Returns a compact
  * shape: the model answers in a line or two and links the catalogue.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { lookupBook } from '$lib/server/tools/books';
+import { lookupBook } from '#lib/server/tools/books/index.ts';
 
 export const bookTool = tool({
 	description:

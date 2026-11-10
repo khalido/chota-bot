@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatTomorrowWeather, rainSummaryToday } from './weather-block';
-import type { ForecastHour, Weather } from '$lib/server/tools/weather';
+import type { ForecastHour, Weather } from '#lib/server/tools/weather.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Sydney May = AEST (+10:00). `hour()` builds slots dated 2026-05-10.

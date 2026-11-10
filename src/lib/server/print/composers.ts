@@ -19,11 +19,12 @@ import {
 	isPrintRecipient,
 	FAMILY_RECIPIENT
 } from './sections';
-import { getSchedule } from '$lib/server/tools/sentral';
-import { briefToPng } from './snapshot';
+import { getSchedule } from '#lib/server/tools/sentral.ts';
+import { briefToPng, NotTheBrief } from './snapshot';
+import { clearAlert, raiseAlert } from '#lib/server/alerts.ts';
 import { renderReceiptPng } from './render';
-import { logErr, errorMessage } from '$lib/server/log';
-import { sydneyYMDOffset } from '$lib/time';
+import { logErr, errorMessage } from '#lib/server/log.ts';
+import { sydneyYMDOffset } from '#lib/time.ts';
 
 /**
  * The school-timetable day to render: an explicit `date` wins; otherwise
@@ -111,17 +112,29 @@ export async function composeImage(
 	if (kind === 'test') return { image: await renderReceiptPng(testSheet(), {}) };
 	if (!isPrintRecipient(kind)) return null;
 	try {
-		return { image: await briefToPng(kind, date, day) };
+		const image = await briefToPng(kind, date, day);
+		await clearAlert(SCREENSHOT_ALERT, {
+			recovered: 'Briefs are printing in the designed layout again'
+		});
+		return { image };
 	} catch (err) {
 		const reason = screenshotFailureReason(err);
 		logErr('print', `screenshot path failed for ${kind} (${reason}); falling back to canvas:`, err);
 		const text = await composeText(kind, date, day);
-		return { image: await renderReceiptPng(text ?? '', { masthead: true }), fallback: reason };
+		const image = await renderReceiptPng(text ?? '', { masthead: true });
+		// The plain sheet did come out, so the job is ok: say so here, or a broken
+		// browser means plain briefs for weeks with nobody told.
+		await raiseAlert(SCREENSHOT_ALERT, `Briefs are printing in the plain layout: ${reason}`);
+		return { image, fallback: reason };
 	}
 }
 
+/** One alert for "the designed sheet can't be made", whoever asked for it. */
+const SCREENSHOT_ALERT = 'print:screenshot';
+
 function screenshotFailureReason(err: unknown): string {
 	const msg = errorMessage(err);
+	if (err instanceof NotTheBrief) return 'the brief page did not render';
 	if (/ENOENT|not found|spawn/i.test(msg)) return 'agent-browser missing';
 	if (/timeout|timed ?out/i.test(msg)) return 'agent-browser timeout';
 	return 'screenshot error';

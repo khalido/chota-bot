@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { errorMessage } from '$lib/utils';
+	import { errorMessage } from '#lib/utils.ts';
 	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
@@ -41,7 +41,7 @@
 			</p>
 		</div>
 		<a
-			href={resolve('/admin')}
+			href={resolve('admin')}
 			class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
 			>← admin</a
 		>

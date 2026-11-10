@@ -11,7 +11,7 @@
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { version } from '$app/environment';
+import { version } from '$app/env';
 
 const exec = promisify(execFile);
 

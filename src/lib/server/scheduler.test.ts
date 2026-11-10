@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from '$lib/server/db/schema';
-import { clearAlert, raiseAlert } from '$lib/server/alerts';
+import * as schema from '#lib/server/db/schema.ts';
+import { clearAlert, raiseAlert } from '#lib/server/alerts.ts';
 
 const sqlite = new Database(':memory:');
 sqlite.exec(`CREATE TABLE job_run (
 	id integer PRIMARY KEY AUTOINCREMENT NOT NULL, job text NOT NULL, at integer NOT NULL,
 	status text NOT NULL, duration_ms integer NOT NULL, summary text, error text)`);
-vi.mock('$lib/server/db', () => ({ db: drizzle(sqlite, { schema }) }));
-vi.mock('$lib/server/alerts', () => ({ raiseAlert: vi.fn(), clearAlert: vi.fn() }));
+vi.mock('#lib/server/db/index.ts', () => ({ db: drizzle(sqlite, { schema }) }));
+vi.mock('#lib/server/alerts.ts', () => ({ raiseAlert: vi.fn(), clearAlert: vi.fn() }));
 
 const { defineJob, JOBS, missedRuns, pruneRuns, recentRuns } = await import('./scheduler');
 

@@ -9,9 +9,9 @@
  * Future agent tool will wrap this — keep the API agent-friendly: small
  * named-args object in, flat JSON-able array out.
  */
-import { getConfig } from '$lib/server/config';
-import type { ChotaConfig, DayOfWeek } from '$lib/config';
-import { sydneyDayOfWeek } from '$lib/time';
+import { getConfig } from '#lib/server/config.ts';
+import type { ChotaConfig, DayOfWeek } from '#lib/config.ts';
+import { sydneyDayOfWeek } from '#lib/time.ts';
 
 export interface ChoreAssignment {
 	person: string;

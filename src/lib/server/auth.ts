@@ -1,16 +1,57 @@
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
-import { env } from '$env/dynamic/private';
+
+import { hostname } from 'node:os';
+import {
+	ORIGIN,
+	PORT,
+	BETTER_AUTH_SECRET,
+	GOOGLE_CLIENT_ID,
+	GOOGLE_CLIENT_SECRET
+} from '$app/env/private';
+
 import { getRequestEvent } from '$app/server';
-import { db } from '$lib/server/db';
-import { event, logger } from '$lib/server/log';
+import { db } from '#lib/server/db/index.ts';
+import { event, logger } from '#lib/server/log.ts';
 
 const authLog = logger('auth');
 
+/**
+ * The box answers on several plain-http names (localhost, its hostname on the
+ * LAN, its tailnet name), so better-auth takes its base URL from each request
+ * rather than from one fixed string. With a fixed string its SvelteKit handler
+ * only answered `/api/auth/*` on that exact origin and every other name got a
+ * 404 (adapter-node 6 no longer rewrites request URLs to `ORIGIN`).
+ *
+ * - `allowedHosts` match host AND port: `localhost:8000` is a direct hit,
+ *   `localhost` is through Caddy on port 80.
+ * - `protocol: 'http'` is needed: left out, only `https://<host>` is trusted for
+ *   a non-loopback host and every sign-in POST from `http://<box>` is refused.
+ *   If the box ever gets an https name, this has to become per-host.
+ * - `fallback` is needed: jobs call `auth.api.getAccessToken` with no request
+ *   (the calendar), and a request on an unlisted host (a bare IP) would
+ *   otherwise throw inside `getSession` and turn every page into a 500.
+ *
+ * Google sign-in still only completes on the origin registered in the Google
+ * console, which is `ORIGIN`: start it there.
+ */
+const box = hostname().toLowerCase();
+const signInOrigin = (ORIGIN || `http://localhost:${PORT || 8000}`).replace(/\/$/, '');
+const allowedHosts = [
+	...new Set([
+		new URL(signInOrigin).host,
+		`localhost:${PORT || 8000}`,
+		'localhost',
+		box,
+		`${box}.local`,
+		`${box}.*.ts.net`
+	])
+];
+
 export const auth = betterAuth({
-	baseURL: env.ORIGIN,
-	secret: env.BETTER_AUTH_SECRET,
+	baseURL: { allowedHosts, protocol: 'http', fallback: signInOrigin },
+	secret: BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 	// Password sign-IN stays for any existing local account, but self-serve
 	// sign-UP is off — the box is LAN-reachable, and admin access is gated on
@@ -25,8 +66,8 @@ export const auth = betterAuth({
 		// re-auth. better-auth stores tokens in the `account` table; tools
 		// retrieve via `auth.api.getAccessToken()` (auto-refreshes).
 		google: {
-			clientId: env.GOOGLE_CLIENT_ID,
-			clientSecret: env.GOOGLE_CLIENT_SECRET,
+			clientId: GOOGLE_CLIENT_ID,
+			clientSecret: GOOGLE_CLIENT_SECRET,
 			accessType: 'offline',
 			prompt: 'select_account consent',
 			scope: ['https://www.googleapis.com/auth/calendar.readonly']

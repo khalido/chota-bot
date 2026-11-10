@@ -14,9 +14,9 @@
  * source: NYT Books API (reviews, bestseller history, children's lists) —
  * see docs/tools.md.
  */
-import { getConfig } from '$lib/server/config';
-import { withTtl } from '$lib/server/cache';
-import { log, logErr } from '$lib/server/log';
+import { getConfig } from '#lib/server/config.ts';
+import { withTtl } from '#lib/server/cache.ts';
+import { log, logErr } from '#lib/server/log.ts';
 import { bookBlurb, type BookBlurb } from './exa';
 import { searchGoogleBooks } from './google';
 import { librarySearchUrl, searchLibrary, type LibraryCopy, type LibraryTitle } from './library';

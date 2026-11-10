@@ -11,13 +11,14 @@
  */
 import { google, calendar_v3 } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { auth } from '$lib/server/auth';
-import { getConfig } from '$lib/server/config';
-import { db } from '$lib/server/db';
-import { account } from '$lib/server/db/auth.schema';
-import { log } from '$lib/server/log';
+import { auth } from '#lib/server/auth.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { db } from '#lib/server/db/index.ts';
+import { account } from '#lib/server/db/auth.schema.ts';
+import { log } from '#lib/server/log.ts';
+import { withTtl } from '#lib/server/cache.ts';
 import { eq } from 'drizzle-orm';
-import { sydneyDayOfWeek, sydneyTimeOnDay, sydneyYMD } from '$lib/time';
+import { sydneyDayOfWeek, sydneyTimeOnDay, sydneyYMD } from '#lib/time.ts';
 
 export interface CalendarEvent {
 	id: string;
@@ -39,41 +40,45 @@ export interface GetCalendarOptions {
 	calendarId?: string;
 }
 
-// Cache keyed by `(range, sydneyYMD)` so a 'today'/'tomorrow'/'week' entry
-// can't outlive the date it was computed for — a failed refresh after midnight
-// used to leave yesterday's events cached forever. Custom calendarId bypasses
-// the cache (it's per-test/per-debug, not the shared path).
-const cache = new Map<string, CalendarEvent[]>();
-const cacheKey = (range: CalendarRange, now: Date) => `${range}:${sydneyYMD(now)}`;
+// The family calendar per range, through the house cache: fresh for 20 minutes,
+// concurrent reads share one fetch, and a failed refetch serves the last good
+// copy for up to 6 more hours. Without a limit, Friday's 06:45 read of
+// `weekend` was still being served to the 18:00 weekend sheet. The Sydney date
+// is part of the key, so yesterday's copy can't be served as today's. A custom
+// calendarId bypasses the cache (it's per-test/per-debug, not the shared path).
+const cached = withTtl(
+	'calendar',
+	async (range: CalendarRange, _ymd: string) => {
+		const { timeMin, timeMax } = rangeFor(range, new Date());
+		const events = await fetchEventsList(timeMin, timeMax);
+		log('calendar', `${events.length} events for range=${range}`);
+		return events;
+	},
+	{ ttl: 20 * 60_000, maxStale: 6 * 60 * 60_000 }
+);
 
-/** Read events for a range. Returns cache if hot for *today's* key; otherwise refreshes. */
+/** Read events for a range (cached 20 minutes). */
 export async function getCalendar(opts: GetCalendarOptions = {}): Promise<CalendarEvent[]> {
 	const range = opts.range ?? 'today';
-	if (!opts.calendarId) {
-		const key = cacheKey(range, new Date());
-		const hit = cache.get(key);
-		if (hit) return hit;
-	}
-	return refreshCalendar(range, opts.calendarId);
+	if (opts.calendarId) return refreshCalendar(range, opts.calendarId);
+	return (await cached(range, sydneyYMD(new Date()))).value;
 }
 
-/** Always fetch + replace cache. Called by the calendar-refresh job + as the
- *  cold-start path of getCalendar. */
+/** Fetch now and replace the cached copy. Called by the calendar-refresh job.
+ *  Throws when the fetch failed, even though readers still get the last good
+ *  copy: the job must see the failure to alert on it. */
 export async function refreshCalendar(
 	range: CalendarRange = 'today',
 	customCalendarId?: string
 ): Promise<CalendarEvent[]> {
-	const { timeMin, timeMax } = rangeFor(range, new Date());
-	const events = await fetchEventsList(timeMin, timeMax, customCalendarId);
-	if (!customCalendarId) {
-		const now = new Date();
-		const key = cacheKey(range, now);
-		// Drop any older-day entries for this range so the map can't grow unbounded.
-		for (const k of cache.keys()) if (k.startsWith(`${range}:`) && k !== key) cache.delete(k);
-		cache.set(key, events);
+	if (customCalendarId) {
+		const { timeMin, timeMax } = rangeFor(range, new Date());
+		return fetchEventsList(timeMin, timeMax, customCalendarId);
 	}
-	log('calendar', `${events.length} events for range=${range}`);
-	return events;
+	const got = await cached.refresh(range, sydneyYMD(new Date()));
+	if (got.stale)
+		throw new Error(`calendar refresh failed for range=${range}; serving the last copy`);
+	return got.value;
 }
 
 /**
@@ -152,15 +157,20 @@ async function fetchEventsList(
 	client.setCredentials({ access_token: accessToken });
 
 	const cal = google.calendar({ version: 'v3', auth: client });
-	const res = await cal.events.list({
-		calendarId,
-		timeMin: timeMin.toISOString(),
-		timeMax: timeMax.toISOString(),
-		singleEvents: true,
-		orderBy: 'startTime',
-		maxResults: 250,
-		...(q ? { q } : {})
-	});
+	const res = await cal.events.list(
+		{
+			calendarId,
+			timeMin: timeMin.toISOString(),
+			timeMax: timeMax.toISOString(),
+			singleEvents: true,
+			orderBy: 'startTime',
+			maxResults: 250,
+			...(q ? { q } : {})
+		},
+		// Readers of a range share one fetch, so a hung call would hold them all
+		// (the 06:45 brief fires in the same minute as the refresh job).
+		{ timeout: 15_000 }
+	);
 
 	return (res.data.items ?? []).map(toEvent);
 }

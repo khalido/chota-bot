@@ -9,7 +9,7 @@
  */
 import { error } from '@sveltejs/kit';
 import { createAgentUIStreamResponse } from 'ai';
-import { chotaAgent } from '$lib/server/agent';
+import { chotaAgent } from '#lib/server/agent/index.ts';
 import type { RequestHandler } from './$types';
 
 // Auth lives in hooks.server.ts (adminEmails guard); this is just a sanity

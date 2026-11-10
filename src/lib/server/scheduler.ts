@@ -10,12 +10,12 @@
  */
 import { Cron } from 'croner';
 import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm';
-import { building } from '$app/environment';
-import { clearAlert, raiseAlert } from '$lib/server/alerts';
-import { db } from '$lib/server/db';
-import { jobRun } from '$lib/server/db/schema';
-import { SYDNEY_TZ } from '$lib/time';
-import { errorMessage, event, logger } from '$lib/server/log';
+import { building } from '$app/env';
+import { clearAlert, raiseAlert } from '#lib/server/alerts.ts';
+import { db } from '#lib/server/db/index.ts';
+import { jobRun } from '#lib/server/db/schema.ts';
+import { SYDNEY_TZ } from '#lib/time.ts';
+import { errorMessage, event, logger } from '#lib/server/log.ts';
 
 /** Default wall-clock cap per run. Clears the slowest jobs (morning-print
  *  screenshots each person; sentral-refresh may do a browser login). */

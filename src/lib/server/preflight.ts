@@ -28,17 +28,17 @@
  */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { env } from '$env/dynamic/private';
+import { AI_GATEWAY_API_KEY, BETTER_AUTH_SECRET, DATABASE_URL, ORIGIN } from '$app/env/private';
 import { getConfig } from './config';
 import { log, logErr } from './log';
 
 /** Hard-required env vars — chota will misbehave without these. */
-const REQUIRED_ENV = [
-	'DATABASE_URL', //         better-auth + drizzle backing store
-	'BETTER_AUTH_SECRET', //   OAuth + session encryption
-	'ORIGIN', //               OAuth callback redirect validation
-	'AI_GATEWAY_API_KEY' //    agent runtime + LLM calls
-] as const;
+const REQUIRED_ENV = {
+	DATABASE_URL, //         better-auth + drizzle backing store
+	BETTER_AUTH_SECRET, //   OAuth + session encryption
+	ORIGIN, //               OAuth callback redirect validation
+	AI_GATEWAY_API_KEY //    agent runtime + LLM calls
+};
 
 export interface PreflightFinding {
 	kind: 'file' | 'env' | 'config';
@@ -55,21 +55,15 @@ export function runPreflight(): PreflightFinding[] {
 	const findings: PreflightFinding[] = [];
 
 	// ── env vars ─────────────────────────────────────────────────────────
-	for (const key of REQUIRED_ENV) {
-		if (!env[key]) {
-			findings.push({
-				kind: 'env',
-				name: key,
-				hint: `set ${key}=… in .env`
-			});
-		}
+	for (const [key, value] of Object.entries(REQUIRED_ENV)) {
+		if (!value) findings.push({ kind: 'env', name: key, hint: `set ${key}=… in .env` });
 	}
 
 	// ── DB file ───────────────────────────────────────────────────────────
 	// DATABASE_URL is a relative path (e.g. `data/home.db`) resolved against
 	// the server's CWD — which is the chota-bot repo root (systemd's
 	// WorkingDirectory=).
-	const dbPath = env.DATABASE_URL;
+	const dbPath = DATABASE_URL;
 	if (dbPath) {
 		const absDb = resolve(process.cwd(), dbPath);
 		if (!existsSync(absDb)) {
@@ -93,7 +87,7 @@ export function runPreflight(): PreflightFinding[] {
 	}
 
 	if (findings.length === 0) {
-		log('preflight', `✓ all ${REQUIRED_ENV.length} required env vars + DB present`);
+		log('preflight', `✓ all ${Object.keys(REQUIRED_ENV).length} required env vars + DB present`);
 		return findings;
 	}
 

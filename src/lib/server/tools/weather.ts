@@ -8,9 +8,9 @@
  *   GET /v1/currentConditions:lookup
  *   GET /v1/forecast/hours:lookup    (up to 48 hours = 2 days)
  */
-import { GOOGLE_WEATHER_API_KEY } from '$env/static/private';
-import { getConfig } from '$lib/server/config';
-import { log } from '$lib/server/log';
+import { GOOGLE_WEATHER_API_KEY } from '$app/env/private';
+import { getConfig } from '#lib/server/config.ts';
+import { log, logErr } from '#lib/server/log.ts';
 import {
 	sydneyDateMedium,
 	sydneyDayOfWeek,
@@ -18,8 +18,8 @@ import {
 	sydneyTimeCompact,
 	sydneyYMD,
 	sydneyYMDOffset
-} from '$lib/time';
-import type { WeatherThresholds } from '$lib/config';
+} from '#lib/time.ts';
+import type { WeatherThresholds } from '#lib/config.ts';
 import { fetchJson } from './http';
 
 const CURRENT_URL = 'https://weather.googleapis.com/v1/currentConditions:lookup';
@@ -74,6 +74,31 @@ function hasOverrides(opts: GetWeatherOptions): boolean {
 	return opts.lat != null || opts.lon != null || (opts.hours != null && opts.hours !== 48);
 }
 
+/** Google returns at most 24 hours a page (`pageSize` default and max), with the
+ *  rest behind `nextPageToken`, so 48 hours is two requests. Reading one page
+ *  gave the 06:45 brief only the small hours of tomorrow. */
+const FORECAST_PAGE_HOURS = 24;
+
+async function fetchForecastHours(
+	base: URLSearchParams,
+	hours: number
+): Promise<GoogleForecastHour[]> {
+	const out: GoogleForecastHour[] = [];
+	let pageToken: string | undefined;
+	for (let page = 0; page < Math.ceil(hours / FORECAST_PAGE_HOURS); page++) {
+		const params = new URLSearchParams(base);
+		params.set('hours', String(hours));
+		if (pageToken) params.set('pageToken', pageToken);
+		const res = await fetchJson<GoogleForecast>(`${FORECAST_URL}?${params}`, {
+			label: 'Google Weather forecast/hours'
+		});
+		out.push(...(res.forecastHours ?? []));
+		pageToken = res.nextPageToken;
+		if (!pageToken) break;
+	}
+	return out.slice(0, hours);
+}
+
 /** Always fetch + replace cache. Called by the weather-refresh job + as the
  *  cold-start path of getWeather. */
 export async function refreshWeather({
@@ -99,19 +124,19 @@ export async function refreshWeather({
 		'location.latitude': String(latitude),
 		'location.longitude': String(longitude)
 	});
-	const forecastParams = new URLSearchParams(params);
-	forecastParams.set('hours', String(Math.min(hours, 48)));
-
-	const [current, forecast] = await Promise.all([
+	const wanted = Math.min(hours, 48);
+	const [current, forecastHours] = await Promise.all([
 		fetchJson<GoogleCurrent>(`${CURRENT_URL}?${params}`, {
 			label: 'Google Weather currentConditions'
 		}),
-		fetchJson<GoogleForecast>(`${FORECAST_URL}?${forecastParams}`, {
-			label: 'Google Weather forecast/hours'
-		})
+		fetchForecastHours(params, wanted)
 	]);
 
-	const hourly: ForecastHour[] = (forecast.forecastHours ?? []).map(toForecastHour);
+	const hourly: ForecastHour[] = forecastHours.map(toForecastHour);
+	// A short forecast makes "tomorrow" a partial day. Say so; don't pad it.
+	if (hourly.length < wanted) {
+		logErr('weather', `asked Google for ${wanted} forecast hours, got ${hourly.length}`);
+	}
 
 	log(
 		'weather',
@@ -305,6 +330,7 @@ interface GoogleCurrent {
 
 interface GoogleForecast {
 	forecastHours?: GoogleForecastHour[];
+	nextPageToken?: string;
 }
 
 interface GoogleForecastHour {

@@ -21,8 +21,8 @@
  * text — the family always gets an answer.
  */
 import type { Context } from 'grammy';
-import { finalText, type ChotaStreamResult } from '$lib/server/agent';
-import { logErr } from '$lib/server/log';
+import { finalText, type ChotaStreamResult } from '#lib/server/agent/index.ts';
+import { logErr } from '#lib/server/log.ts';
 
 const SCOPE = 'telegram';
 /** Min gap between draft updates. Tokens arrive every few ms; sending each

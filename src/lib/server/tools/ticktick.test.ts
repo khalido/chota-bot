@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/static/private', () => ({ TICKTICK_API_KEY: 'test' }));
-vi.mock('$lib/server/config', () => ({ getConfig: () => ({}) }));
+vi.mock('$app/env/private', () => ({ TICKTICK_API_KEY: 'test' }));
+vi.mock('#lib/server/config.ts', () => ({ getConfig: () => ({}) }));
 
-const { dueDateString, matchTitles } = await import('./ticktick');
+const { dueDateString, matchTitles, repeatable } = await import('./ticktick');
 
 describe('dueDateString', () => {
 	it('uses the offset at Sydney midnight', () => {
@@ -46,5 +46,19 @@ describe('matchTitles', () => {
 		expect(r.notFound).toEqual(['tea', 'ham']);
 		const twice = matchTitles(tasks, ['shoes', 'school shoes']);
 		expect(twice.found.map((f) => f.task.title)).toEqual(['Kid1 school shoes']);
+	});
+});
+
+describe('repeatable', () => {
+	it('retries reads and the handshake', () => {
+		expect(repeatable('initialize', {})).toBe(true);
+		expect(repeatable('tools/call', { name: 'list_projects' })).toBe(true);
+		expect(repeatable('tools/call', { name: 'get_project_with_undone_tasks' })).toBe(true);
+	});
+
+	it('never retries a write, which may already have landed', () => {
+		expect(repeatable('tools/call', { name: 'create_task' })).toBe(false);
+		expect(repeatable('tools/call', { name: 'complete_task' })).toBe(false);
+		expect(repeatable('tools/call', {})).toBe(false);
 	});
 });

@@ -16,9 +16,9 @@
  * (sibling to `weatherSummary()` in weather.ts); `BeachReport` is the pure data.
  */
 import * as cheerio from 'cheerio';
-import { withTtl } from '$lib/server/cache';
-import { getConfig } from '$lib/server/config';
-import { log, logErr } from '$lib/server/log';
+import { withTtl } from '#lib/server/cache.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { log, logErr } from '#lib/server/log.ts';
 import { fetchText } from './http';
 
 const FEED_URL = 'https://www.randwick.nsw.gov.au/integration/feeds/lifeguard-reports';

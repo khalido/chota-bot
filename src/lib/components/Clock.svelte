@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { ClockQuote } from '$lib/server/tools/clock-quotes';
-	import type { Weather } from '$lib/server/tools/weather';
-	import { sydneyDateLong, sydneyDateShort, sydneyTimeShort } from '$lib/time';
+	import type { ClockQuote } from '#lib/server/tools/clock-quotes.ts';
+	import type { Weather } from '#lib/server/tools/weather.ts';
+	import { sydneyDateLong, sydneyDateShort, sydneyTimeShort } from '#lib/time.ts';
 
 	interface Props {
 		quote: ClockQuote | null;

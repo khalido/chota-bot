@@ -1,7 +1,7 @@
 // One-way sync family TickTick lists to the local in-memory cache every 10
 // minutes. Keeps dashboard reads fast and bounded-stale.
-import { defineJob } from '$lib/server/scheduler';
-import { refreshFamilyLists } from '$lib/server/tools/ticktick';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { refreshFamilyLists } from '#lib/server/tools/ticktick.ts';
 
 defineJob(
 	'ticktick-refresh',

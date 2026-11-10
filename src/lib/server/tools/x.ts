@@ -14,8 +14,8 @@
  * spending limit is the hard stop.
  */
 import { Client, type Schemas } from '@xdevplatform/xdk';
-import { env } from '$env/dynamic/private';
-import { log } from '$lib/server/log';
+import { X_BEARER_TOKEN } from '$app/env/private';
+import { log } from '#lib/server/log.ts';
 
 const SCOPE = 'x';
 const POST_USD = 0.005;
@@ -57,8 +57,8 @@ export interface XPost {
 let client: Client | undefined;
 
 function x(): Client {
-	if (!env.X_BEARER_TOKEN) throw new Error('Set X_BEARER_TOKEN in .env');
-	client ??= new Client({ bearerToken: env.X_BEARER_TOKEN });
+	if (!X_BEARER_TOKEN) throw new Error('Set X_BEARER_TOKEN in .env');
+	client ??= new Client({ bearerToken: X_BEARER_TOKEN });
 	return client;
 }
 

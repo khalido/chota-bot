@@ -1,9 +1,14 @@
 <script lang="ts">
-	import { errorMessage } from '$lib/utils';
-	import { invalidateAll } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '$lib/components/ui/empty';
+	import { errorMessage } from '#lib/utils.ts';
+	import { refreshAll } from '$app/navigation';
+	import * as Card from '#lib/components/ui/card/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import {
+		Empty,
+		EmptyHeader,
+		EmptyTitle,
+		EmptyDescription
+	} from '#lib/components/ui/empty/index.ts';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -33,7 +38,7 @@
 			result[who] = body.ok
 				? `✓ ${body.bytes} bytes · ${body.events} events`
 				: `✗ ${body.error ?? 'failed'}`;
-			if (body.ok) await invalidateAll(); // refresh the file-state display
+			if (body.ok) await refreshAll(); // refresh the file-state display
 		} catch (e) {
 			result[who] = `✗ ${errorMessage(e)}`;
 		} finally {

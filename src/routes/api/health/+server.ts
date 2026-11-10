@@ -15,14 +15,13 @@
  * pushed SHA is the proof the box rebuilt + restarted on it.
  */
 import os from 'node:os';
-import { json } from '@sveltejs/kit';
 import { sql } from 'drizzle-orm';
-import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
-import { buildCommit } from '$lib/server/version';
-import { JOBS, recentRuns, type JobRecord } from '$lib/server/scheduler';
-import { sydneyHHMM } from '$lib/time';
-import { musicHealth } from '$lib/server/tools/spotify';
+import { KIOSK } from '$app/env/private';
+import { db } from '#lib/server/db/index.ts';
+import { buildCommit } from '#lib/server/version.ts';
+import { JOBS, recentRuns, type JobRecord } from '#lib/server/scheduler.ts';
+import { sydneyHHMM } from '#lib/time.ts';
+import { musicHealth } from '#lib/server/tools/music.ts';
 import type { RequestHandler } from './$types';
 
 const PROCESS_START = Date.now();
@@ -91,7 +90,7 @@ function snapshot() {
 		version: buildCommit,
 		uptimeMs: Date.now() - PROCESS_START,
 		node: process.version,
-		env: env.KIOSK === 'true' ? 'kiosk' : 'dev',
+		env: KIOSK === 'true' ? 'kiosk' : 'dev',
 		host: os.hostname(),
 		db: database ? 'ok' : 'error',
 		load: os.loadavg().map((n) => Number(n.toFixed(2))),
@@ -148,7 +147,7 @@ function asText(s: ReturnType<typeof snapshot>): string {
 export const GET: RequestHandler = async ({ url }) => {
 	const snap = snapshot();
 	if (url.searchParams.get('format') === 'json') {
-		return json(snap);
+		return Response.json(snap);
 	}
 	return new Response(asText(snap), {
 		headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }

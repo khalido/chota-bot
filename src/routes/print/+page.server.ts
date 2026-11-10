@@ -1,7 +1,7 @@
-import { gatherBrief } from '$lib/server/print/brief';
-import { recipientToSections, getRecipients } from '$lib/server/print/sections';
-import { getSchedule } from '$lib/server/tools/sentral';
-import { sydneyYMD, sydneyYMDOffset } from '$lib/time';
+import { gatherBrief } from '#lib/server/print/brief.ts';
+import { recipientToSections, getRecipients } from '#lib/server/print/sections.ts';
+import { getSchedule } from '#lib/server/tools/sentral.ts';
+import { sydneyYMD, sydneyYMDOffset } from '#lib/time.ts';
 import type { PageServerLoad } from './$types';
 
 /**

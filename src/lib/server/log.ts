@@ -29,8 +29,13 @@ import { getRotatingFileSink } from '@logtape/file';
 import { getOpenTelemetrySink } from '@logtape/otel';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { mkdirSync } from 'node:fs';
-import { dev, version } from '$app/environment';
-import { env } from '$env/dynamic/private';
+import { dev, version } from '$app/env';
+
+import {
+	OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
+	OTEL_SERVICE_NAME,
+	OTEL_EXPORTER_OTLP_LOGS_HEADERS
+} from '$app/env/private';
 
 const LOG_DIR = 'data/logs';
 const LOG_FILE = `${LOG_DIR}/chota.log`;
@@ -95,10 +100,10 @@ export async function configureLogging(): Promise<void> {
 		// `Authorization=Bearer phc_…`. Axiom / Honeycomb / others work the same
 		// way. `diagnostics: true` surfaces export failures through the
 		// `['logtape','meta']` logger — otherwise a 401/404 would be silent.
-		const otlpEndpoint = env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
+		const otlpEndpoint = OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
 		if (otlpEndpoint) {
 			sinks.otel = getOpenTelemetrySink({
-				serviceName: env.OTEL_SERVICE_NAME || 'chota-bot',
+				serviceName: OTEL_SERVICE_NAME || 'chota-bot',
 				diagnostics: true,
 				// PostHog-recommended resource attributes (service.name comes from
 				// serviceName above; service.version + deployment.environment ride
@@ -111,7 +116,7 @@ export async function configureLogging(): Promise<void> {
 				}),
 				otlpExporterConfig: {
 					url: otlpEndpoint,
-					headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_LOGS_HEADERS)
+					headers: parseOtlpHeaders(OTEL_EXPORTER_OTLP_LOGS_HEADERS)
 				}
 			});
 			sinkNames.push('otel');
@@ -241,8 +246,8 @@ function flatten(args: unknown[]): { msg: string; props: Record<string, unknown>
 	return { msg, props };
 }
 
-/** Lives in `$lib/utils` so Svelte pages can use it too; re-exported for server code. */
-export { errorMessage } from '$lib/utils';
+/** Lives in `#lib/utils.ts` so Svelte pages can use it too; re-exported for server code. */
+export { errorMessage } from '#lib/utils.ts';
 
 /** Compat shim for the old console.log wrapper — logs at `info`. */
 export function log(scope: string, ...args: unknown[]): void {

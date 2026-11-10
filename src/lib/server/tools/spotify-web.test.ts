@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { SPOTIFY_CLIENT_ID: 'id', SPOTIFY_CLIENT_SECRET: 'secret' }
+vi.mock('$app/env/private', () => ({
+	SPOTIFY_CLIENT_ID: 'id',
+	SPOTIFY_CLIENT_SECRET: 'secret'
 }));
 type Module = typeof import('./spotify-web');
 let searchSpotify: Module['searchSpotify'];

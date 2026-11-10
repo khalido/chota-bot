@@ -15,8 +15,8 @@
  */
 import type { BriefData } from './brief';
 import type { PrintSectionBody } from './sections';
-import type { SchedulePeriod } from '$lib/server/tools/sentral';
-import { sydneyTimeRange } from '$lib/time';
+import type { SchedulePeriod } from '#lib/server/tools/sentral.ts';
+import { sydneyTimeRange } from '#lib/time.ts';
 
 /**
  * A kid's school day: the periods, the week folded into the header

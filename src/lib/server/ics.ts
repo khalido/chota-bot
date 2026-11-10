@@ -13,7 +13,7 @@
  * `rrule` on the raw component.
  */
 import ical, { type ParameterValue } from 'node-ical';
-import { sydneyYMD } from '$lib/time';
+import { sydneyYMD } from '#lib/time.ts';
 
 export interface IcsEvent {
 	/** VEVENT `SUMMARY`, trimmed. */

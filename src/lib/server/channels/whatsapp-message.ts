@@ -14,7 +14,7 @@
  * - `fromMe` (sent from the bot's own phone) is skipped; `append` means it
  *   arrived late, after a reconnect.
  */
-import type { FamilyMember } from '$lib/config';
+import type { FamilyMember } from '#lib/config.ts';
 import type { Incoming } from './types';
 
 /** The parts of a baileyrs WAMessage we read. */

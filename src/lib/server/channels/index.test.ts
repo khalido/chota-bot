@@ -4,10 +4,10 @@ import type { Incoming } from './types';
 vi.mock('./telegram', () => ({ telegramChannel: () => null }));
 vi.mock('./whatsapp', () => ({ whatsappChannel: () => null }));
 vi.mock('./triage', () => ({ triage: vi.fn(), triageHint: vi.fn() }));
-vi.mock('$lib/server/agent', () => ({ runAgentStream: vi.fn() }));
-vi.mock('$lib/server/agent/history', () => ({}));
-vi.mock('$lib/server/agent/prompts', () => ({ GROUP_HINT: '' }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/agent/index.ts', () => ({ runAgentStream: vi.fn() }));
+vi.mock('#lib/server/agent/history.ts', () => ({}));
+vi.mock('#lib/server/agent/prompts.ts', () => ({ GROUP_HINT: '' }));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const { followsBot, shouldAnswer } = await import('./index');
 

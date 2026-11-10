@@ -1,21 +1,21 @@
 <script lang="ts">
 	import './layout.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '#lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { invalidateAll, goto } from '$app/navigation';
-	import { sydneyHour } from '$lib/time';
+	import { refreshAll, goto } from '$app/navigation';
+	import { sydneyHour } from '#lib/time.ts';
 
 	let { children } = $props();
 
 	const tabs = [
 		{ href: resolve('/'), label: 'Dashboard' },
-		{ href: resolve('/clock'), label: 'Clock' },
-		{ href: resolve('/weather'), label: 'Weather' },
-		{ href: resolve('/lists'), label: 'Lists' },
-		{ href: resolve('/morning'), label: 'Morning' },
-		{ href: resolve('/print'), label: 'Print' },
-		{ href: resolve('/admin'), label: 'Admin' }
+		{ href: resolve('clock'), label: 'Clock' },
+		{ href: resolve('weather'), label: 'Weather' },
+		{ href: resolve('lists'), label: 'Lists' },
+		{ href: resolve('morning'), label: 'Morning' },
+		{ href: resolve('print'), label: 'Print' },
+		{ href: resolve('admin'), label: 'Admin' }
 	];
 
 	// The family-facing pages the wall kiosk parks on. Only these auto-refresh
@@ -57,11 +57,11 @@
 	// Re-runs whenever the path changes (reactive on page.url.pathname).
 	$effect(() => {
 		if (!KIOSK_PATHS.includes(page.url.pathname)) return;
-		const refresh = setInterval(() => invalidateAll(), 60_000);
+		const refresh = setInterval(() => refreshAll(), 60_000);
 		let idle: ReturnType<typeof setTimeout>;
 		const resetIdle = () => {
 			clearTimeout(idle);
-			idle = setTimeout(() => goto(resolve('/clock')), IDLE_TO_CLOCK_MS);
+			idle = setTimeout(() => goto(resolve('clock')), IDLE_TO_CLOCK_MS);
 		};
 		const activity = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
 		for (const evt of activity) window.addEventListener(evt, resetIdle, { passive: true });

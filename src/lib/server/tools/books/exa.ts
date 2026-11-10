@@ -7,8 +7,8 @@
  * an `outputSchema` too, read from `output.content`. `numResults` is capped
  * at 5 to keep a lookup cheap. Key: EXA_API_KEY.
  */
-import { exa } from '$lib/server/exa';
-import { log } from '$lib/server/log';
+import { exa } from '#lib/server/exa.ts';
+import { log } from '#lib/server/log.ts';
 
 export interface BookBlurb {
 	/** 1–3 sentences on what the book is about, no spoilers. */

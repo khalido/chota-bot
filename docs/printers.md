@@ -28,15 +28,15 @@ Because the built-in fonts are so basic, **anything visually richer than monospa
 
 ```ts
 // Simple text print (most common — used by morning-print job)
-import { printText } from '$lib/server/print/printer';
+import { printText } from '#lib/server/print/printer.ts';
 await printText((await composeText('morning'))!);
 
 // Image print — what the production morning print actually uses
-import { printPng } from '$lib/server/print/printer';
+import { printPng } from '#lib/server/print/printer.ts';
 await printPng(pngBuffer);
 
 // Lower level: build with node-thermal-printer's full API, includes images
-import { printReceipt } from '$lib/server/print/printer';
+import { printReceipt } from '#lib/server/print/printer.ts';
 await printReceipt(async (p) => {
 	p.alignCenter().bold(true);
 	p.println('CHOTA');

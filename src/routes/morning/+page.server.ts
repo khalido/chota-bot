@@ -1,5 +1,5 @@
-import { gatherBrief } from '$lib/server/print/brief';
-import { recipientToSections, getRecipients } from '$lib/server/print/sections';
+import { gatherBrief } from '#lib/server/print/brief.ts';
+import { recipientToSections, getRecipients } from '#lib/server/print/sections.ts';
 import type { PageServerLoad } from './$types';
 
 /**

@@ -143,7 +143,7 @@ Skills are markdown **procedures/knowledge** the agent loads on demand — disti
 
 ## Tools — current shape (v7)
 
-One file per tool in `agent/tools/`, basename matching the data lib it wraps in `$lib/server/tools/`. The tool file adds the LLM-facing `description` + `inputSchema` + any response shaping; the data lib owns the fetch, caching, and stale-ok behaviour.
+One file per tool in `agent/tools/`, basename matching the data lib it wraps in `#lib/server/tools/`. The tool file adds the LLM-facing `description` + `inputSchema` + any response shaping; the data lib owns the fetch, caching, and stale-ok behaviour.
 
 ```ts
 import { tool } from 'ai';
@@ -181,7 +181,7 @@ Rules (also in `agent/CLAUDE.md`):
   );
   ```
 
-- **Don't reach for the DB / external APIs directly from a tool** — call the matching `$lib/server/tools/` lib.
+- **Don't reach for the DB / external APIs directly from a tool** — call the matching `#lib/server/tools/` lib.
 
 ## Loop control
 

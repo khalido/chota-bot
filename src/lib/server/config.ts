@@ -8,7 +8,7 @@
  * no runtime validation needed for a TS literal we control.
  */
 import config from '../../../chota.config';
-import type { ChotaConfig, FamilyMember, Kid } from '$lib/config';
+import type { ChotaConfig, FamilyMember, Kid } from '#lib/config.ts';
 
 export function getConfig(): ChotaConfig {
 	return config;

@@ -63,8 +63,8 @@ Reflects the agent that exists _today_ (`chotaAgent` — a `ToolLoopAgent` — a
 ```ts
 import { Bot } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
-import { chotaAgent, runAgent } from '$lib/server/agent';
-import { getConfig } from '$lib/server/config';
+import { chotaAgent, runAgent } from '#lib/server/agent/index.ts';
+import { getConfig } from '#lib/server/config.ts';
 import { env } from '$env/dynamic/private';
 
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN);

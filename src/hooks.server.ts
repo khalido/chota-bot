@@ -1,15 +1,15 @@
-import type { Handle, ServerInit } from '@sveltejs/kit';
-import { json, redirect } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
-import { building } from '$app/environment';
-import { auth } from '$lib/server/auth';
-import { isAdminEmail } from '$lib/server/config';
+import { redirect } from '@sveltejs/kit';
+import { sequence, type Handle, type ServerInit } from '@sveltejs/kit/hooks';
+import { building } from '$app/env';
+import { SOLOIST_WS } from '$app/env/private';
+import { auth } from '#lib/server/auth.ts';
+import { getConfig, isAdminEmail } from '#lib/server/config.ts';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { bootJobs, stopJobs } from '$lib/server/scheduler';
-import { bootChannels, stopChannels } from '$lib/server/channels';
-import { configureLogging, shutdownLogging } from '$lib/server/log';
-import { runPreflight } from '$lib/server/preflight';
-import { bootMusic, stopMusic } from '$lib/server/tools/spotify';
+import { bootJobs, stopJobs } from '#lib/server/scheduler.ts';
+import { bootChannels, stopChannels } from '#lib/server/channels/index.ts';
+import { configureLogging, shutdownLogging } from '#lib/server/log.ts';
+import { runPreflight } from '#lib/server/preflight.ts';
+import { bootMusic, stopMusic } from '#lib/server/tools/music.ts';
 
 // Runs once at server startup (not during build) — env vars are available.
 export const init: ServerInit = async () => {
@@ -27,7 +27,8 @@ export const init: ServerInit = async () => {
 	await bootJobs();
 	// Spotify speaker (Soloist): connects in the background, retries forever,
 	// and an absent speaker is just "offline". No-op without `music` in config.
-	bootMusic();
+	const music = getConfig().music;
+	bootMusic(music ? { url: SOLOIST_WS || undefined, maxVolume: music.maxVolume } : null);
 
 	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
 	// cron timers (croner's intervals outlive adapter-node's server.close()
@@ -86,7 +87,10 @@ const handleGuard: Handle = async ({ event, resolve }) => {
 	// APIs answer with a status; page navigations bounce to the sign-in screen
 	// (which also explains "signed in but not on the admin list").
 	if (path.startsWith('/api/')) {
-		return json({ error: email ? 'forbidden' : 'unauthenticated' }, { status: email ? 403 : 401 });
+		return Response.json(
+			{ error: email ? 'forbidden' : 'unauthenticated' },
+			{ status: email ? 403 : 401 }
+		);
 	}
 	redirect(303, '/login');
 };

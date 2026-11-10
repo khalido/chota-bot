@@ -1,23 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from '$lib/server/db/schema';
+import * as schema from '#lib/server/db/schema.ts';
 
 const sqlite = new Database(':memory:');
 sqlite.exec(`CREATE TABLE alert (
 	key text PRIMARY KEY NOT NULL, status text NOT NULL, text text NOT NULL,
 	opened_at integer NOT NULL, sent_at integer, ok_streak integer DEFAULT 0 NOT NULL,
 	resolved_at integer)`);
-vi.mock('$lib/server/db', () => ({ db: drizzle(sqlite, { schema }) }));
-vi.mock('$lib/server/config', () => ({
+vi.mock('#lib/server/db/index.ts', () => ({ db: drizzle(sqlite, { schema }) }));
+vi.mock('#lib/server/config.ts', () => ({
 	getConfig: () => ({
 		channels: { default: 'telegram', fallback: 'whatsapp' },
 		alerts: { quietHours: { from: '21:00', to: '07:00' } }
 	})
 }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
-const { clearAlert, inQuietHours, raiseAlert, registerAlertChannel } = await import('./alerts');
+const { clearAlert, inQuietHours, raiseAlert, registerAlertChannel, resendUnsent } =
+	await import('./alerts');
 
 const sent: { text: string; silent: boolean }[] = [];
 let telegramDown = false;
@@ -85,5 +86,39 @@ describe('inQuietHours', () => {
 		expect(inQuietHours('12:00', quiet)).toBe(false);
 		expect(inQuietHours('12:00')).toBe(false);
 		expect(inQuietHours('13:00', { from: '12:00', to: '14:00' })).toBe(true);
+	});
+});
+
+describe('resendUnsent', () => {
+	it('sends an alert whose first send failed, once, and its fix is then announced', async () => {
+		telegramDown = true;
+		registerAlertChannel('whatsapp', async () => {
+			throw new Error('whatsapp down');
+		});
+		expect(await raiseAlert('job:morning-print', 'Job morning-print failed: printer busy')).toBe(
+			false
+		);
+		expect(await resendUnsent()).toBe(0); // still down
+		expect(sent).toHaveLength(0);
+
+		telegramDown = false;
+		expect(await resendUnsent()).toBe(1);
+		expect(sent.map((s) => s.text)).toEqual(['⚠️ Job morning-print failed: printer busy']);
+		expect(await resendUnsent()).toBe(0); // not twice
+
+		await clearAlert('job:morning-print');
+		expect(sent.at(-1)?.text).toBe('✅ Back to normal: Job morning-print failed: printer busy');
+		registerAlertChannel('whatsapp', async (text) => {
+			viaWhatsapp.push(text);
+		});
+	});
+
+	it('leaves sent and resolved alerts alone', async () => {
+		await raiseAlert('printer', 'Printer: paper out');
+		await raiseAlert('old', 'Old problem');
+		await clearAlert('old');
+		sent.length = 0;
+		expect(await resendUnsent()).toBe(0);
+		expect(sent).toHaveLength(0);
 	});
 });

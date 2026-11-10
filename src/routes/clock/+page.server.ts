@@ -1,6 +1,6 @@
-import { quoteForTime } from '$lib/server/tools/clock-quotes';
-import { getWeather } from '$lib/server/tools/weather';
-import { logErr } from '$lib/server/log';
+import { quoteForTime } from '#lib/server/tools/clock-quotes.ts';
+import { getWeather } from '#lib/server/tools/weather.ts';
+import { logErr } from '#lib/server/log.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

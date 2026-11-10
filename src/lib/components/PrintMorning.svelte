@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { errorMessage } from '$lib/utils';
+	import { errorMessage } from '#lib/utils.ts';
 	// Dashboard widget: preview any family member's printed brief as plain text.
 	// Before midday it previews today's (morning) brief; after midday, tomorrow's
 	// (the evening print) — the same names, the day that's actually relevant.
-	import { sydneyHour } from '$lib/time';
+	import { sydneyHour } from '#lib/time.ts';
 
 	let { recipients }: { recipients: readonly string[] } = $props();
 

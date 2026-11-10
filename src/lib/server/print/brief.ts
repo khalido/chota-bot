@@ -12,24 +12,32 @@
  * Weather *formatting* lives in weather-block.ts; bus-trip shaping is at the
  * bottom of this file.
  */
-import { getConfig } from '$lib/server/config';
-import { getChores } from '$lib/server/chores';
-import type { BusTrip, FamilyMember } from '$lib/config';
-import { getBus, schoolRunLine, type BusDeparture } from '$lib/server/tools/bus';
-import { getWeather } from '$lib/server/tools/weather';
-import { getCalendar, type CalendarEvent } from '$lib/server/tools/calendar';
-import { getFamilyLists, cleanListName, type ProjectWithTasks } from '$lib/server/tools/ticktick';
-import { parseTaskPeople } from '$lib/server/people';
-import { getBootprintFact } from '$lib/server/tools/bootprint';
+import { getConfig } from '#lib/server/config.ts';
+import { getChores } from '#lib/server/chores.ts';
+import type { BusTrip, FamilyMember } from '#lib/config.ts';
+import { getBus, schoolRunLine, type BusDeparture } from '#lib/server/tools/bus.ts';
+import { getWeather } from '#lib/server/tools/weather.ts';
+import { getCalendar, type CalendarEvent } from '#lib/server/tools/calendar.ts';
+import {
+	getFamilyLists,
+	cleanListName,
+	type ProjectWithTasks
+} from '#lib/server/tools/ticktick.ts';
+import { parseTaskPeople } from '#lib/server/people.ts';
+import { getBootprintFact } from '#lib/server/tools/bootprint.ts';
 import {
 	getSchoolWeek,
 	getUpcomingSchoolEvents,
 	getSchoolBreak
-} from '$lib/server/tools/schoolterms';
-import { pickPuzzle, type Puzzle } from '$lib/server/puzzles';
-import { getQuote, type Quote } from '$lib/server/tools/quotes';
-import { getWeekendVolleyball, weekendDates, type KidFixture } from '$lib/server/tools/volleyball';
-import { getBeachReport, type BeachReport } from '$lib/server/tools/beach';
+} from '#lib/server/tools/schoolterms.ts';
+import { pickPuzzle, type Puzzle } from '#lib/server/puzzles.ts';
+import { getQuote, type Quote } from '#lib/server/tools/quotes.ts';
+import {
+	getWeekendVolleyball,
+	weekendDates,
+	type KidFixture
+} from '#lib/server/tools/volleyball.ts';
+import { getBeachReport, type BeachReport } from '#lib/server/tools/beach.ts';
 import {
 	sydneyDateMedium,
 	sydneyDateShort,
@@ -40,8 +48,8 @@ import {
 	sydneyYMDOffset,
 	ymdDiffDays,
 	sydneyNoon
-} from '$lib/time';
-import { logErr } from '$lib/server/log';
+} from '#lib/time.ts';
+import { logErr } from '#lib/server/log.ts';
 import { weatherBlock } from './weather-block';
 
 // Empty default — the static "Have a good day, kids" closing was dropped (it
@@ -126,7 +134,8 @@ export interface BriefData {
 	/** TickTick "Family"-list tasks due on the brief's day or overdue, with
 	 *  assignees. Rendered on the brief under the TODOS heading. */
 	todos: Todo[];
-	puzzle: Puzzle;
+	/** Null when the curios content couldn't be read: the section drops, the sheet prints. */
+	puzzle: Puzzle | null;
 	/** A TV / comic-strip quote for the morning brief's QUOTE section. */
 	funQuote: Quote | null;
 	/** "Shopping" list items, shown in full. Empty if the list is empty/missing. */
@@ -266,7 +275,7 @@ export async function gatherBrief({
 		schoolBreak,
 		chores: getChores({ now: ref }),
 		todos,
-		puzzle: pickPuzzle(ref),
+		puzzle: pickDaily('puzzle', () => pickPuzzle(ref)),
 		funQuote: getQuote({ date: ref }),
 		shoppingItems,
 		boughtRecently,
@@ -275,6 +284,17 @@ export async function gatherBrief({
 			: null,
 		closing
 	};
+}
+
+/** Content read from the sibling curios repo. If it can't be read (a failed
+ *  pull, a renamed file) that one section drops; the brief still prints. */
+function pickDaily<T>(what: string, pick: () => T): T | null {
+	try {
+		return pick();
+	} catch (err) {
+		logErr('print', `${what} unavailable, leaving it off the brief`, err);
+		return null;
+	}
 }
 
 /**

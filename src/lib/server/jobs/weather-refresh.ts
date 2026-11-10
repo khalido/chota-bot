@@ -4,9 +4,9 @@
 // (its own 30-min TTL means the RSS is actually fetched at most once per run),
 // so "weather" stays one thing to refresh. A dead beach feed doesn't fail the
 // job — getBeachReport swallows its own errors and returns null.
-import { defineJob } from '$lib/server/scheduler';
-import { refreshWeather } from '$lib/server/tools/weather';
-import { getBeachReport } from '$lib/server/tools/beach';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { refreshWeather } from '#lib/server/tools/weather.ts';
+import { getBeachReport } from '#lib/server/tools/beach.ts';
 
 defineJob(
 	'weather-refresh',

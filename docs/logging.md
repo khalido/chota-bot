@@ -107,7 +107,7 @@ Instrumented: server boot, every job run (`job.run`), the per-recipient `print.b
 
 ## Settled decisions
 
-1. **App version in base context** — done. `version` from `$app/environment` (`<pkgver>+<gitsha>`, set in `svelte.config.js > kit.version.name`) is folded into base context.
+1. **App version in base context** — done. `version` from `$app/env` (`<pkgver>+<gitsha>`, set in `svelte.config.js > kit.version.name`) is folded into base context.
 2. **`@logtape/pretty` for dev?** — skipped. The plain console sink reads fine.
 3. **`withContext`?** — not used. Base context goes in via `.with()` on the root logger instead; a job's `runId` is just a field on the `job.run` event.
 4. **`job_run` table** — shipped (Oct 2026); the source of `runId`.

@@ -3,7 +3,7 @@
  * WhatsApp voice notes are Ogg/Opus; the model takes the bytes as they are.
  */
 import { gateway, transcribe } from 'ai';
-import { log } from '$lib/server/log';
+import { log } from '#lib/server/log.ts';
 
 const MODEL = 'google/gemini-3.5-transcribe';
 

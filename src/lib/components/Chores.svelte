@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ChoreAssignment } from '$lib/server/chores';
+	import type { ChoreAssignment } from '#lib/server/chores.ts';
 	let { chores }: { chores: ChoreAssignment[] } = $props();
 </script>
 

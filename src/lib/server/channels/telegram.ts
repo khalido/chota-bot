@@ -12,22 +12,22 @@
  * Mac + the box) cause 409 conflicts. Locally use a throwaway dev token.
  *
  * Allowlist: only chats in `chota.config.ts > telegram.allowedChatIds` reach
- * the router, except `/start` (so anyone can fetch their chat ID to be
- * added). In groups, Telegram's privacy mode already limits the bot to
+ * the router. The exact `/start` command is answered for anyone (so they can
+ * fetch their chat ID to be added) and never reaches the router. In groups, Telegram's privacy mode already limits the bot to
  * commands, @mentions and replies to it, so everything delivered counts as
  * addressed.
  */
 import { Bot, InputFile, InlineKeyboard, GrammyError, HttpError, type Context } from 'grammy';
 import type { Chat, Message } from 'grammy/types';
 import { autoRetry } from '@grammyjs/auto-retry';
-import { env } from '$env/dynamic/private';
-import { getConfig, getFamily } from '$lib/server/config';
-import { composeImage } from '$lib/server/print/composers';
-import { getRecipients, FAMILY_RECIPIENT } from '$lib/server/print/sections';
-import { streamRichReply } from '$lib/server/telegram/stream';
-import { log, logErr } from '$lib/server/log';
-import { registerAlertChannel } from '$lib/server/alerts';
-import { recordSent, sessionKeyFor } from '$lib/server/agent/history';
+import { TELEGRAM_BOT_TOKEN } from '$app/env/private';
+import { getConfig, getFamily } from '#lib/server/config.ts';
+import { composeImage } from '#lib/server/print/composers.ts';
+import { getRecipients, FAMILY_RECIPIENT } from '#lib/server/print/sections.ts';
+import { streamRichReply } from '#lib/server/telegram/stream.ts';
+import { log, logErr } from '#lib/server/log.ts';
+import { registerAlertChannel } from '#lib/server/alerts.ts';
+import { recordSent, sessionKeyFor } from '#lib/server/agent/history.ts';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'telegram';
@@ -65,7 +65,7 @@ const contexts = new WeakMap<Incoming, Context>();
 
 /** The Telegram channel, or null when no token is set (dev machines). */
 export function telegramChannel(): Channel | null {
-	const token = env.TELEGRAM_BOT_TOKEN;
+	const token = TELEGRAM_BOT_TOKEN;
 	if (!token) {
 		log(SCOPE, 'no TELEGRAM_BOT_TOKEN — Telegram disabled');
 		return null;
@@ -114,19 +114,8 @@ export function telegramChannel(): Channel | null {
 				if (failed.length) logErr(SCOPE, 'alert not delivered to every notify chat', failed[0]);
 			});
 
-			// Allowlist gate. `/start` always passes (onboarding); everyone else
-			// not on the list is dropped, with a chat-ID hint on a plain message.
-			bot.use(async (ctx, next) => {
-				if (ctx.message?.text?.startsWith('/start')) return next();
-				if (isAllowed(ctx.chat?.id)) return next();
-				log(SCOPE, `dropped update from un-whitelisted chat ${ctx.chat?.id}`);
-				if (ctx.message) {
-					await ctx.reply(
-						`Not authorised yet. Your chat ID is ${ctx.chat?.id} — ask a parent to add it to the family list.`
-					);
-				}
-			});
-
+			// /start is the one thing open to everyone (onboarding: it shows the ids
+			// to add to the config), so it sits above the gate.
 			bot.command('start', async (ctx) => {
 				const id = ctx.chat.id;
 				// The user id goes on their family entry (`family[].telegram`).
@@ -136,6 +125,20 @@ export function telegramChannel(): Channel | null {
 						? `Hey, I'm Chota. Ask me anything, or /print a brief.${you}`
 						: `Hey, I'm Chota. You're not on the family list yet.\nYour chat ID is ${id} — add it to chota.config.ts > telegram.allowedChatIds.${you}`
 				);
+			});
+
+			// Allowlist gate. Everything registered below it needs an allowed chat;
+			// anyone else is dropped, with a chat-ID hint on a plain message. Only the
+			// /start command above is open, and grammY matches that exactly: a prefix
+			// check here once let "/starter …" from any chat through to the agent.
+			bot.use(async (ctx, next) => {
+				if (isAllowed(ctx.chat?.id)) return next();
+				log(SCOPE, `dropped update from un-whitelisted chat ${ctx.chat?.id}`);
+				if (ctx.message) {
+					await ctx.reply(
+						`Not authorised yet. Your chat ID is ${ctx.chat?.id} — ask a parent to add it to the family list.`
+					);
+				}
 			});
 
 			// /print [who] — send a brief image. No/invalid arg → recipient buttons.

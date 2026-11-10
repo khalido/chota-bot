@@ -39,11 +39,13 @@
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { env } from '$env/dynamic/private';
-import { sydneyYMD } from '$lib/time';
-import { log } from '$lib/server/log';
-import { parseIcsEvents } from '$lib/server/ics';
+import { sydneyYMD } from '#lib/time.ts';
+import { log } from '#lib/server/log.ts';
+import { parseIcsEvents } from '#lib/server/ics.ts';
 import { loginSentral } from './sentral-login';
+
+// Per-person keys (SENTRAL_<NAME>_...) can't be declared in src/env.ts without real names.
+const env = process.env;
 
 const TIMETABLE_DIR = 'sentral'; // data/sentral/<who>-{timetable.ics,cookie.txt}
 

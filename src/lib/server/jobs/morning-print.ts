@@ -9,17 +9,17 @@
 //
 // No catch-up: a run the box missed (off or restarting at 06:45) isn't printed
 // late — `job-check.ts` alerts instead.
-import { defineJob } from '$lib/server/scheduler';
-import { composeImage } from '$lib/server/print/composers';
-import { printPng } from '$lib/server/print/printer';
-import { getAutoPrintRecipients } from '$lib/server/print/sections';
-import { errorMessage, event } from '$lib/server/log';
-import { env } from '$env/dynamic/private';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { composeImage } from '#lib/server/print/composers.ts';
+import { printPng } from '#lib/server/print/printer.ts';
+import { getAutoPrintRecipients } from '#lib/server/print/sections.ts';
+import { errorMessage, event } from '#lib/server/log.ts';
+import { KIOSK } from '$app/env/private';
 
 defineJob('morning-print', '45 6 * * 1-5', async () => {
 	// Only the kiosk has a printer attached. On a dev machine this would log a
 	// failure every morning at 06:45 — no thanks.
-	if (env.KIOSK !== 'true') return 'skipped (KIOSK env not set)';
+	if (KIOSK !== 'true') return 'skipped (KIOSK env not set)';
 
 	const recipients = getAutoPrintRecipients();
 	const results: string[] = [];

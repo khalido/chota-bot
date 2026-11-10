@@ -13,7 +13,7 @@
  * failure throws to the caller.
  */
 import { LRUCache } from 'lru-cache';
-import { logErr } from '$lib/server/log';
+import { errorMessage, logErr } from '#lib/server/log.ts';
 
 export interface Fresh<T> {
 	value: T;
@@ -68,15 +68,19 @@ export function withTtl<A extends unknown[], T>(
 
 	const read = async (args: A, forceRefresh: boolean): Promise<Fresh<T>> => {
 		const status: LRUCache.Status<string, Entry<T>, unknown[]> = {};
+		const startedAt = Date.now();
 		let entry: Entry<T> | undefined;
 		try {
 			entry = await cache.fetch(JSON.stringify(args), { context: args, status, forceRefresh });
 		} catch (err) {
 			// No stale value to fall back on — the caller decides how to log this.
-			throw new Error(`${name} unavailable`, { cause: err });
+			throw new Error(`${name} unavailable: ${errorMessage(err)}`, { cause: err });
 		}
 		if (status.fetchRejected) logErr('cache', `${name}: refetch failed`, status.fetchError);
-		if (!entry) throw new Error(`${name} unavailable`, { cause: status.fetchError });
+		if (!entry)
+			throw new Error(`${name} unavailable: ${errorMessage(status.fetchError)}`, {
+				cause: status.fetchError
+			});
 		if (Date.now() - entry.fetchedAt > ttl + maxStale) {
 			throw new Error(`${name} unavailable: last good value is too old`, {
 				cause: status.fetchError
@@ -85,7 +89,12 @@ export function withTtl<A extends unknown[], T>(
 		return {
 			value: entry.value,
 			asOf: new Date(entry.fetchedAt),
-			stale: status.returnedStale === true
+			// lru-cache's flag, or the value's age: a caller that joins a fetch
+			// already in flight gets the old value back with the flag unset when that
+			// fetch fails, and a refresh job then recorded ok.
+			stale:
+				status.returnedStale === true ||
+				(forceRefresh ? entry.fetchedAt < startedAt : Date.now() - entry.fetchedAt > ttl)
 		};
 	};
 	const cached = (...args: A) => read(args, false);

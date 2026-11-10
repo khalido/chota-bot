@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { withTtl } from './cache';
 
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 afterEach(() => vi.useRealTimers());
 
@@ -65,6 +65,29 @@ describe('withTtl', () => {
 		fail = true;
 		vi.setSystemTime(Date.now() + 12 * 60_000);
 		await expect(get()).rejects.toThrow('flaky unavailable');
+	});
+
+	it('a refresh that joins a failing fetch already in flight still reports stale', async () => {
+		let fail = false;
+		let release: () => void = () => {};
+		const get = withTtl(
+			'joined',
+			async () => {
+				if (!fail) return 'good';
+				await new Promise<void>((r) => (release = r));
+				throw new Error('down');
+			},
+			{ ttl: 60_000, maxStale: 10 * 60_000 }
+		);
+		await get();
+		fail = true;
+		vi.setSystemTime(Date.now() + 2 * 60_000);
+		const reader = get(); // starts the refetch
+		const refresher = get.refresh(); // joins it
+		await Promise.resolve();
+		release();
+		expect(await reader).toMatchObject({ value: 'good', stale: true });
+		expect(await refresher).toMatchObject({ value: 'good', stale: true });
 	});
 
 	it('throws on failure when maxStale is 0', async () => {

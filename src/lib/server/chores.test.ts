@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getChores } from './chores';
-import type { ChotaConfig } from '$lib/config';
+import type { ChotaConfig } from '#lib/config.ts';
 
 // Placeholder kids — real names live only in chota.config.ts (gitignored).
 const fixture: ChotaConfig = {

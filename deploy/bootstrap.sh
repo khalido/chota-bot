@@ -110,8 +110,8 @@ echo "✓ .env + chota.config.ts present"
 
 # Append the kiosk-only env lines once. Idempotent: only adds if absent.
 if ! grep -q '^PORT=' .env; then
-	printf '\n# kiosk-only overrides (appended by bootstrap.sh)\nPORT=8000\nKIOSK="true"\n' >> .env
-	echo "✓ Appended PORT + KIOSK to .env"
+	printf '\n# kiosk-only overrides (appended by bootstrap.sh)\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\n' >> .env
+	echo "✓ Appended PORT, KIOSK and PROTOCOL_HEADER to .env"
 fi
 
 # Clone the sibling content repo (curios) for quotes + puzzles. chota

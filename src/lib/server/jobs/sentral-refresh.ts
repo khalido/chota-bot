@@ -9,9 +9,9 @@
 // agent-browser (`refreshSentralCookie`); the failure mode is fully
 // unreachable Sentral, which logs here and the print degrades to the last
 // good .ics on disk.
-import { defineJob } from '$lib/server/scheduler';
-import { configuredSentralKids, refreshTimetable } from '$lib/server/tools/sentral';
-import { errorMessage } from '$lib/server/log';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { configuredSentralKids, refreshTimetable } from '#lib/server/tools/sentral.ts';
+import { errorMessage } from '#lib/server/log.ts';
 
 defineJob(
 	'sentral-refresh',

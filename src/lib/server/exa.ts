@@ -3,12 +3,12 @@
  * and saved content. Key: EXA_API_KEY.
  */
 import Exa from 'exa-js';
-import { env } from '$env/dynamic/private';
+import { EXA_API_KEY } from '$app/env/private';
 
 let client: Exa | undefined;
 
 export function exa(): Exa {
-	if (!env.EXA_API_KEY) throw new Error('Set EXA_API_KEY in .env');
-	client ??= new Exa(env.EXA_API_KEY);
+	if (!EXA_API_KEY) throw new Error('Set EXA_API_KEY in .env');
+	client ??= new Exa(EXA_API_KEY);
 	return client;
 }

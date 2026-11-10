@@ -6,7 +6,7 @@
  * Intl.DateTimeFormat calls — keeps timezone logic in one place and
  * handles DST (AEST +10:00 / AEDT +11:00) correctly.
  */
-import type { DayOfWeek } from '$lib/config';
+import type { DayOfWeek } from '#lib/config.ts';
 
 /** The kiosk's time zone. Import this rather than writing the name out. */
 export const SYDNEY_TZ = 'Australia/Sydney';

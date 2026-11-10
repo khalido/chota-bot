@@ -1,23 +1,23 @@
 /**
  * school agent-tools — a kid's timetable for a day, and the NSW school dates.
  *
- * `school_day` wraps `$lib/server/tools/sentral > getSchedule` (the cached
- * Sentral .ics per kid). `school_dates` wraps `$lib/server/tools/schoolterms`
+ * `school_day` wraps `#lib/server/tools/sentral > getSchedule` (the cached
+ * Sentral .ics per kid). `school_dates` wraps `#lib/server/tools/schoolterms.ts`
  * (term dates, development days and holidays for the family's division) and
  * answers "when's the last day of term", "when are the holidays", "when do
  * they go back" without the model doing date maths.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { configuredSentralKids, getSchedule } from '$lib/server/tools/sentral';
+import { configuredSentralKids, getSchedule } from '#lib/server/tools/sentral.ts';
 import {
 	getSchoolBreak,
 	getSchoolTerms,
 	getSchoolWeek,
 	getUpcomingSchoolEvents
-} from '$lib/server/tools/schoolterms';
-import { errorMessage } from '$lib/server/log';
-import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange, sydneyYMD, ymdDiffDays } from '$lib/time';
+} from '#lib/server/tools/schoolterms.ts';
+import { errorMessage } from '#lib/server/log.ts';
+import { sydneyDayOfWeek, sydneyNoon, sydneyTimeRange, sydneyYMD, ymdDiffDays } from '#lib/time.ts';
 import { ymd as ymdSchema } from './schemas';
 
 export const schoolDayTool = tool({

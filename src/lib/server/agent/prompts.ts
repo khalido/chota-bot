@@ -20,12 +20,12 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { getChores } from '$lib/server/chores';
-import { getConfig } from '$lib/server/config';
-import { getCalendar } from '$lib/server/tools/calendar';
-import { cleanListName, getFamilyLists } from '$lib/server/tools/ticktick';
-import { logger, errorMessage } from '$lib/server/log';
-import { sydneyDateLong, sydneyTimeCompact, sydneyYMD } from '$lib/time';
+import { getChores } from '#lib/server/chores.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { getCalendar } from '#lib/server/tools/calendar.ts';
+import { cleanListName, getFamilyLists } from '#lib/server/tools/ticktick.ts';
+import { logger, errorMessage } from '#lib/server/log.ts';
+import { sydneyDateLong, sydneyTimeCompact, sydneyYMD } from '#lib/time.ts';
 
 const log = logger('agent/prompts');
 

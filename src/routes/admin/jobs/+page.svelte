@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
-	import { SYDNEY_TZ } from '$lib/time';
+	import { SYDNEY_TZ } from '#lib/time.ts';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -46,7 +46,7 @@
 			</p>
 		</div>
 		<a
-			href={resolve('/admin')}
+			href={resolve('admin')}
 			class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
 			>← admin</a
 		>
@@ -60,8 +60,9 @@
 			<form method="POST" action="?/testAlert" use:enhance>
 				<button
 					class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
-					>{form ? (form.sent ? 'Sent ✓' : 'Not sent — check the log') : 'Send test alert'}</button
 				>
+					{form ? (form.sent ? 'Sent ✓' : 'Not sent — check the log') : 'Send test alert'}
+				</button>
 			</form>
 		</header>
 		{#if data.alerts.length === 0}

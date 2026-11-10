@@ -6,9 +6,9 @@ import {
 	tomorrowSummary,
 	weatherSummary,
 	type BlockName
-} from '$lib/server/tools/weather';
-import { getConfig } from '$lib/server/config';
-import { logErr } from '$lib/server/log';
+} from '#lib/server/tools/weather.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { logErr } from '#lib/server/log.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

@@ -29,7 +29,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 ## Stack
 
 - **Bun** — runtime and package manager (`bun.lock`; `bunfig.toml`'s 2-day release wait is off for now, 8 Nov). Switched from Node 28 Oct 2026 after tests, build, pages and USB prints passed on the X230
-- **SvelteKit** TS, Tailwind, adapter-node (its output runs on Bun) — UI + API in one process
+- **SvelteKit 3** TS, Tailwind, adapter-node (its output runs on Bun) — UI + API in one process
 - **Drizzle + better-sqlite3** at `data/home.db`
 - **Better-auth** Google OAuth — powers the calendar tool AND the admin gate: `hooks.server.ts` is **deny-by-default** — `/admin` and every `/api/*` need a session whose email is in `chota.config.ts > adminEmails`, except the public `/api/auth`, `/api/health`, `/api/print`. New API routes are gated unless allow-listed. Sign-in at `/login`
 - **grammY (Telegram)** — long-polling bot at `src/lib/server/channels/telegram.ts` (behind the shared channel router), chat-ID allowlisted, streams agent replies as rich messages — see [`docs/telegram.md`](docs/telegram.md)
@@ -38,7 +38,7 @@ The live dashboard runs on the kiosk box (currently a ThinkPad X230 running Pop!
 - **node-thermal-printer + node-usb (libusb)** — see [`docs/printers.md`](docs/printers.md)
 - **Vercel AI SDK + AI Gateway** — ToolLoopAgent live at `src/lib/server/agent/`; chat-debuggable at `/admin/agent` and serving Telegram. Autonomous job-driving still ahead (see [`docs/agent.md`](docs/agent.md))
 - **shadcn-svelte** — UI primitives (Card, Tabs, Dialog, Sheet, Popover, Switch, Empty, Accordion, ButtonGroup, Button, Textarea, Separator) at `src/lib/components/ui/`
-- **LogTape** — structured logging at `$lib/server/log.ts` — see [`docs/logging.md`](docs/logging.md)
+- **LogTape** — structured logging at `#lib/server/log.ts` — see [`docs/logging.md`](docs/logging.md)
 - **Content** — quotes (literary-clock per-minute) + puzzles (daily) live in the [`khalido/curios`](https://github.com/khalido/curios) sibling repo (cloned next to chota-bot at `~/code/curios`). chota reads `../curios/dist/*` at runtime; `deploy.sh` does `git pull` in `../curios/` on every deploy so the box's content tracks curios's main branch. No sync script, no duplicated files.
 
 ## Where things live
@@ -91,6 +91,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - **New tool:** one file in `src/lib/server/tools/<domain>.ts` (the raw fetch + caching). For agent exposure, add a thin wrapper at `src/lib/server/agent/tools/<domain>.ts` and register it in `agent/index.ts > tools: { … }`.
 - **New print format:** one file in `src/lib/server/print/<kind>.ts` + composer registration in `composers.ts` + button in `routes/admin/print/+page.svelte`.
 - **New job:** drop a TS file in `src/lib/server/jobs/`, call `defineJob(name, cron, fn)` at module top. Auto-discovered — see [`src/lib/server/jobs/CLAUDE.md`](src/lib/server/jobs/CLAUDE.md).
+- **New env var:** declare it in `src/env.ts`, import it by name from `$app/env/private`.
 - **Per-family data:** add a typed field to `ChotaConfig` in `src/lib/config.ts`, fill in both `chota.config.example.ts` and your real `chota.config.ts`. No JSON files, no zod — TypeScript catches shape mismatches at compile time.
 - **AI calls** through AI Gateway (one key), voice transcription included (`google/gemini-3.5-transcribe`, `src/lib/server/transcribe.ts`).
 - **Auth** — Google OAuth (better-auth). Deny-by-default guard in `hooks.server.ts`: `/admin` and every `/api/*` require a session whose email is in `chota.config.ts > adminEmails` (fail-closed; sign-in at `/login`), except the deliberately-public `/api/auth`, `/api/health`, `/api/print` plus the kiosk dashboard + `/print/<who>` pages (LAN-open by design). A new API route is gated unless you add it to the public allowlist.
@@ -122,7 +123,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - **Deploy = `bun run deploy`** (SSH from the Mac over Tailscale). It runs two preflight checks — is this Mac on the tailnet, then the faster-expiring Tailscale SSH re-auth — and tells you what to approve. After it lands, `curl pop-os/api/health` (or `?format=json | jq .version`) shows the running commit — the proof the box rebuilt on your push. See [`docs/deploy.md`](docs/deploy.md).
 - **`auth` (the Better Auth CLI, devDep) pins `better-auth` exactly** — bump both together, or the install pulls a second better-auth copy for the CLI.
 - **Bun runs install scripts only for `package.json > trustedDependencies`** (`better-sqlite3`, `esbuild`, `usb`); `bun pm untrusted` lists the blocked ones (`protobufjs`, on purpose). A native addon missing from the list shows up as a load error at run time, not at install.
-- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). **SvelteKit stays on 2** for now — 3 is a real migration (`bunx sv migrate sveltekit-3`; adapter-node drops `ORIGIN` for `paths.origin`). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
+- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
 
 ## UI + tooling
 

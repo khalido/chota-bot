@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from '$lib/server/db/schema';
+import * as schema from '#lib/server/db/schema.ts';
 import type { Channel, Incoming } from './types';
 
 // The router with its real history on a real database; only the channels and
@@ -18,7 +18,7 @@ CREATE TABLE chat_message (
 	cached_tokens integer, cost_usd real, error text,
 	created_at integer NOT NULL);`);
 const db = drizzle(sqlite, { schema });
-vi.mock('$lib/server/db', () => ({ db }));
+vi.mock('#lib/server/db/index.ts', () => ({ db }));
 
 const started: Array<(m: Incoming) => Promise<void>> = [];
 const fakeChannel = (name: 'telegram' | 'whatsapp'): Channel =>
@@ -34,12 +34,12 @@ vi.mock('./telegram', () => ({ telegramChannel: () => fakeChannel('telegram') })
 vi.mock('./whatsapp', () => ({ whatsappChannel: () => fakeChannel('whatsapp') }));
 vi.mock('./triage', () => ({ triage: vi.fn(), triageHint: vi.fn(), photoIsActionable: vi.fn() }));
 vi.mock('./files', () => ({ pdfText: vi.fn(), saveFile: vi.fn() }));
-vi.mock('$lib/server/transcribe', () => ({ transcribeAudio: vi.fn() }));
-vi.mock('$lib/server/agent/prompts', () => ({ GROUP_HINT: '[group]' }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/transcribe.ts', () => ({ transcribeAudio: vi.fn() }));
+vi.mock('#lib/server/agent/prompts.ts', () => ({ GROUP_HINT: '[group]' }));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const runs: { messages: { role: string; content: unknown }[]; sessionId: string }[] = [];
-vi.mock('$lib/server/agent', () => ({
+vi.mock('#lib/server/agent/index.ts', () => ({
 	describeChatError: (e: unknown) => ({ kind: 'x', message: String(e) }),
 	EMPTY_REPLY: 'empty',
 	finalText: async (r: { text: string }) => r.text,

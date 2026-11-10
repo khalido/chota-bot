@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from '$lib/server/db/schema';
+import * as schema from '#lib/server/db/schema.ts';
 
 const sqlite = new Database(':memory:');
 sqlite.exec(`CREATE TABLE content (
@@ -10,11 +10,11 @@ sqlite.exec(`CREATE TABLE content (
 	url text, file text, file_name text, mimetype text, title text NOT NULL, summary text NOT NULL,
 	text text NOT NULL, tags text NOT NULL, note text, model text, created_at integer NOT NULL)`);
 const db = drizzle(sqlite, { schema });
-vi.mock('$lib/server/db', () => ({ db }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/db/index.ts', () => ({ db }));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const { saveContent, searchContent, scopeFor } = await import('./content');
-const { savedTool } = await import('$lib/server/agent/tools/content');
+const { savedTool } = await import('#lib/server/agent/tools/content.ts');
 
 const row = (sender: string, scope: 'private' | 'family', title: string) => ({
 	sender,

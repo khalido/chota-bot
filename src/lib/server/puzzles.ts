@@ -11,7 +11,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { sydneyYMD } from '$lib/time';
+import { sydneyYMD } from '#lib/time.ts';
 
 const PATH = resolve(process.cwd(), '../curios/dist/puzzles.json');
 

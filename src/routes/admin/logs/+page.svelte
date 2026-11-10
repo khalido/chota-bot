@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '$lib/components/ui/empty';
-	import { Button } from '$lib/components/ui/button';
-	import { SYDNEY_TZ } from '$lib/time';
+	import {
+		Empty,
+		EmptyHeader,
+		EmptyTitle,
+		EmptyDescription
+	} from '#lib/components/ui/empty/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import { SYDNEY_TZ } from '#lib/time.ts';
 	import type { PageData } from './$types';
 	import type { LogEntry } from '../../api/admin/logs/+server';
 

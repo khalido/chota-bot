@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from '$lib/server/db/schema';
+import * as schema from '#lib/server/db/schema.ts';
 import { turnStats } from './turns';
 
 const sqlite = new Database(':memory:');
@@ -16,7 +16,7 @@ CREATE TABLE chat_message (
 	cached_tokens integer, cost_usd real, error text,
 	created_at integer NOT NULL);`);
 const db = drizzle(sqlite, { schema });
-vi.mock('$lib/server/db', () => ({ db }));
+vi.mock('#lib/server/db/index.ts', () => ({ db }));
 
 const { appendMessage, loadHistory, openSession, QUIET_PREFIX, recordSent, sessionKeyFor } =
 	await import('./history');

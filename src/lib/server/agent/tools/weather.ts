@@ -2,7 +2,7 @@
  * weather agent-tool — sky + sea: current conditions + today's headline for
  * home, plus the local beach's full lifeguard report.
  *
- * Wraps `$lib/server/tools/weather` (+ `beach`). No args: location + beach come
+ * Wraps `#lib/server/tools/weather` (+ `beach`). No args: location + beach come
  * from `chota.config.ts > home`. The full hourly array is dropped, but — unlike
  * the print's one-liner — the LLM gets the FULL beach report (water temp, wave
  * height, rips, bluebottles, status, when updated) so it can answer specifics
@@ -11,8 +11,8 @@
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getWeather, todayRange, weatherSummary } from '$lib/server/tools/weather';
-import { getBeachReport, beachSummary } from '$lib/server/tools/beach';
+import { getWeather, todayRange, weatherSummary } from '#lib/server/tools/weather.ts';
+import { getBeachReport, beachSummary } from '#lib/server/tools/beach.ts';
 
 export const weatherTool = tool({
 	description:

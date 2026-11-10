@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Weather } from '$lib/server/tools/weather';
+	import type { Weather } from '#lib/server/tools/weather.ts';
 
 	interface Props {
 		weather: Weather | null;

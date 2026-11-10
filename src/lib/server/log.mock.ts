@@ -1,13 +1,13 @@
 /**
- * A silent `$lib/server/log` for tests, so every test mocks the whole module
+ * A silent `#lib/server/log.ts` for tests, so every test mocks the whole module
  * the same way (a partial mock breaks as soon as the code uses one more export):
  *
- *   vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+ *   vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
  */
 import { vi } from 'vitest';
 import type { Event } from './log';
 
-export { errorMessage } from '$lib/utils';
+export { errorMessage } from '#lib/utils.ts';
 
 export const log = vi.fn();
 export const logErr = vi.fn();

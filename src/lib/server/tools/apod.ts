@@ -9,8 +9,8 @@
  * Not wired into a print section yet (the explanation is often several
  * paragraphs — needs a truncation pass first).
  */
-import { env } from '$env/dynamic/private';
-import { log } from '$lib/server/log';
+import { NASA_API_KEY } from '$app/env/private';
+import { log } from '#lib/server/log.ts';
 import { fetchJson } from './http';
 
 const APOD_URL = 'https://api.nasa.gov/planetary/apod';
@@ -38,7 +38,7 @@ interface ApodResponse {
 
 /** Today's (or `date`'s, YYYY-MM-DD) APOD. Throws on network/HTTP error. */
 export async function getApod(date?: string): Promise<Apod> {
-	const qs = new URLSearchParams({ api_key: env.NASA_API_KEY || 'DEMO_KEY' });
+	const qs = new URLSearchParams({ api_key: NASA_API_KEY || 'DEMO_KEY' });
 	if (date) qs.set('date', date);
 	const d = await fetchJson<ApodResponse>(`${APOD_URL}?${qs}`, { label: 'NASA APOD' });
 	log('apod', `${d.date ?? '?'}: ${d.title ?? '?'}`);

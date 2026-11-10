@@ -6,7 +6,7 @@
  * - `watch_ideas` — lists to pick from: trending, in AU cinemas, coming
  *   soon, or "something like X".
  *
- * Wraps `$lib/server/tools/tmdb`. Provider data is TMDB-via-JustWatch, AU.
+ * Wraps `#lib/server/tools/tmdb.ts`. Provider data is TMDB-via-JustWatch, AU.
  */
 import { tool } from 'ai';
 import { z } from 'zod';
@@ -17,7 +17,7 @@ import {
 	recommendations,
 	trending,
 	type TitleMatch
-} from '$lib/server/tools/tmdb';
+} from '#lib/server/tools/tmdb.ts';
 
 const kind = z.enum(['movie', 'tv']).optional().describe('Leave out unless the user said which.');
 

@@ -5,9 +5,14 @@
  * keeps history, runs the agent and hands the stream back to the adapter.
  * Design: docs/agent.md §Channels.
  */
-import { describeChatError, EMPTY_REPLY, finalText, runAgentStream } from '$lib/server/agent';
-import { GROUP_HINT } from '$lib/server/agent/prompts';
-import type { Asker } from '$lib/server/tools/content';
+import {
+	describeChatError,
+	EMPTY_REPLY,
+	finalText,
+	runAgentStream
+} from '#lib/server/agent/index.ts';
+import { GROUP_HINT } from '#lib/server/agent/prompts.ts';
+import type { Asker } from '#lib/server/tools/content.ts';
 import {
 	appendMessage,
 	loadHistory,
@@ -16,11 +21,11 @@ import {
 	openSession,
 	QUIET_PREFIX,
 	sessionKeyFor
-} from '$lib/server/agent/history';
-import { type StepLike, toolParts, turnStats } from '$lib/server/agent/turns';
+} from '#lib/server/agent/history.ts';
+import { type StepLike, toolParts, turnStats } from '#lib/server/agent/turns.ts';
 import { LRUCache } from 'lru-cache';
-import { event, logErr } from '$lib/server/log';
-import { transcribeAudio } from '$lib/server/transcribe';
+import { event, logErr } from '#lib/server/log.ts';
+import { transcribeAudio } from '#lib/server/transcribe.ts';
 import { pdfText, saveFile } from './files';
 import { ThreadQueue } from './queue';
 import { photoIsActionable, triage, triageHint } from './triage';

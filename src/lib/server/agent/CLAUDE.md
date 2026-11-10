@@ -2,11 +2,11 @@
 
 The chota agent — one `ToolLoopAgent` instance, one growing folder of typed
 tool definitions. Surfaces that need an LLM (the live Telegram handler at
-`$lib/server/telegram/`, the `/admin/agent` chat, eventually job loops) all
+`#lib/server/telegram/`, the `/admin/agent` chat, eventually job loops) all
 import the agent from `./index.ts`. Nothing else in the repo imports `ai` or
 `zod` directly.
 
-`tools/` here is **not** `$lib/server/tools/`. The latter is pure I/O — each
+`tools/` here is **not** `#lib/server/tools/`. The latter is pure I/O — each
 file fetches weather, calendar, bus times etc. and returns the raw shape. The
 files in `agent/tools/` are typed Vercel AI SDK tool definitions that wrap
 those libs with the `description` + `inputSchema` the LLM needs to pick + call
@@ -84,13 +84,13 @@ Memory joins when there's a real second use of it.
   agent's step content. Wide-event log captures the step count; inspect
   `steps` to debug a specific failure.
 - **Don't reach for the DB or external APIs directly from a tool.** Call the
-  matching data lib in `$lib/server/tools/` — that's where the caching,
+  matching data lib in `#lib/server/tools/` — that's where the caching,
   error handling, and stale-ok behaviour already live.
 
 ## Wide-event logging
 
 Every agent invocation emits one `agent.run` wide event via the `event()`
-helper in `$lib/server/log.ts` — `model`, `tokens_in`, `tokens_out`, `steps`,
+helper in `#lib/server/log.ts` — `model`, `tokens_in`, `tokens_out`, `steps`,
 `outcome`, `duration_ms`. That's what reaches PostHog via the OTel sink and
 answers "is the agent useful or burning money?" Wrap `agent.generate(...)`
 in a thin helper here rather than spreading `event(...)` calls across

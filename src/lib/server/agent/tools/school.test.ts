@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SchoolTerm } from '$lib/server/tools/schoolterms';
+import type { SchoolTerm } from '#lib/server/tools/schoolterms.ts';
 
 const terms2026: SchoolTerm[] = [
 	{ term: 1, start: '2026-02-02', end: '2026-04-02' },
@@ -15,17 +15,17 @@ const st = vi.hoisted(() => ({
 	upcoming: [] as { label: string; start: string; end: string }[]
 }));
 
-vi.mock('$lib/server/tools/sentral', () => ({
+vi.mock('#lib/server/tools/sentral.ts', () => ({
 	configuredSentralKids: () => [],
 	getSchedule: vi.fn()
 }));
-vi.mock('$lib/server/tools/schoolterms', () => ({
+vi.mock('#lib/server/tools/schoolterms.ts', () => ({
 	getSchoolTerms: async (year: number) => (year === 2026 ? terms2026 : terms2027),
 	getSchoolWeek: async () => st.week,
 	getSchoolBreak: async () => st.brk,
 	getUpcomingSchoolEvents: async () => st.upcoming
 }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const { schoolDatesTool } = await import('./school');
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

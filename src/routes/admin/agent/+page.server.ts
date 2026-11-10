@@ -7,11 +7,20 @@
  * through POST /api/agent/chat as a UI-message stream.
  */
 import { eq } from 'drizzle-orm';
-import { chotaAgent, MODEL } from '$lib/server/agent';
-import { getConfig } from '$lib/server/config';
-import { db } from '$lib/server/db';
-import { account } from '$lib/server/db/auth.schema';
-import { env } from '$env/dynamic/private';
+import { chotaAgent, MODEL } from '#lib/server/agent/index.ts';
+import { getConfig } from '#lib/server/config.ts';
+import { db } from '#lib/server/db/index.ts';
+import { account } from '#lib/server/db/auth.schema.ts';
+
+import {
+	AI_GATEWAY_API_KEY,
+	GOOGLE_WEATHER_API_KEY,
+	TICKTICK_API_KEY,
+	TMDB_READ_ACCESS_TOKEN,
+	GOOGLE_BOOKS_API_KEY,
+	EXA_API_KEY
+} from '$app/env/private';
+
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -33,12 +42,12 @@ export const load: PageServerLoad = async () => {
 		.limit(1);
 
 	const health = {
-		aiGateway: !!env.AI_GATEWAY_API_KEY,
-		weather: !!env.GOOGLE_WEATHER_API_KEY,
+		aiGateway: !!AI_GATEWAY_API_KEY,
+		weather: !!GOOGLE_WEATHER_API_KEY,
 		calendar: googleAccount.length > 0 && !!cfg.calendar?.id,
-		ticktick: !!env.TICKTICK_API_KEY && Object.keys(cfg.ticktick?.lists ?? {}).length > 0,
-		tmdb: !!env.TMDB_READ_ACCESS_TOKEN,
-		books: !!env.GOOGLE_BOOKS_API_KEY && !!env.EXA_API_KEY
+		ticktick: !!TICKTICK_API_KEY && Object.keys(cfg.ticktick?.lists ?? {}).length > 0,
+		tmdb: !!TMDB_READ_ACCESS_TOKEN,
+		books: !!GOOGLE_BOOKS_API_KEY && !!EXA_API_KEY
 	};
 
 	return { model: MODEL, tools, health };

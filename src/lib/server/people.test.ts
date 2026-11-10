@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseEventPeople } from './people';
-import type { FamilyMember } from '$lib/config';
+import type { FamilyMember } from '#lib/config.ts';
 
 // Placeholder family — real names live only in the gitignored chota.config.ts.
 // These exist purely to exercise the matcher (token boundaries, initials,

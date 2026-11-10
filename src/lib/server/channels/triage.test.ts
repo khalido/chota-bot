@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Incoming } from './types';
 
 const inserted: unknown[] = [];
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.ts', () => ({
 	db: { insert: () => ({ values: (v: unknown) => ({ run: () => inserted.push(v) }) }) }
 }));
-vi.mock('$lib/server/db/schema', () => ({ decision: {} }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/db/schema.ts', () => ({ decision: {} }));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 const decideChoice = vi.fn();
-vi.mock('$lib/server/decide', () => ({ decideChoice, questionsHash: () => 'h' }));
+vi.mock('#lib/server/decide.ts', () => ({ decideChoice, questionsHash: () => 'h' }));
 
 const { triage } = await import('./triage');
 

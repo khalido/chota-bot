@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Quote } from '$lib/server/tools/quotes';
+	import type { Quote } from '#lib/server/tools/quotes.ts';
 	let { quote }: { quote: Quote | null } = $props();
 </script>
 

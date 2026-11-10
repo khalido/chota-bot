@@ -12,19 +12,18 @@
  * (e.g. localhost on the box) but accesses from another (e.g. http://pop-os
  * over Tailscale), since cookies are host-scoped.
  */
-import { json } from '@sveltejs/kit';
-import { refreshTimetable } from '$lib/server/tools/sentral';
-import { logErr, errorMessage } from '$lib/server/log';
+import { refreshTimetable } from '#lib/server/tools/sentral.ts';
+import { logErr, errorMessage } from '#lib/server/log.ts';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params }) => {
 	const who = params.who.toLowerCase();
 	try {
 		const { bytes, events } = await refreshTimetable(who);
-		return json({ ok: true, who, bytes, events });
+		return Response.json({ ok: true, who, bytes, events });
 	} catch (err) {
 		const message = errorMessage(err);
 		logErr('admin·sentral-refresh', `${who}: ${message}`);
-		return json({ ok: false, who, error: message }, { status: 500 });
+		return Response.json({ ok: false, who, error: message }, { status: 500 });
 	}
 };

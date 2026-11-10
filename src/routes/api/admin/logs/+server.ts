@@ -16,7 +16,6 @@
  * surface here. If a future case wants historical, add a `?since=…`
  * param that glob-reads the archive files too.
  */
-import { json } from '@sveltejs/kit';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RequestHandler } from './$types';
@@ -41,7 +40,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	);
 
 	const text = await readFile(LOG_PATH, 'utf8').catch(() => '');
-	if (!text) return json({ entries: [], total: 0, file: LOG_PATH });
+	if (!text) return Response.json({ entries: [], total: 0, file: LOG_PATH });
 
 	// Cheap tail — split + slice. The file rotates so it won't grow
 	// unbounded; if memory ever became an issue we'd reverse-read a fixed
@@ -64,5 +63,5 @@ export const GET: RequestHandler = async ({ url }) => {
 			// Skip malformed lines — usually a torn write at the file boundary.
 		}
 	}
-	return json({ entries, total: all.length, file: LOG_PATH });
+	return Response.json({ entries, total: all.length, file: LOG_PATH });
 };

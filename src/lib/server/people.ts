@@ -11,7 +11,7 @@
  *   "P2 & P1 date night"    → ["Parent1", "Parent2"]
  *   "Family BBQ"            → []
  */
-import type { FamilyMember } from '$lib/config';
+import type { FamilyMember } from '#lib/config.ts';
 
 export function parseEventPeople(title: string, family: FamilyMember[] = []): string[] {
 	if (!title || family.length === 0) return [];

@@ -23,12 +23,12 @@ import makeWASocket, {
 	fetchLatestWaWebVersion,
 	useMultiFileAuthState
 } from '@oxidezap/baileyrs';
-import { env } from '$env/dynamic/private';
-import { getConfig, getFamily } from '$lib/server/config';
-import { clearAlert, raiseAlert, registerAlertChannel } from '$lib/server/alerts';
-import { finalText } from '$lib/server/agent';
-import { recordSent, sessionKeyFor } from '$lib/server/agent/history';
-import { errorMessage, log, logErr } from '$lib/server/log';
+import { WHATSAPP_ENABLED } from '$app/env/private';
+import { getConfig, getFamily } from '#lib/server/config.ts';
+import { clearAlert, raiseAlert, registerAlertChannel } from '#lib/server/alerts.ts';
+import { finalText } from '#lib/server/agent/index.ts';
+import { recordSent, sessionKeyFor } from '#lib/server/agent/history.ts';
+import { errorMessage, log, logErr } from '#lib/server/log.ts';
 import { mediaOf, personByPhone, toIncoming, userOf, type WaMessage } from './whatsapp-message';
 import { toWhatsApp } from './whatsapp-format';
 import { FAILED, THINKING, toolEmoji, WRITE_TOOLS } from './reactions';
@@ -53,6 +53,7 @@ const libLogger = {
 	// routine: log them plainly, and keep errors for the rest.
 	error: (...a: unknown[]) => {
 		const text = a.map((x) => JSON.stringify(x)).join(' ');
+
 		if (/WebSocket error|Will retry|reconnecting/.test(text)) log(SCOPE, `lib (retrying): ${text}`);
 		else logErr(SCOPE, 'lib error', text);
 	}
@@ -73,7 +74,7 @@ function keepRaw(m: Incoming, raw: WaMessage) {
 
 export function whatsappChannel(): Channel | null {
 	const configured = getConfig().whatsapp?.botNumber;
-	if (env.WHATSAPP_ENABLED !== 'true' || !configured) {
+	if (WHATSAPP_ENABLED !== 'true' || !configured) {
 		log(SCOPE, 'WhatsApp disabled (WHATSAPP_ENABLED / whatsapp.botNumber)');
 		return null;
 	}
@@ -166,8 +167,13 @@ export function whatsappChannel(): Channel | null {
 			if (connection !== 'close' || stopped) return;
 			sock = undefined;
 			const err = lastDisconnect?.error as
-				| { output?: { statusCode?: number }; data?: { expire?: number }; message?: string }
+				| {
+						output?: { statusCode?: number };
+						data?: { expire?: number };
+						message?: string;
+				  }
 				| undefined;
+
 			const code = err?.output?.statusCode;
 			log(SCOPE, `closed (${code ?? '?'}: ${err?.message ?? 'no reason'})`);
 			const next = afterClose(code, err?.data?.expire, Date.now());

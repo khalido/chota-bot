@@ -5,9 +5,9 @@
  * history and the agent run. Shape borrowed from Vercel's Chat SDK (see
  * docs/agent.md §Channels) without the SDK.
  */
-import type { FamilyMember } from '$lib/config';
-import type { ChotaStreamResult } from '$lib/server/agent';
-import type { Attachment } from '$lib/server/tools/content';
+import type { FamilyMember } from '#lib/config.ts';
+import type { ChotaStreamResult } from '#lib/server/agent/index.ts';
+import type { Attachment } from '#lib/server/tools/content.ts';
 
 export type ChannelName = 'telegram' | 'whatsapp';
 

@@ -4,7 +4,7 @@
  *   → { object, image, image_id, fact, fact_id }
  * No key. Used (experimentally) for the brief's "DID YOU KNOW" block.
  */
-import { log } from '$lib/server/log';
+import { log } from '#lib/server/log.ts';
 import { fetchJson } from './http';
 
 const BASE = 'https://api.bootprint.space/all';

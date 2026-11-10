@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PrintSection } from '$lib/server/print/sections';
+	import type { PrintSection } from '#lib/server/print/sections.ts';
 	import {
 		Sun,
 		CloudSun,
@@ -88,7 +88,10 @@
      Typography is set once here (.plex / font-medium / text-[17px]) so every
      section inherits it; only the per-section header chrome is shared, via
      the snippet above — section *bodies* lay out freely. -->
+<!-- data-brief-sheet: the screenshot path checks for it, so an error page is
+     never captured and printed as the brief (print/snapshot.ts). -->
 <div
+	data-brief-sheet
 	class="plex mx-auto w-[576px] bg-white px-6 pt-0 pb-6 text-[17px] leading-snug font-medium text-black"
 >
 	<BriefHeader {who} {date} />

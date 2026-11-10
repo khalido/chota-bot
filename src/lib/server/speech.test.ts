@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const cfg: { speech?: Record<string, unknown>; music?: object } = {};
-vi.mock('$lib/server/config', () => ({ getConfig: () => cfg }));
-vi.mock('$lib/server/log', () => import('$lib/server/log.mock'));
+vi.mock('#lib/server/config.ts', () => ({ getConfig: () => cfg }));
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
 const generateSpeech = vi.fn();
 vi.mock('ai', () => ({ generateSpeech: (o: unknown) => generateSpeech(o) }));
@@ -20,8 +20,16 @@ vi.mock('node:child_process', () => ({
 	}
 }));
 
-const interrupt = vi.fn(async (fn: () => Promise<unknown>) => fn());
-vi.mock('$lib/server/tools/spotify', () => ({ soloist: () => ({ interrupt }) }));
+type AsideResult = { value: unknown; music: string; why?: string };
+const interrupt = vi.fn(async (fn: () => Promise<unknown>): Promise<AsideResult> => ({
+	value: await fn(),
+	music: 'restored'
+}));
+const duck = vi.fn(async (fn: () => Promise<unknown>, _to: number): Promise<AsideResult> => ({
+	value: await fn(),
+	music: 'restored'
+}));
+vi.mock('#lib/server/tools/music.ts', () => ({ houseSpeaker: () => ({ interrupt, duck }) }));
 
 const { chimeWav, clipPath, directions, cannotSpeak, speak, SpeechRefused } =
 	await import('./speech');
@@ -40,6 +48,7 @@ beforeEach(() => {
 	delete cfg.music;
 	generateSpeech.mockReset().mockResolvedValue({ audio: wav, warnings: [] });
 	interrupt.mockClear();
+	duck.mockClear();
 	played.length = 0;
 });
 
@@ -109,11 +118,43 @@ describe('speak', () => {
 		expect(generateSpeech).toHaveBeenCalledTimes(1);
 	});
 
-	it('pauses the music around it when music is configured, and can skip the chime', async () => {
+	it('turns the music down around a regular announcement, and can skip the chime', async () => {
 		cfg.music = {};
 		await speak(`another ${Math.random()}`, { chime: false });
-		expect(interrupt).toHaveBeenCalledTimes(1);
+		expect(duck).toHaveBeenCalledWith(expect.any(Function), 20);
+		expect(interrupt).not.toHaveBeenCalled();
 		expect(played).toHaveLength(1);
+	});
+
+	it('turns it down to the configured level', async () => {
+		cfg.music = {};
+		cfg.speech!.duckTo = 35;
+		await speak(`quieter ${Math.random()}`, { chime: false });
+		expect(duck).toHaveBeenCalledWith(expect.any(Function), 35);
+		delete cfg.speech!.duckTo;
+	});
+
+	it('logs it when the music was not put back', async () => {
+		cfg.music = {};
+		duck.mockImplementationOnce(async (fn) => ({
+			value: await fn(),
+			music: 'failed',
+			why: 'sent the volume; Soloist has not reported it'
+		}));
+		const { logErr } = await import('#lib/server/log.ts');
+		vi.mocked(logErr).mockClear();
+		await speak(`left quiet ${Math.random()}`, { chime: false });
+		expect(logErr).toHaveBeenCalledWith(
+			'speech',
+			'music failed after an announcement: sent the volume; Soloist has not reported it'
+		);
+	});
+
+	it('pauses the music around an important announcement', async () => {
+		cfg.music = {};
+		await speak(`urgent ${Math.random()}`, { chime: false, important: true });
+		expect(interrupt).toHaveBeenCalledTimes(1);
+		expect(duck).not.toHaveBeenCalled();
 	});
 
 	it('refuses in quiet hours and when off, without calling the model', async () => {

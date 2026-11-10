@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import BriefSheet from '$lib/components/print/BriefSheet.svelte';
+	import BriefSheet from '#lib/components/print/BriefSheet.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -12,7 +12,7 @@
 	// screenshot completes in well under a second, the interval can't fire
 	// in that window.
 	onMount(() => {
-		const refresh = setInterval(() => invalidateAll(), 60_000);
+		const refresh = setInterval(() => refreshAll(), 60_000);
 		return () => clearInterval(refresh);
 	});
 </script>

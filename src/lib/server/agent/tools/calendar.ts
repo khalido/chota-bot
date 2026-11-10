@@ -1,7 +1,7 @@
 /**
  * calendar agent-tool — Google Calendar events for a range or a specific day.
  *
- * Wraps `$lib/server/tools/calendar`. The LLM passes one of:
+ * Wraps `#lib/server/tools/calendar.ts`. The LLM passes one of:
  *   - `range`:  `today` | `tomorrow` | `week` | … — common quick lookups
  *   - `date`:   Sydney-local `YYYY-MM-DD`          — a specific day
  *   - `search`: 1–4 wordings, Google's free-text search (title, place, notes)
@@ -20,17 +20,17 @@ import {
 	getCalendarBetween,
 	searchEvents,
 	type CalendarEvent
-} from '$lib/server/tools/calendar';
-import { getFamily } from '$lib/server/config';
-import { parseEventPeople } from '$lib/server/people';
-import { errorMessage } from '$lib/server/log';
+} from '#lib/server/tools/calendar.ts';
+import { getFamily } from '#lib/server/config.ts';
+import { parseEventPeople } from '#lib/server/people.ts';
+import { errorMessage } from '#lib/server/log.ts';
 import {
 	sydneyDayOfWeek,
 	sydneyNoon,
 	sydneyTimeOnDay,
 	sydneyTimeRange,
 	sydneyYMD
-} from '$lib/time';
+} from '#lib/time.ts';
 import { ymd as ymdSchema } from './schemas';
 
 const MAX_EVENTS = 15;

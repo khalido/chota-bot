@@ -4,8 +4,8 @@
 // 17:30 (before the 18:00 weekend family sheet). Forces a re-fetch via
 // refreshFixtures(); a failed fetch isn't cached, so the print itself retries
 // live and degrades to no VOLLEYBALL section rather than failing.
-import { defineJob } from '$lib/server/scheduler';
-import { refreshFixtures } from '$lib/server/tools/volleyball';
+import { defineJob } from '#lib/server/scheduler.ts';
+import { refreshFixtures } from '#lib/server/tools/volleyball.ts';
 
 defineJob('volleyball-refresh', '30 6,17 * * 5', async () => {
 	const fixtures = await refreshFixtures();

@@ -7,11 +7,11 @@
  */
 import { generateId, generateText, Output } from 'ai';
 import { z } from 'zod';
-import { db } from '$lib/server/db';
-import { decision } from '$lib/server/db/schema';
-import { decideChoice, questionsHash, type Question } from '$lib/server/decide';
-import { logErr } from '$lib/server/log';
-import spec from '$lib/server/decisions/group-triage.json';
+import { db } from '#lib/server/db/index.ts';
+import { decision } from '#lib/server/db/schema.ts';
+import { decideChoice, questionsHash, type Question } from '#lib/server/decide.ts';
+import { logErr } from '#lib/server/log.ts';
+import spec from '#lib/server/decisions/group-triage.json';
 import type { Incoming } from './types';
 
 const KIND = 'group-triage';

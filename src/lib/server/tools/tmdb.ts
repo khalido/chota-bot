@@ -14,9 +14,10 @@
  * `mature` flags anything above PG-13 (AU MA15+/R18+, US R/NC-17/TV-MA).
  */
 import { TMDB, type AppendToResponseMovieKey, type AppendToResponseTvKey } from 'tmdb-ts';
-import { TMDB_READ_ACCESS_TOKEN } from '$env/static/private';
-import { withTtl } from '$lib/server/cache';
-import { log } from '$lib/server/log';
+
+import { TMDB_READ_ACCESS_TOKEN } from '$app/env/private';
+import { withTtl } from '#lib/server/cache.ts';
+import { log } from '#lib/server/log.ts';
 import { fetchOk } from './http';
 
 const REGION = 'AU';

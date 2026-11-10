@@ -1,7 +1,7 @@
 /**
  * volleyball agent-tool — the kids' next games + duty rosters.
  *
- * Wraps `$lib/server/tools/volleyball > getKidFixtures`. No args: which kids
+ * Wraps `#lib/server/tools/volleyball > getKidFixtures`. No args: which kids
  * play, their teams and division draw URLs all come from `chota.config.ts`.
  * Returns the next round per kid whenever it is (not just this weekend), so
  * the agent can answer mid-week questions too. Duty games matter — the team
@@ -9,7 +9,7 @@
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getKidFixtures } from '$lib/server/tools/volleyball';
+import { getKidFixtures } from '#lib/server/tools/volleyball.ts';
 
 export const volleyballTool = tool({
 	description:

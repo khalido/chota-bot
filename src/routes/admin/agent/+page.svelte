@@ -10,7 +10,7 @@
 	// endpoint via the transport (the `api: …` shortcut was deprecated in
 	// v6 — see common-errors.md). Using the default `UIMessage` type
 	// rather than the inferred `ChotaAgentUIMessage` so we don't import a
-	// `$lib/server` value type into client code — tool parts still render
+	// `#lib/server` value type into client code — tool parts still render
 	// generically via the `tool-*` prefix check below.
 	const chat = new Chat({
 		transport: new DefaultChatTransport({ api: '/api/agent/chat' })
@@ -43,7 +43,7 @@
 			</p>
 		</div>
 		<a
-			href={resolve('/admin')}
+			href={resolve('admin')}
 			class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300"
 			>← admin</a
 		>

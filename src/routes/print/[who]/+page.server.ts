@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import { gatherBrief } from '$lib/server/print/brief';
-import { recipientToSections, isPrintRecipient } from '$lib/server/print/sections';
-import { getSchedule } from '$lib/server/tools/sentral';
-import { sydneyYMDOffset } from '$lib/time';
+import { gatherBrief } from '#lib/server/print/brief.ts';
+import { recipientToSections, isPrintRecipient } from '#lib/server/print/sections.ts';
+import { getSchedule } from '#lib/server/tools/sentral.ts';
+import { sydneyYMDOffset } from '#lib/time.ts';
 import type { PageServerLoad } from './$types';
 
 /**

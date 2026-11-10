@@ -1,6 +1,6 @@
 # server/
 
-Chota's backend — everything server-only. It lives under `$lib/server` (not
+Chota's backend — everything server-only. It lives under `#lib/server` (not
 `src/server`) because SvelteKit's build _guarantees_ nothing here — API keys,
 the auth secret, the DB, Sentral cookies — can be imported into client code; a
 value import that leaks is a build error.
@@ -19,4 +19,4 @@ Loose files: `config.ts` (loads the gitignored `chota.config.ts`), `chores.ts`,
 screenshots and the Sentral SAML login), and
 `scheduler.ts` (the `defineJob` wrapper that `jobs/` self-register through).
 
-Tests mock logging with `vi.mock('$lib/server/log', () => import('$lib/server/log.mock'))`, never a hand-written partial mock.
+Tests mock logging with `vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'))`, never a hand-written partial mock.

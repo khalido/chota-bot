@@ -1,18 +1,18 @@
 /**
  * music agent-tools — the Soloist speaker on the box (Spotify Connect).
  *
- * Wraps `$lib/server/tools/spotify`: `music_now` (what's playing),
+ * Wraps `#lib/server/tools/music`: `music_now` (what's playing),
  * `music_control` (pause, resume, skip, volume) and `music_play` (a favourite
  * from `chota.config.ts > music.favourites`, a Spotify link, or a catalogue
  * search through `tools/spotify-web.ts`, whose best match Soloist plays).
  */
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getConfig } from '$lib/server/config';
-import { soloist, toSpotifyUri, type NowPlaying } from '$lib/server/tools/spotify';
-import { recentEpisodes, searchSpotify } from '$lib/server/tools/spotify-web';
-import { AskerSchema } from '$lib/server/tools/content';
-import { errorMessage } from '$lib/server/log';
+import { getConfig } from '#lib/server/config.ts';
+import { houseSpeaker, toSpotifyUri, type Done, type NowPlaying } from '#lib/server/tools/music.ts';
+import { recentEpisodes, searchSpotify } from '#lib/server/tools/spotify-web.ts';
+import { AskerSchema } from '#lib/server/tools/content.ts';
+import { errorMessage } from '#lib/server/log.ts';
 
 const NOT_SET_UP = { error: 'music is not set up (no music in chota.config.ts)' };
 /** An untagged group message can't change the music, whatever the model decides. */
@@ -21,22 +21,35 @@ const contextSchema = z.object({ asker: AskerSchema.optional() });
 
 function shape(n: NowPlaying) {
 	if (n.speaker === 'offline') return { speaker: 'offline' };
-	if (n.speaker === 'logged-out') return { speaker: 'not signed in to Spotify' };
-	return {
-		speaker: n.deviceName,
-		status: n.status,
-		volume: n.volume,
-		...(n.track
-			? {
-					track: n.track.name,
-					artists: n.track.artists.join(', '),
-					album: n.track.album,
-					position_s: n.positionMs === null ? null : Math.round(n.positionMs / 1000),
-					length_s: n.track.durationMs === null ? null : Math.round(n.track.durationMs / 1000)
-				}
-			: {})
-	};
+	if (n.speaker === 'waiting') return { speaker: 'not signed in to Spotify' };
+	const track = n.track
+		? {
+				track: n.track.name,
+				artists: n.track.artists.join(', '),
+				album: n.track.album,
+				position_s: n.positionMs === null ? null : Math.round(n.positionMs / 1000),
+				length_s: n.track.durationMs === null ? null : Math.round(n.track.durationMs / 1000)
+			}
+		: {};
+	// Spotify plays on one device per account. Soloist reports the account's
+	// playback even when it is on a phone or another speaker, so say which.
+	if (!n.here) {
+		const playing = n.status === 'playing' || n.status === 'buffering';
+		return {
+			speaker: n.deviceName,
+			status: 'silent',
+			note: playing
+				? 'Spotify is playing on another device (a phone or another speaker), not the house speaker.'
+				: 'Nothing is playing on the house speaker.',
+			...(playing ? { elsewhere: track } : {})
+		};
+	}
+	return { speaker: n.deviceName, status: n.status, volume: n.volume, ...track };
 }
+
+/** A write's result for the model: done, or sent but not yet seen to take. */
+const sent = (d: Done) =>
+	d.confirmed ? {} : { note: 'Sent, but the speaker has not reported the change yet.' };
 
 /** A podcast: play the newest episode if asked for it, else list the last few to choose from. */
 async function podcast(show: string, uri: string, latest: boolean | undefined) {
@@ -44,9 +57,10 @@ async function podcast(show: string, uri: string, latest: boolean | undefined) {
 	if (!episodes.length) return { error: `no episodes of ${show}` };
 	if (!latest)
 		return { show, episodes, source: 'Spotify', next: 'Ask which one, then play its uri.' };
-	await soloist().play(episodes[0].uri);
+	const done = await houseSpeaker().play(episodes[0].uri);
 	return {
 		ok: true,
+		...sent(done),
 		playing: episodes[0].name,
 		show,
 		released: episodes[0].released,
@@ -59,7 +73,7 @@ export const musicNowTool = tool({
 	inputSchema: z.object({}),
 	execute: async () => {
 		if (!getConfig().music) return NOT_SET_UP;
-		return shape(soloist().nowPlaying());
+		return shape(houseSpeaker().nowPlaying());
 	}
 });
 
@@ -73,14 +87,15 @@ export const musicControlTool = tool({
 	execute: async ({ action, volume }, { context }) => {
 		if (!getConfig().music) return NOT_SET_UP;
 		if (context.asker?.quiet) return QUIET;
-		const s = soloist();
+		const s = houseSpeaker();
 		try {
 			if (action === 'volume') {
 				if (volume === undefined) return { error: 'volume needs a number 0–100' };
-				return { ok: true, volume: await s.setVolume(volume) };
+				const done = await s.setVolume(volume);
+				// What it ended at: a request above the cap comes back as the cap.
+				return { ok: true, ...sent(done), volume: done.now.volume };
 			}
-			await { pause: s.pause, resume: s.resume, next: s.next, prev: s.prev }[action].call(s);
-			return { ok: true };
+			return { ok: true, ...sent(await s[action]()) };
 		} catch (err) {
 			return { error: errorMessage(err) };
 		}
@@ -123,21 +138,22 @@ export const musicPlayTool = tool({
 		);
 		try {
 			if (key) {
-				await soloist().play(music.favourites[key]);
-				return { ok: true, playing: key, from: 'favourites' };
+				const done = await houseSpeaker().play(music.favourites[key]);
+				return { ok: true, ...sent(done), playing: key, from: 'favourites' };
 			}
 			if (toSpotifyUri(what)) {
-				await soloist().play(what);
-				return { ok: true, playing: what };
+				const done = await houseSpeaker().play(what);
+				return { ok: true, ...sent(done), playing: what };
 			}
 			const found = await searchSpotify(what, { kinds: [kind ?? 'track'], limit: 3 });
 			if (!found.length) return { error: `nothing on Spotify for "${what}"` };
 			const [best, ...rest] = found;
 			if (best.kind === 'show') return await podcast(best.name, best.uri, latest);
-			await soloist().play(best.uri);
+			const done = await houseSpeaker().play(best.uri);
 			const label = (f: (typeof found)[number]) => (f.by ? `${f.name} by ${f.by}` : f.name);
 			return {
 				ok: true,
+				...sent(done),
 				playing: label(best),
 				kind: best.kind,
 				source: 'Spotify',

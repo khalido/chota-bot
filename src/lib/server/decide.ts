@@ -7,7 +7,7 @@
 import { createHash } from 'node:crypto';
 import { experimental_decide as decide, gateway } from 'ai';
 import type { Experimental_DecisionQuestion as Question } from 'ai';
-import { log } from '$lib/server/log';
+import { log } from '#lib/server/log.ts';
 
 export type { Question };
 

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Clock from '$lib/components/Clock.svelte';
-	import Bus from '$lib/components/Bus.svelte';
-	import Weather from '$lib/components/Weather.svelte';
-	import Chores from '$lib/components/Chores.svelte';
-	import Calendar from '$lib/components/Calendar.svelte';
-	import Lists from '$lib/components/Lists.svelte';
-	import FunQuote from '$lib/components/FunQuote.svelte';
-	import PrintMorning from '$lib/components/PrintMorning.svelte';
+	import Clock from '#lib/components/Clock.svelte';
+	import Bus from '#lib/components/Bus.svelte';
+	import Weather from '#lib/components/Weather.svelte';
+	import Chores from '#lib/components/Chores.svelte';
+	import Calendar from '#lib/components/Calendar.svelte';
+	import Lists from '#lib/components/Lists.svelte';
+	import FunQuote from '#lib/components/FunQuote.svelte';
+	import PrintMorning from '#lib/components/PrintMorning.svelte';
 	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
@@ -26,7 +26,7 @@
 
 	<div class="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 		<a
-			href={resolve('/clock')}
+			href={resolve('clock')}
 			class="rounded-2xl ring-slate-300 transition hover:ring-2 md:col-span-2 lg:col-span-3"
 			aria-label="Open fullscreen clock"
 		>
@@ -35,7 +35,7 @@
 
 		<Bus trips={data.trips} />
 		<a
-			href={resolve('/weather')}
+			href={resolve('weather')}
 			class="rounded-2xl ring-slate-300 transition hover:ring-2 dark:ring-neutral-700"
 			aria-label="Open weather details"
 		>
