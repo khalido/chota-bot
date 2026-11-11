@@ -48,17 +48,14 @@ The full review is in `docs/private/review-2026-11-10.html` (gitignored on purpo
 
 **Shipped: the Telegram allowlist (bug 1).** Live on the Pi since 10 Nov. Not checked from outside: KO can send `/starter hi` to the bot from a Telegram account that is not on the list; it should answer "Not authorised yet".
 
-**Next: Kit 3 to the Pi, 11 Nov, with KO at the printer** (KO, 10 Nov: he has to do the Google sign-in himself, so it waits for him). In order:
+**Kit 3 is on the Pi (11 Nov, `af4eea8`).** `sveltekit-3` was fast-forwarded into `main` and deployed; work on `main` now. Done and seen: `PROTOCOL_HEADER=x-forwarded-proto` added to the Pi's `.env`; a database copy in `~/chota-backups/` (`sqlite3 .backup`, integrity ok); the first real build swap (`build.prev/` holds the Kit 2 build; no schema change, so the snapshot, push and put-back are still unproven on the Pi); health ok on the new commit; Telegram polling, WhatsApp connected; `/api/auth/get-session` 200 and `/admin` 303 through Caddy; the test sheet printed, and the family brief printed through the screenshot path (`screenshot /print/family`, so the `localhost` screenshot URL works on the Pi). A POST to the API from a script needs an `Origin` header and a content type, or Kit 3 answers 403.
 
-1. KO picks the sign-in origin: `http://localhost:8000` through an SSH tunnel to Caddy's port 80 (`ssh -L 8000:localhost:80 chota`; the redirect already registered with Google), or an https tailnet name through Tailscale Serve (a new redirect in the Google console, and `ORIGIN` changed on the Pi).
-2. Add `PROTOCOL_HEADER=x-forwarded-proto` to the Pi's `.env` (a Pi write: KO's OK at the time).
-3. Pull a fresh database copy to `~/chota-backups/`.
-4. Merge `sveltekit-3` into `main`, push, `bun run deploy`. Watch it: this is the first real run of the build swap, and `bun.lock` changes. Schema files are unchanged since the Pi's commit unless `git diff origin/main sveltekit-3 -- src/lib/server/db` says otherwise; check before deploying.
-5. Check `/api/health` shows the new commit, Telegram is polling and WhatsApp reconnected.
-6. A test print from `/admin/print`, then one brief, with KO at the printer. The print path was reworked and has not printed.
-7. KO signs in with Google and opens `/admin`.
-8. Within 15 minutes `printer-check` should have run (`/admin/jobs`). Open the printer cover for one tick to see the alert arrive, then close it for two ticks to see "working again".
-9. Then add the `music` block to `chota.config.ts` and ask the bot what's playing.
+**Still to do, with KO:**
+
+1. KO to confirm both prints look right.
+2. KO signs in with Google: `ssh -L 8000:localhost:80 chota` on the Mac (stop a local dev server first, it uses 8000), then open `http://localhost:8000/login` and `/admin`. `ORIGIN` on the Pi is `http://localhost:8000`, which Google already has.
+3. `printer-check` runs at :05, :20, :35, :50 (`/admin/jobs`). Open the printer cover across one tick to see the alert arrive, then close it for two ticks to see "working again". No alert has reached a phone yet.
+4. Then add the `music` block to `chota.config.ts` (KO's edit) and ask the bot what's playing.
 
 **Fixed, by group** (files in brackets). Most of these files also carry Kit 3 migration changes, so the groups can't be committed apart without splitting hunks; only `deploy/deploy.sh`, `deploy/push.sh`, `.gitignore` and the new files separate cleanly. Plan on one "Kit 3 plus fixes" commit unless KO wants them pulled apart. Only the Telegram fix is ported to `main`; `deploy.sh` is not.
 
