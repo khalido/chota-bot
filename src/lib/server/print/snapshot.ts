@@ -69,6 +69,20 @@ async function snapshot(
 	const out = join(tmpdir(), `chota-brief-${who}-${process.pid}-${Date.now()}.png`);
 	const ab = (args: string[]) => exec('agent-browser', args, { timeout: CMD_TIMEOUT_MS });
 
+	try {
+		return await capture(ab, url, who, out);
+	} finally {
+		// Left open, Chromium sat in memory between prints (Sentral's login closes it too).
+		await ab(['close']).catch(() => {});
+	}
+}
+
+async function capture(
+	ab: (args: string[]) => Promise<{ stdout: string | Buffer }>,
+	url: string,
+	who: string,
+	out: string
+): Promise<Buffer> {
 	await ab(['set', 'viewport', String(WIDTH), '900']);
 	await ab(['open', url]);
 	await ab(['wait', '--load', 'networkidle']);

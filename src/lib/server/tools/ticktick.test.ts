@@ -62,3 +62,23 @@ describe('repeatable', () => {
 		expect(repeatable('tools/call', {})).toBe(false);
 	});
 });
+
+describe('sameOpenItem', () => {
+	const task = (title: string, assigneeUsername?: string) =>
+		({ id: title, projectId: 'p', title, status: 0, priority: 0, assigneeUsername }) as const;
+
+	it('finds the same item whatever the case or spacing', async () => {
+		const { sameOpenItem } = await import('./ticktick');
+		const tasks = [task('Oat  milk'), task('bread')];
+		expect(sameOpenItem(tasks, 'oat milk')?.title).toBe('Oat  milk');
+		expect(sameOpenItem(tasks, 'milk')).toBeUndefined();
+	});
+
+	it("doesn't count the same job assigned to someone else", async () => {
+		const { sameOpenItem } = await import('./ticktick');
+		const tasks = [task('tidy room', 'kid1@example.com')];
+		expect(sameOpenItem(tasks, 'tidy room', 'kid2@example.com')).toBeUndefined();
+		expect(sameOpenItem(tasks, 'tidy room', 'kid1@example.com')).toBeDefined();
+		expect(sameOpenItem(tasks, 'tidy room')).toBeDefined();
+	});
+});

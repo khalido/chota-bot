@@ -91,12 +91,22 @@ export const ticktickAddTool = tool({
 					? `no TickTick email on file for ${person.name}`
 					: undefined;
 		try {
-			const task = await addToList(list, title, {
+			const { task, existed } = await addToList(list, title, {
 				due,
 				content: note,
 				assignee: person?.email,
 				section
 			});
+			// Nothing was added: say so, with no `added`, so nobody is told it was.
+			// It carries the existing item's details, so a different due date or
+			// section asked for this time can be pointed out.
+			if (existed)
+				return {
+					alreadyOnList: task.title,
+					list,
+					due: task.dueDate ? sydneyYMD(new Date(task.dueDate)) : null,
+					note: task.content || null
+				};
 			return {
 				added: task.title,
 				list,

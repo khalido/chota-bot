@@ -56,6 +56,16 @@ export const WRITE_DONE: Record<string, string> = {
 };
 
 /**
+ * Did the tool say it failed? Chota's tools report a failure as a result, not a
+ * throw: `{ error }`, or `{ said: false }` from `announce`.
+ */
+export function reportedFailure(output: unknown): boolean {
+	if (typeof output !== 'object' || output === null) return false;
+	const o = output as Record<string, unknown>;
+	return 'error' in o || o.said === false;
+}
+
+/**
  * Did this tool call change something? The write tools report a failure as a
  * result, not a throw (`{ error }`, `{ said: false }`), and some results are a
  * question back (`music_play` listing episodes to choose from), so the name
@@ -64,7 +74,7 @@ export const WRITE_DONE: Record<string, string> = {
 export function changedSomething(tool: string, output: unknown): boolean {
 	if (!(tool in WRITE_DONE) || typeof output !== 'object' || output === null) return false;
 	const o = output as Record<string, unknown>;
-	if ('error' in o || o.said === false) return false;
+	if (reportedFailure(output)) return false;
 	if (tool === 'music_play' || tool === 'music_control') return o.ok === true;
 	if (tool === 'ticktick_done') return Array.isArray(o.done) && o.done.length > 0;
 	if (tool === 'ticktick_add') return typeof o.added === 'string';

@@ -26,6 +26,18 @@ describe('toolParts', () => {
 		expect(parts[0]).toMatchObject({ status: 'error', output: 'Error: down' });
 	});
 
+	it('records a tool that returned { error } as failed, not ok', () => {
+		const [part] = toolParts([
+			{
+				content: [
+					call('a', 'ticktick_add'),
+					{ type: 'tool-result', toolCallId: 'a', output: { error: "couldn't add: timeout" } }
+				]
+			}
+		]);
+		expect(part).toMatchObject({ status: 'error', output: { error: "couldn't add: timeout" } });
+	});
+
 	it('keeps a call that never got a result, as an error', () => {
 		expect(toolParts([{ content: [call('a')] }])[0]).toMatchObject({
 			status: 'error',
@@ -89,6 +101,42 @@ describe('runNote', () => {
 		expect(runNote(parts, null)).toBe('[ran tools: bus (ok), calendar (failed)]');
 		expect(runNote(parts, 'network')).toBe(
 			'[ran tools: bus (ok), calendar (failed); then the run failed]'
+		);
+	});
+
+	it('says "no change" for a write that changed nothing', () => {
+		const parts = [
+			{
+				name: 'ticktick_add',
+				status: 'ok' as const,
+				input: { title: 'milk' },
+				output: { alreadyOnList: 'milk', list: 'shopping' }
+			},
+			{
+				name: 'ticktick_done',
+				status: 'ok' as const,
+				input: { titles: ['x'] },
+				output: { done: [] }
+			},
+			{
+				name: 'ticktick_add',
+				status: 'ok' as const,
+				input: { title: 'eggs' },
+				output: { error: 'x' }
+			}
+		];
+		expect(runNote(parts, null)).toBe(
+			'[ran tools: ticktick_add {"title":"milk"} (no change), ticktick_done {"titles":["x"]} (no change), ticktick_add {"title":"eggs"} (failed)]'
+		);
+	});
+
+	it('says what a write tool was asked to do, and nothing for a read', () => {
+		const parts = [
+			{ name: 'ticktick', status: 'ok' as const, input: { list: 'shopping' } },
+			{ name: 'ticktick_add', status: 'ok' as const, input: { list: 'shopping', title: 'milk' } }
+		];
+		expect(runNote(parts, null)).toBe(
+			'[ran tools: ticktick (ok), ticktick_add {"list":"shopping","title":"milk"} (ok)]'
 		);
 	});
 });

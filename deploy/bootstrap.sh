@@ -108,11 +108,17 @@ if [ "$missing" -ne 0 ]; then
 fi
 echo "✓ .env + chota.config.ts present"
 
-# Append the kiosk-only env lines once. Idempotent: only adds if absent.
-if ! grep -q '^PORT=' .env; then
-	printf '\n# kiosk-only overrides (appended by bootstrap.sh)\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\nHOST=127.0.0.1\n' >> .env
-	echo "✓ Appended PORT, KIOSK, PROTOCOL_HEADER and HOST to .env"
-fi
+# Append each kiosk-only env line that is missing. Checked one by one: a box set
+# up before HOST existed had PORT, so a single check skipped the rest and the app
+# listened on every interface while trusting x-forwarded-proto.
+# An .env copied over may not end in a newline; appending straight on would join two lines.
+[ -n "$(tail -c1 .env)" ] && printf '\n' >> .env
+for line in 'PORT=8000' 'KIOSK="true"' 'PROTOCOL_HEADER=x-forwarded-proto' 'HOST=127.0.0.1'; do
+	if ! grep -q "^${line%%=*}=" .env; then
+		printf '%s\n' "$line" >> .env
+		echo "✓ Appended $line to .env"
+	fi
+done
 
 # Clone the sibling content repo (curios) for quotes + puzzles. chota
 # reads from ../curios/dist/* at runtime; deploy.sh keeps it current

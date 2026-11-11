@@ -2,6 +2,7 @@
  * What an agent run did, from the SDK's steps: the tool calls to keep, and the
  * numbers for its `chat_message` row and the `agent.run` event.
  */
+import { changedSomething, reportedFailure, WRITE_DONE } from './errors';
 
 /** A tool result larger than this is cut when stored, and marked `truncated`. */
 const MAX_OUTPUT_CHARS = 200_000;
@@ -63,7 +64,14 @@ export function toolParts(steps: readonly StepLike[]): ToolPart[] {
 			}
 			const part = parts.get(c.toolCallId);
 			if (!part) continue;
-			if (c.type === 'tool-result') Object.assign(part, { status: 'ok' }, stored(c.output));
+			// A tool that returned `{ error }` failed, though nothing threw. Recorded
+			// as ok, the next turn read "ticktick_add (ok)" for an add that never landed.
+			if (c.type === 'tool-result')
+				Object.assign(
+					part,
+					{ status: reportedFailure(c.output) ? 'error' : 'ok' },
+					stored(c.output)
+				);
 			if (c.type === 'tool-error') Object.assign(part, stored(String(c.error)));
 		}
 	}
@@ -111,7 +119,29 @@ export function turnStats(steps: readonly StepLike[]) {
 
 /** What the model sees for a run that wrote no text: without this, it can't tell
  *  a tool already acted, and may do it again when asked again. */
-export function runNote(parts: readonly Pick<ToolPart, 'name' | 'status'>[], error: string | null) {
-	const tools = parts.map((p) => `${p.name} (${p.status === 'ok' ? 'ok' : 'failed'})`).join(', ');
+export function runNote(
+	parts: readonly (Pick<ToolPart, 'name' | 'status'> & { input?: unknown; output?: unknown })[],
+	error: string | null
+) {
+	const tools = parts.map((p) => `${p.name}${wrote(p)} (${outcome(p)})`).join(', ');
 	return `[ran tools: ${tools}${error ? '; then the run failed' : ''}]`;
+}
+
+/** ok or failed; and for a write tool whose result shows nothing changed (an
+ *  item already on the list, nothing ticked off, a question back), "no change".
+ *  Judged from the output, so rows stored before failures were recorded as
+ *  failed read right too. */
+function outcome(p: { name: string; status: 'ok' | 'error'; output?: unknown }): string {
+	if (p.status !== 'ok' || reportedFailure(p.output)) return 'failed';
+	if (p.name in WRITE_DONE && p.output !== undefined && !changedSomething(p.name, p.output))
+		return 'no change';
+	return 'ok';
+}
+
+/** What a write tool was asked to do, so the model can see "milk" is already
+ *  added and not add it again. Read tools get no detail. */
+function wrote(p: { name: string; input?: unknown }): string {
+	if (!(p.name in WRITE_DONE) || p.input === undefined || p.input === null) return '';
+	const text = JSON.stringify(p.input) ?? '';
+	return ` ${text.length > 120 ? `${text.slice(0, 120)}…` : text}`;
 }

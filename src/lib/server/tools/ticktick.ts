@@ -298,14 +298,25 @@ function matchKey(name: string): string {
  * Add a task to a configured list, addressed by internal name. `due` is a
  * Sydney-local `YYYY-MM-DD`, set as an all-day due date ("buy Kid1 shoes"
  * in about a month). Drops that list's cache so the next read shows it.
+ *
+ * An open item with the same title is not added again: `existed` is true and
+ * `task` is the one already there. Asking twice (a retry after a failed turn,
+ * two people in the group) used to put milk on the list twice.
  */
 export async function addToList(
 	internalName: string,
 	title: string,
 	extras: { content?: string; due?: string; assignee?: string; section?: string } = {}
-): Promise<Task> {
+): Promise<{ task: Task; existed: boolean }> {
 	const list = await getList(internalName);
 	if (!list) throw new Error(`Cannot add to "${internalName}" — no such configured list`);
+	if (sameOpenItem(list.tasks, title, extras.assignee)) {
+		// The cached copy may still show an item ticked off a minute ago: read
+		// again, past the cache. If that read fails the add fails; it is not guessed.
+		const now = await getProjectWithTasks(list.project.id, { force: true });
+		const already = sameOpenItem(now.tasks, title, extras.assignee);
+		if (already) return { task: already, existed: true };
+	}
 	const task: Record<string, unknown> = { projectId: list.project.id, title };
 	if (extras.content) task.content = extras.content;
 	if (extras.assignee) task.assigneeUsername = extras.assignee;
@@ -329,7 +340,24 @@ export async function addToList(
 	// create_task takes `{ task: OpenTask }` — not flat fields.
 	const created = await callTool<Task>('create_task', { task, client_timezone: SYDNEY_TZ });
 	projectDataCache.delete(list.project.id);
-	return created;
+	return { task: created, existed: false };
+}
+
+/**
+ * The open item an add would duplicate: the same title, ignoring case and
+ * spacing. An item assigned to someone else is a different job ("tidy room" for
+ * two kids), so it doesn't count.
+ */
+export function sameOpenItem(
+	tasks: readonly Task[],
+	title: string,
+	assignee?: string
+): Task | undefined {
+	return tasks.find(
+		(t) =>
+			norm(t.title) === norm(title) &&
+			(!assignee || !t.assigneeUsername || t.assigneeUsername === assignee)
+	);
 }
 
 /**
@@ -370,8 +398,12 @@ export async function listProjects(): Promise<Project[]> {
 	}
 }
 
-export async function getProjectWithTasks(projectId: string): Promise<ProjectWithTasks> {
-	const cached = fresh(projectDataCache.get(projectId));
+/** `force` reads past the cache, and throws on failure rather than serving the stale copy. */
+export async function getProjectWithTasks(
+	projectId: string,
+	opts: { force?: boolean } = {}
+): Promise<ProjectWithTasks> {
+	const cached = opts.force ? undefined : fresh(projectDataCache.get(projectId));
 	if (cached) return cached;
 	try {
 		const data = await callTool<ProjectWithTasks>('get_project_with_undone_tasks', {
@@ -380,7 +412,7 @@ export async function getProjectWithTasks(projectId: string): Promise<ProjectWit
 		projectDataCache.set(projectId, { data, at: Date.now() });
 		return data;
 	} catch (err) {
-		const stale = staleOk(projectDataCache.get(projectId));
+		const stale = opts.force ? undefined : staleOk(projectDataCache.get(projectId));
 		if (stale) {
 			log(
 				'ticktick',

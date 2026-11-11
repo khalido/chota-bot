@@ -46,7 +46,12 @@ const TOOL_STATUS: Record<string, string> = {
 	save: 'Saving it',
 	saved: 'Looking through what we saved',
 	web_search: 'Searching the web',
-	web_fetch: 'Reading the page'
+	web_fetch: 'Reading the page',
+	volleyball: 'Checking the volleyball',
+	music_now: "Checking what's playing",
+	music_control: 'Changing the music',
+	music_play: 'Putting it on',
+	announce: 'Saying it'
 };
 
 /** Escape for the `<tg-thinking>` HTML body (model reasoning is untrusted text). */

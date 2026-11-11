@@ -93,30 +93,39 @@ describe('loadHistory', () => {
 		const part = {
 			id: 'c1',
 			name: 'ticktick_add',
-			input: {},
+			input: { title: 'milk' },
 			status: 'ok' as const,
-			output: 'secret'
+			output: { added: 'milk', list: 'secret' }
 		};
 		appendMessage(id, 'tools-1', 'user', 'add milk', { sender: 'D' });
 		appendMessage(id, 'tools-1', 'assistant', '', { parts: [part] });
 		appendMessage(id, 'tools-2', 'user', 'thanks', { sender: 'D' });
 		expect(loadHistory(id).map((m) => m.content)).toEqual([
 			'D: add milk',
-			'[ran tools: ticktick_add (ok)]',
+			'[ran tools: ticktick_add {"title":"milk"} (ok)]',
 			'D: thanks'
 		]);
 		const row = sqlite.prepare('SELECT parts FROM chat_message WHERE turn_id = ? AND role = ?');
 		const { parts } = row.get('tools-1', 'assistant') as { parts: string };
-		expect(JSON.parse(parts)[0]).toMatchObject({ name: 'ticktick_add', output: 'secret' });
+		expect(JSON.parse(parts)[0]).toMatchObject({
+			name: 'ticktick_add',
+			output: { added: 'milk', list: 'secret' }
+		});
 	});
 
 	it('says when a run that ran tools then failed, so the action is not repeated', () => {
 		const id = openSession('person:G/main');
-		const part = { id: 'c1', name: 'ticktick_add', input: {}, status: 'ok' as const, output: 'x' };
+		const part = {
+			id: 'c1',
+			name: 'ticktick_add',
+			input: { title: 'milk' },
+			status: 'ok' as const,
+			output: { added: 'milk' }
+		};
 		appendMessage(id, 'f1', 'user', 'add milk', { sender: 'G' });
 		appendMessage(id, 'f1', 'assistant', '', { parts: [part], error: 'network' });
 		expect(loadHistory(id).at(-1)?.content).toBe(
-			'[ran tools: ticktick_add (ok); then the run failed]'
+			'[ran tools: ticktick_add {"title":"milk"} (ok); then the run failed]'
 		);
 	});
 

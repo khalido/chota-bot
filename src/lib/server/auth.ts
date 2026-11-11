@@ -56,6 +56,10 @@ const allowedHosts = [
 
 export const auth = betterAuth({
 	baseURL: { allowedHosts, fallback: signInOrigin },
+	// Both default from NODE_ENV, which the box doesn't set. Plain cookie names
+	// on purpose: `__Secure-` ones can't be set from `http://<box>` on the LAN.
+	advanced: { useSecureCookies: false },
+	rateLimit: { enabled: true },
 	secret: BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 	// Password sign-IN stays for any existing local account, but self-serve
