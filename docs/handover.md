@@ -52,7 +52,7 @@ The full review is in `docs/private/review-2026-11-10.html` (gitignored on purpo
 
 **Still to do, with KO:**
 
-1. KO to confirm both prints look right.
+1. ~~KO to confirm both prints look right~~ (KO, 11 Nov: both fine).
 2. KO signs in with Google: `ssh -L 8000:localhost:80 chota` on the Mac (stop a local dev server first, it uses 8000), then open `http://localhost:8000/login` and `/admin`. `ORIGIN` on the Pi is `http://localhost:8000`, which Google already has.
 3. `printer-check` runs at :05, :20, :35, :50 (`/admin/jobs`). Open the printer cover across one tick to see the alert arrive, then close it for two ticks to see "working again". No alert has reached a phone yet.
 4. Then add the `music` block to `chota.config.ts` (KO's edit) and ask the bot what's playing.
