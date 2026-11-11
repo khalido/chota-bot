@@ -110,8 +110,8 @@ echo "✓ .env + chota.config.ts present"
 
 # Append the kiosk-only env lines once. Idempotent: only adds if absent.
 if ! grep -q '^PORT=' .env; then
-	printf '\n# kiosk-only overrides (appended by bootstrap.sh)\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\n' >> .env
-	echo "✓ Appended PORT, KIOSK and PROTOCOL_HEADER to .env"
+	printf '\n# kiosk-only overrides (appended by bootstrap.sh)\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\nHOST=127.0.0.1\n' >> .env
+	echo "✓ Appended PORT, KIOSK, PROTOCOL_HEADER and HOST to .env"
 fi
 
 # Clone the sibling content repo (curios) for quotes + puzzles. chota
@@ -184,7 +184,7 @@ sudo systemctl is-active chota
 curl -fsS -o /dev/null -m 5 http://localhost:8000/ && echo "✓ HTTP 200 on localhost:8000"
 echo
 echo "Next:"
-echo "  - Open http://$(hostname):8000/ from another machine on the tailnet"
+echo "  - Open http://$(hostname)/ from another machine on the tailnet (Caddy; port 8000 is closed to the network)"
 echo "  - Sign in with Google at /admin to wire up the calendar tool"
 echo "  - From the Mac, future updates are just: bun run deploy"
 echo "  - With the speaker plugged in: wpctl status, then wpctl set-default <id>"

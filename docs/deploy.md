@@ -97,7 +97,7 @@ agent-browser install                 # downloads Chromium (~150MB, one-time; no
 # 4. Copy secrets from your Mac (one-time)
 #    From the Mac:  scp .env chota.config.ts chota:~/code/chota-bot/
 #    Then on the box, append PORT, KIOSK and PROTOCOL_HEADER to .env (these aren't in your dev .env):
-printf '\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\n' >> .env
+printf '\nPORT=8000\nKIOSK="true"\nPROTOCOL_HEADER=x-forwarded-proto\nHOST=127.0.0.1\n' >> .env
 #    Also sanity-check DATABASE_URL — sv create scaffolds it as `local.db` but
 #    .env.example uses `data/home.db`. Whichever you pick, the kiosk's .env and
 #    the path in deploy.sh's first-time DB init must match. Recommend:
@@ -187,6 +187,24 @@ things:
 
 `.env` stays per-machine — it carries SP5-only `KIOSK=true` and the OAuth
 `ORIGIN`. Edit those on the box.
+
+### How the box is reached, and where you sign in
+
+The app listens on `127.0.0.1:8000` only (`HOST=127.0.0.1` in the box's `.env`). It trusts `x-forwarded-proto` (`PROTOCOL_HEADER`), so it must not be reachable except through a proxy:
+
+- **Caddy, port 80, plain http:** `http://<box>/` on the LAN and `http://<box>.<tailnet>.ts.net/` over Tailscale. The dashboard and `/print/<who>` use this.
+- **Tailscale Serve, port 443, https:** `https://<box>.<tailnet>.ts.net/`, tailnet only, with a real certificate. This is the sign-in address.
+
+Google sign-in completes only on `ORIGIN`, which must be a redirect Google knows (`<ORIGIN>/api/auth/callback/google`). Setting up the https address, once:
+
+1. In the Tailscale admin console, turn on HTTPS certificates (DNS page).
+2. On the box: `sudo tailscale serve --bg 8000`. `tailscale serve status` shows the address.
+3. In the Google Cloud console, add `https://<box>.<tailnet>.ts.net/api/auth/callback/google` to the OAuth client's redirect URIs.
+4. On the box, set `ORIGIN="https://<box>.<tailnet>.ts.net"` in `.env` and `sudo systemctl restart chota`.
+
+Until then `ORIGIN` is `http://localhost:8000` and sign-in goes through a tunnel from the Mac: `ssh -L 8000:localhost:80 <box>`, then `http://localhost:8000/login`.
+
+A script that POSTs to the API needs an `Origin` header matching the host and a content type, or SvelteKit answers 403.
 
 The deploy script (`deploy.sh`, on the kiosk) compares the box against `data/.deployed`: the commit and `chota.config.ts` that last passed the health check. If neither differs, it does nothing. A run that fails part-way leaves that stamp alone, so running it again redoes every step.
 

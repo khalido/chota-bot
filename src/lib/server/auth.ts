@@ -18,23 +18,28 @@ import { event, logger } from '#lib/server/log.ts';
 const authLog = logger('auth');
 
 /**
- * The box answers on several plain-http names (localhost, its hostname on the
- * LAN, its tailnet name), so better-auth takes its base URL from each request
+ * The box answers on several names (localhost, its hostname on the LAN, its
+ * tailnet name over plain http through Caddy, and the tailnet name over https
+ * through Tailscale Serve), so better-auth takes its base URL from each request
  * rather than from one fixed string. With a fixed string its SvelteKit handler
  * only answered `/api/auth/*` on that exact origin and every other name got a
  * 404 (adapter-node 6 no longer rewrites request URLs to `ORIGIN`).
  *
  * - `allowedHosts` match host AND port: `localhost:8000` is a direct hit,
  *   `localhost` is through Caddy on port 80.
- * - `protocol: 'http'` is needed: left out, only `https://<host>` is trusted for
- *   a non-loopback host and every sign-in POST from `http://<box>` is refused.
- *   If the box ever gets an https name, this has to become per-host.
+ * - No `protocol`: it comes from the request URL, which adapter-node builds
+ *   from `PROTOCOL_HEADER` (`x-forwarded-proto`, set by Caddy and by Tailscale
+ *   Serve). That header is only safe to trust because the app listens on
+ *   127.0.0.1 (`HOST` in `.env`), so nothing reaches it except those proxies.
+ *   Without `PROTOCOL_HEADER` every non-loopback host reads as https and
+ *   sign-in from `http://<box>` is refused.
  * - `fallback` is needed: jobs call `auth.api.getAccessToken` with no request
  *   (the calendar), and a request on an unlisted host (a bare IP) would
  *   otherwise throw inside `getSession` and turn every page into a 500.
  *
  * Google sign-in still only completes on the origin registered in the Google
- * console, which is `ORIGIN`: start it there.
+ * console, which is `ORIGIN`: start it there. Cookies keep their plain names on
+ * every host (not `__Secure-`), so one session store serves http and https.
  */
 const box = hostname().toLowerCase();
 const signInOrigin = (ORIGIN || `http://localhost:${PORT || 8000}`).replace(/\/$/, '');
@@ -50,7 +55,7 @@ const allowedHosts = [
 ];
 
 export const auth = betterAuth({
-	baseURL: { allowedHosts, protocol: 'http', fallback: signInOrigin },
+	baseURL: { allowedHosts, fallback: signInOrigin },
 	secret: BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 	// Password sign-IN stays for any existing local account, but self-serve
