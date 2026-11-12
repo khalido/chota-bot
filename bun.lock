@@ -307,7 +307,7 @@
 
     "@keyv/serialize": ["@keyv/serialize@1.1.1", "", {}, "sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA=="],
 
-    "@khalido/home": ["@khalido/home@0.2.1", "", { "dependencies": { "basic-ftp": "^6.2.3", "cac": "^7.1.0", "fast-xml-parser": "^5.11.2", "jsonc-parser": "^3.3.1", "suncalc": "^2.1.1", "undici": "^8.12.3", "zod": "^4.6.7" }, "bin": { "home": "src/cli/main.ts" } }, "sha512-mjN/xf8zb5RCMbyZg3Jf6MBZFyUIpvDv1e2es22k5kzPNFrIq4kcZMfS2JDYLIWQMmSJEHzwdK8lXvWpstcGHA=="],
+    "@khalido/home": ["@khalido/home@0.2.2", "", { "dependencies": { "basic-ftp": "^6.2.3", "cac": "^7.1.0", "fast-xml-parser": "^5.11.2", "jsonc-parser": "^3.3.1", "suncalc": "^2.1.1", "undici": "^8.12.3", "zod": "^4.6.7" }, "bin": { "home": "src/cli/main.ts" } }, "sha512-60nkQl6R8wbnYdlGFTdyyhVbAIouZVQdommySR4bb0pZVK41EduJT6qsMS6416eUWY0TywCfK54eRVOpsdKyYg=="],
 
     "@logtape/file": ["@logtape/file@2.4.2", "", { "peerDependencies": { "@logtape/logtape": "^2.4.2" } }, "sha512-Wit1GrwBQ1mCERREsBX5C4TKe3SWoAZ2bFBh7e4sbAnh1w2rOjD46puW+/f/A3G7HFIsAYlL03/r1/9CeKZ0XQ=="],
 
