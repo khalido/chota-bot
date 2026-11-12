@@ -86,7 +86,7 @@ src/hooks.server.ts       # init hook: configureLogging + bootJobs + shutdown
 src/routes/admin/jobs/    # /admin/jobs page (reads JOBS)
 ```
 
-Jobs folder is **flat + jobs only**. No framework code in there — `defineJob` lives in `scheduler.ts`. (User-defined jobs from agent prompts will arrive later via a single `dispatch-user-jobs.ts` heartbeat that reads a DB table — see §Future: user-defined jobs.)
+Jobs folder is **flat + jobs only**. No framework code in there — `defineJob` lives in `scheduler.ts`. (Jobs made in chat will be rows in a table, fired by one system job, `user-jobs.ts` — see §User jobs.)
 
 ## Cron pattern reference
 
@@ -152,6 +152,7 @@ Bake in from day one. See `docs/agent.md` for the `runAgent` wrapper that enforc
 | `ticktick-refresh`    | refresh cadence       | scripted | Warm TickTick lists cache                                                                  |
 | `job-check`           | `*/30 * * * *`        | scripted | Alert when a print's slot passed with no run (gated by `KIOSK=true`)                       |
 | `printer-check`       | `5-59/15 * * * *`     | scripted | Alert when the printer can't print: offline, cover open, paper out (gated by `KIOSK=true`) |
+| `user-jobs`           | `* * * * *`           | scripted | Send the reminders that are due (gated by `KIOSK=true`); idle ticks aren't stored          |
 | `job-runs-prune`      | `30 3 * * *`          | scripted | Drop `job_run` rows older than 30 days                                                     |
 | `dreaming`            | `0 3 * * *`           | stub     | No-op placeholder — will consolidate memory once agent-jobs land                           |
 
@@ -162,28 +163,179 @@ Planned:
 | `enrich-lists` | `*/5 * * * *` | scripted (wake-gated) | TMDB-enrich new movies/tv                      |
 | `weekly-news`  | `0 7 * * 1`   | agent (Haiku)         | Search Exa for kid-friendly news, add to Notes |
 
-## Future: user-defined jobs
+## User jobs: reminders and scheduled asks
 
-**Reference: [`~/code/everx/docs/jobs.md`](../../everx/docs/jobs.md)** — a portable, current (Jun 2026) design note distilled from three reference implementations (openclaw, hermes-agent, eve) plus everx's own build. Read it before building this. The takeaways below are chota-specific.
+**Built 12 Nov 2026: plain reminders.** The `user_job` table, `#lib/server/userjobs.ts` (rules, schedule maths, `dispatchDue`), the `schedule` chat tool, `jobs/user-jobs.ts`, and a read-only phone page at `/me/<who>` (`docs/phone.md`). Not built: scheduled asks (the `ask` kind, `job_result`, the cost cap), the `run` action, the `/admin/jobs` list.
 
-The single most important idea: **system jobs and user jobs are two different things — keep them in separate homes.**
+Where the build differs from the design below:
 
-- **System jobs = code.** Fixed schedule, no owner, same every deploy (our morning-print, refreshes, dreaming). One self-registering `defineJob()` file each. **chota already does this and it's correct — don't change it.** Croner self-schedules each; there is no dispatcher and no `next_run_at` to manage.
-- **User jobs = data.** Created at runtime ("hey Chota, every Monday tell me which library books are due"). Per-owner, arbitrary schedule, editable without a deploy. These live in a **table**, and **one new system job — a dispatcher heartbeat — processes that table.** That's the whole relationship: the dispatcher is a `defineJob`, the user jobs are its rows.
+- **Delivered in the chat it was made in.** Config has no person-to-chat map, so the rules follow the chat: a direct message holds only your own reminders; one for someone else or for everyone is made in the family group, and arrives there with the person's name. Any repeat in a group needs a parent.
+- **No `running_at` claim.** Sends are awaited inside one tick in one process, and croner's `protect` drops an overlapping tick. The claim comes back with `ask` runs, which aren't awaited.
+- **A failed send never gives up.** `next_run_at` stays at the slot it was due and `retry_at` holds the next try (30 s, 1 min, 5 min, 15 min, then hourly). After five failures a parent gets an alert and it keeps trying, so the reminder goes out marked late, or as "missed" past 12 hours, when the channel is back. Nothing is switched off.
+- **A one-off is deleted once sent.** The chat history and the log keep the record. `enabled = false` means paused, nothing else.
+- **Quiet hours are not applied:** a channel's `send` has no silent option.
+- **`create` also takes `inMinutes`.** The model is told the date and time but shouldn't do clock arithmetic.
+- **No `job_run` row per reminder.** The tick stores a run when it sent or is waiting on something, not when idle (`recordIdle: false`).
+- **The owner isn't told when a send keeps failing:** the failing channel is the way to reach them. The alert goes to the alert channel.
 
-> Our current `heartbeat.ts` (every 5 min, console.log) is a liveness debug log, **not** this dispatcher. When user jobs land, add a separate `dispatch-user-jobs.ts` — don't overload heartbeat.
+One jobs system, two homes:
 
-What to steal when we build it (all detailed in the everx doc):
+- **System jobs are code.** Fixed schedule, no owner, the same on every deploy: the prints, the refreshes, the checks. One `defineJob()` file each, as above. Croner schedules each one; nothing to dispatch.
+- **User jobs are rows.** Made in chat ("remind me at 4 to leave for volleyball", "every Monday tell me which library books are due"). They have an owner, any schedule, and change without a deploy. They live in the `user_job` table, and one system job, `user-jobs`, runs every minute and fires the rows that are due.
 
-1. **`computeNextRun(job, from) → ts | null`** — one pure function, exhaustively unit-tested with a case table. Delegate DST/month-length to croner (we already depend on it): translate friendly fields → cron expr → `new Cron(expr, { timezone }).nextRun(from)`. `cadence` and one-time `none` are the only two computed by hand. **Prove DST with a test that actually straddles a boundary** (a 01:00 job straddles a 03:00 switch; a 10:00 job never does).
-2. **`next_run_at <= now` dispatch.** The tick query is `WHERE enabled AND next_run_at <= now`. This one predicate subsumes _due-now_, _missed-while-down_, and _failed-last-time_ — no catch-up branch, no ±window scan, self-healing. **Index `(enabled, next_run_at)` from day one.**
-3. **Heartbeat interval = worst-case lateness = cadence floor.** Prefer **1 min** over 5 — the indexed query usually returns zero rows, effectively free, and coarser only buys lateness. (chota is single-process, so a fixed tick is plenty; skip openclaw's self-scheduling `setTimeout`.)
-4. **Claim with a visible lease, recover on boot.** Atomic `UPDATE … SET last_error='_running_', running_at=now WHERE id=? AND last_error!='_running_'` is the overlap guard; on boot, reset rows stuck in `_running_` past a lease (~2h) to failed. **Never advance `next_run_at` before running** — a crash then silently drops the job; the lease leaves visible evidence instead.
-5. **Snapshot the timezone into the row at create time** — a schedule should mean what it meant when created.
-6. **An agent job is mostly a stored prompt.** Translate the user's one-liner into a holistic prompt + per-job `model` + `tools` scope, and at fire time feed it to **our existing `chotaAgent`** (we have exactly one agent — see `docs/agent.md`). No specialized agents until a pattern repeats 3×. This is the mechanism for "crystallize repeated chat asks into jobs."
-7. **Cost: per-run record + per-job cap.** Reuse a session/run table with a nullable `source_job_id` (a job run is a session a job produced); cap with `cost_cap_usd` → disable + notify on hit. Our `agent.run` wide event already captures usage per call — a DB row makes it queryable.
+There is no separate heartbeat. A regular "anything worth telling the family?" check is a user job with a prompt and the silence rule below. OpenClaw folded its heartbeat into ordinary jobs for the same reason, and hermes-agent never had one. Today's `heartbeat.ts` is a scheduler smoke test and has nothing to do with this.
 
-**Build order (each step inert until the last):** `computeNextRun` + tests → schema (`user_jobs` table + index, `source_job_id`) → creation path (one-liner → holistic prompt) → **the dispatcher last** (the only step that makes anything fire). Defer the whole thing until there's a real ask.
+Surveyed 11–12 Nov 2026: [`~/code/everx/docs/jobs.md`](../../everx/docs/jobs.md) and its dispatcher (the closest to chota: croner, one process, SQLite), `syntechfibres.dev/docs/jobs.md` §9 (a review of everx's build three weeks on), `refs/hermes-agent/cron/`, `refs/openclaw/src/cron/` and its automation docs, and `refs/eve` (Vercel's agent; `docs/schedules.mdx`, `docs/experimental/dynamic-schedules.mdx`).
+
+**Croner stays.** Checked 12 Nov 2026 against Bun's built-in `Bun.cron`, node-cron, cron, node-schedule, toad-scheduler (wraps croner) and bree: croner is the only one with timezones, overlap protection and a plain next-run-after-T calculation in one package, and OpenClaw uses it for the same maths. chota is on 11.0.0, which changed DST behaviour (a job in the spring-forward gap now runs at the first valid time after it) and has more DST fixes queued for 11.0.1; take that release when it lands. No chota job sits in Sydney's 02:00–03:00 gap.
+
+**Every minute, not every five.** The tick is one indexed query that nearly always returns nothing. The interval is how late a reminder can be, and "at 4:00" arriving at 4:04 is a miss.
+
+### Reminders and TickTick
+
+TickTick is the store for lists and to-dos: it brings the phone app, sharing and tick-off, and all access goes through `tools/ticktick.ts`, so it can be swapped later. The bot keeps no lists of its own. A reminder goes where its meaning puts it:
+
+| The ask                                    | Where it lives                           |
+| ------------------------------------------ | ---------------------------------------- |
+| "Remind me to book the dentist"            | TickTick, with a due date (as today)     |
+| "Remind me at 4 to leave for volleyball"   | A `remind` job                           |
+| "Remind me Friday 5pm to book the dentist" | Both: the to-do, and a job that names it |
+
+A to-do needs ticking off and shows on the morning brief; a ping at a time has nothing to tick. Chasing open to-dos (anything due today and still open at 17:00) is one system job in code, not a job per item.
+
+The same split applies to watching things. "Tell me when this film is out" for one film is an `ask` job. Checking the whole watch list against release dates is a system job, cheaper and steadier than a model run per title.
+
+### Two kinds
+
+| Kind     | What fires                                                         | Model call |
+| -------- | ------------------------------------------------------------------ | ---------- |
+| `remind` | Sends the stored text: `⏰ Leave for volleyball`                   | None       |
+| `ask`    | Runs `chotaAgent` on the stored prompt and sends the reply, if any | One run    |
+
+Most family asks are `remind`. It costs nothing and can't go wrong in interesting ways, so the tool description steers the model to it unless the answer has to be worked out at fire time.
+
+### The chat tool
+
+One tool, `schedule`, with an `action`: `create`, `list`, `update`, `pause`, `resume`, `remove`, `run`. hermes-agent and OpenClaw both use one tool with an action; eve generates a tool per operation, which would add seven tools to the bot's list. The description tells the model to:
+
+- `list` before it changes or removes anything, and never guess an id.
+- Not make a second copy when a `list` comes back empty or fails; say so instead.
+- Say the schedule and the task back in plain words before creating a repeating job (OpenClaw's rule). A one-off reminder needs no confirmation.
+- Use it for future work only, never for something to do now.
+
+`list` returns the asker's own jobs (a parent can ask for someone else's or the group's): id, kind, text cut to 60 characters, the schedule in words, next run, last result. In chat the bot shows one line per job, soonest first, at most ten, then "and N more". `prompts.ts` gets that rule, and loses its line saying the bot can't send a message at an exact time.
+
+`run` fires a job once now, as a test. After creating an `ask` job the bot offers it, so the first result isn't a surprise next Monday.
+
+`create` takes:
+
+- `kind`: `remind` or `ask`
+- `text`: the reminder text, written to read as a reminder when it arrives ("Leave for volleyball", not "that thing"), or for `ask` a prompt that stands on its own (the run has no chat history) and says when to stay quiet and when the job is finished
+- `at`: a local date and time (`2026-11-12T16:00`) for a one-off, **or** `cron`: a 5-field pattern in Sydney time for a repeat. The model turns "every weekday at 7" into `0 7 * * 1-5` itself; it already gets today's date. No third format.
+- `for`: a family member, or `group`. Left out, it means the asker.
+
+Who is asking comes from the call options (`asker`), never from the model. Rules, enforced in the tool and not in the prompt:
+
+- Anyone can make, see and remove a job for themselves.
+- Only a parent can make one for someone else, or a repeating one for the group.
+- A job is never created on a quiet turn (the bot overhearing the group), and never from inside a job run.
+- The model can't pick the model or the tools a job runs with.
+- Limits: 20 open jobs per person. A `remind` repeats every 5 min at most, an `ask` every 15 min. The tick is every minute so a job fires on time, not so a job can run every minute.
+
+### The table
+
+`user_job`: `id`, `owner`, `created_by`, `kind`, `text`, `cron` or `run_at`, `timezone` (copied in at create time, so a schedule keeps meaning what it meant), `deliver_to` (a session key: the owner's own chat, or the group), `enabled`, `next_run_at`, `running_at`, `error_count`, `last_error`, `last_message` (what the last run sent), `cost_usd_total`, `created_at`. Index `(enabled, next_run_at)`.
+
+Add a column only when the code that reads it ships. everx carries two that nothing reads (`workingHoursOnly`, `tools`).
+
+`computeNextRun(job, from)` is one pure function: a one-off returns its time once, a repeat asks croner (`new Cron(expr, { timezone }).nextRun(from)`), so DST and month lengths are croner's problem. Test it with a table of cases, one of which crosses a DST change at the job's own hour.
+
+### The dispatcher
+
+`jobs/user-jobs.ts`, `* * * * *`, kiosk only (a dev Mac must never send a reminder). Each tick:
+
+1. Reset rows whose `running_at` is over 30 min old to failed. Also done once at boot.
+2. Take up to 25 rows `WHERE enabled AND next_run_at <= now AND running_at IS NULL`.
+3. Claim each with `UPDATE … SET running_at = now WHERE id = ? AND running_at IS NULL`. No row changed means another tick has it.
+4. A `remind` is sent inside the tick. An `ask` is started and **not awaited**: the tick returns straight away, and the run sets `next_run_at` (or disables a finished one-off) and clears `running_at` when it ends. Croner's `protect` drops a tick while the last one is still going, so a tick that waited on a 3-minute run would make every reminder due in those minutes late.
+5. At most 2 `ask` runs at once (a Pi, and one shared browser lock). A third stays unclaimed and goes on the next tick with a free slot.
+
+**"Already running"** is the `running_at` stamp, set by the claim in step 3. While it is set the row is invisible to every later tick, so a long job can't start twice, and `schedule list` shows it as "running since 07:00". A job whose next slot comes round while it is still running skips that slot; it doesn't queue a second run.
+
+`next_run_at <= now` covers due now, missed while the box was off, and failed last time, with no catch-up code. `next_run_at` moves only after the run. hermes-agent moves it first, so a crash loses that run without a trace; for a reminder, late is better than lost.
+
+**Late runs.** A reminder up to 12h late is sent with "(late: was for 16:00)". Older than that, the owner gets one line saying it was missed. Nothing is dropped without a message.
+
+**Failures.** Retry after 30s, 1m, 5m, 15m, 1h, or the next natural slot if that is later. After 5 in a row the job is disabled, the owner is told, and `raiseAlert('user-job:<id>', …)` fires.
+
+**Quiet hours.** Delivered silently during `alerts.quietHours`, not held back. Someone who asks for a 05:30 reminder means it.
+
+### What an `ask` run does
+
+- A fresh `chotaAgent` run as the owner (their `asker`, so privacy rules hold). The stored prompt is the user turn.
+- A block appended last to the system prompt: this is a scheduled run and its time; nobody is there to answer a question; the reply is sent to the owner as is, so no preamble; `schedule` is not available. The block is fixed text, so it caches.
+- The run ends by calling `job_result`, a tool that exists only in job runs and stops the loop (eve's `no_reply` tool, widened). It takes an `outcome`:
+  - `nothing`: send nothing. "The film isn't out yet."
+  - `tell`: send `message`.
+  - `done`: send `message` and disable the job. "It's out on Thursday" ends a watch.
+- A plain text reply with no `job_result` call counts as `tell`. A tool call is harder to get half right than an exact token such as `[SILENT]` or `NO_REPLY`, which hermes-agent and OpenClaw match on.
+- The last `tell` or `done` message is given to the next run, so a repeating job doesn't say the same thing twice.
+- A silent run is still recorded.
+- Read tools only. A job gets a write tool (adding to a list, printing, announcing) only when its creator asked for that in so many words; it is stored on the job. Add that column when the first such job exists.
+- 2 minute time limit, step limit as in chat. Cost is added to `cost_usd_total`; over US$1 the job is disabled and the owner told.
+
+### Where the result goes, and the record
+
+The message goes out through the channel router to `deliver_to`, and is recorded with `recordSent(sessionKey, text, channel)`, the same call alerts use. So when someone replies "why?" or "push it an hour", the bot already has the message in that chat's history. Each fire also writes a `job_run` row named `user:<id>`, so `/admin/jobs` and the 30-day prune cover user jobs with no new code. `/admin/jobs` gets a second list: every user job with owner, schedule, next run, last result, and pause and delete buttons.
+
+### Showing jobs in TickTick (after reminders work)
+
+The `user_job` table is the truth. TickTick is where the family sees jobs and makes a few safe edits. Each job is mirrored as one task in the bot's list (KO may rename the family list "Chota"), in a "Reminders" or "Jobs" section, and the row stores the task's id.
+
+| Edit made in the app                                                       | What the bot does                                             |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Tick it off                                                                | Cancels the job (a finished one-off is ticked off by the bot) |
+| Delete it                                                                  | Removes the job                                               |
+| New due time on a one-off, valid and in the future                         | Takes it                                                      |
+| New title on a `remind`                                                    | Takes it                                                      |
+| Anything else (a repeat rule, an `ask` job's text, a move to another list) | Puts the task back and tells the owner in chat why            |
+
+An edit passes the same checks as a chat request before it touches the row. An `ask` job's task title is a plain summary ("Mondays 7am: library books due"); the prompt stays in the table.
+
+What the API allows (checked 12 Nov 2026 against `developer.ticktick.com/docs/openapi.md`; nothing called live):
+
+- **Our lib talks to TickTick's hosted MCP server, not the REST API.** It uses five MCP tools and has no update, delete or assign. The mirror needs those, so it means a REST client (`api.ticktick.com/open/v1`, personal API token) built beside the MCP one.
+- **No webhooks or change feed.** Seeing an edit means reading the list and comparing by task id and `etag`. A task that disappears was completed or deleted; `POST task/completed` tells which.
+- **Timed tasks are supported**: `dueDate` with a time, `isAllDay: false`, `timeZone`, `reminders: ["TRIGGER:PT0S"]`, and `repeatFlag` as an RRULE.
+- **No hidden field** to tag a task as the bot's. The link is the task id in our row.
+
+Tested on the family list, 12 Nov 2026, with a throwaway task (since deleted):
+
+- The existing `TICKTICK_API_KEY` works as a REST Bearer token. No second key.
+- Create and update accept `columnId`; an update moves a task between sections. Tasks come back with `columnId`, `columnName`, `etag` and `modifiedTime`, none of which are in the docs.
+- An update is partial: sending only `title` kept the due time and alarm. Every write changes `etag`.
+- A ticked-off task leaves `project/{id}/data` and a get by id returns `status: 2` with `completedTime`.
+- A deleted open task also leaves `/data`, and a get by id still returns it with `status: 0`. So: gone from the list and `status 2` is ticked off; gone and `status 0` is deleted.
+- Not known yet: whether the timed task's alarm reached a phone (KO to say), and whose phone gets it for an assigned task.
+
+If the alarm does notify, mirrored tasks carry no alarm, or the bot's own ping is turned off for that person: one or the other, never both.
+
+**Decided 12 Nov: not now.** Reminders are built on the table alone, with no TickTick dependency. KO is weighing chota's own surfaces for lists (pages built from a chat ask, `docs/artifacts.md`; later an Android app), and a mirror would tie jobs to a store that may be replaced. The findings above stay for when it's wanted.
+
+Order: reminders with the table and the chat list first; then the one-way mirror (bot → TickTick); then taking edits back. Each is useful alone, and the two-way part is most of the work.
+
+### Build order
+
+Each step does nothing visible until the last.
+
+1. `computeNextRun` and its case table.
+2. The `user_job` table and index.
+3. The `schedule` tool with the permission rules, tested with example chats. Jobs can be made and listed but nothing fires.
+4. The `remind` path of the dispatcher. This is the first version worth shipping.
+5. The `ask` path: prompt block, `job_result`, cost cap.
+6. The `/admin/jobs` list.
+
+Later, when asked for: a cheap check before the model runs (skip when a watched page or list hasn't changed); promoting a repeated chat ask into a job on the bot's suggestion.
 
 ## Future: agent jobs that need code execution
 

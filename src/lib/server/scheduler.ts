@@ -59,6 +59,10 @@ export interface JobOptions {
 	 *  would add 48 identical lines a day; its failures and alerts still log,
 	 *  and every run stays in /admin/jobs. */
 	logOk?: boolean;
+	/** Store ok runs that did nothing (default true). False for the every-minute
+	 *  reminder tick, which would add 1,440 empty rows a day; a run that returns a
+	 *  summary, and every failed or skipped run, is still stored. */
+	recordIdle?: boolean;
 	/** Failed runs in a row before alerting (default 1). Frequent refreshes set
 	 *  3 so one blip in a feed doesn't send "failed" then "working again". */
 	alertAfter?: number;
@@ -80,7 +84,7 @@ export function defineJob(
 	name: string,
 	pattern: string,
 	fn: JobFn,
-	{ logOk = true, alertAfter = 1, timeoutMs = TIMEOUT_MS }: JobOptions = {}
+	{ logOk = true, recordIdle = true, alertAfter = 1, timeoutMs = TIMEOUT_MS }: JobOptions = {}
 ): Cron | undefined {
 	if (building) return; // skip during `vite build`
 
@@ -140,7 +144,10 @@ export function defineJob(
 				});
 				const summary = typeof out === 'string' && out.length > 0 ? out : undefined;
 				const durationMs = Date.now() - start;
-				ev.set('runId', recordRun(name, { at, status: 'ok', durationMs, summary }));
+				// After a failed run the next ok one is stored even when idle, so the
+				// job's last recorded run doesn't stay "error" (/api/health reads it).
+				if (recordIdle || summary || failStreak > 0)
+					ev.set('runId', recordRun(name, { at, status: 'ok', durationMs, summary }));
 				if (logOk) ev.done({ summary });
 			} catch (err) {
 				error = errorMessage(err);

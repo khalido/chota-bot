@@ -79,6 +79,7 @@
 <!--
   Routes that suppress the dashboard nav:
     - /clock          — ambient clock view (idle-fallback from the kiosk)
+    - /me/<who>       — a person's phone page (the companion app)
     - /print/<who>    — single-person printed sheet; rendered bare so
                         agent-browser screenshots it pixel-clean for the
                         thermal printer. /print itself (the multi-person
@@ -86,7 +87,7 @@
   This used to be gated on `?bare=1` — the query-string contract is now a
   pathname contract, so the URL self-documents the rendering mode.
 -->
-{#if page.url.pathname !== '/clock' && !page.url.pathname.match(/^\/print\/[^/]+$/)}
+{#if page.url.pathname !== '/clock' && !page.url.pathname.match(/^\/print\/[^/]+$/) && !page.url.pathname.startsWith('/me/')}
 	<nav class="border-b border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 		<div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
 			{#each tabs as tab (tab.href)}

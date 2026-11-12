@@ -19,6 +19,14 @@ export function getFamily(): FamilyMember[] {
 	return getConfig().family ?? [];
 }
 
+/** A family member by name or alias, any case. */
+export function findMember(name: string): FamilyMember | undefined {
+	const n = name.trim().toLowerCase();
+	return getFamily().find(
+		(f) => f.name.toLowerCase() === n || f.aliases.some((a) => a.toLowerCase() === n)
+	);
+}
+
 export function findKid(name: string, c: ChotaConfig = getConfig()): Kid | undefined {
 	return c.kids.find((k) => k.name.toLowerCase() === name.toLowerCase());
 }

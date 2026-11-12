@@ -29,6 +29,9 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ### Added
 
+- **Reminders.** "Remind me at 4 to leave", "in 20 minutes", "every weekday at 7:15": chota sends the message at that time, in the chat where you asked. Ask it to list, move, pause or remove them. Anyone can set one for themselves; only a parent for someone else, or a repeating one for everyone.
+- **A phone page per person** at `/me/<name>`: your reminders, soonest first. Read-only, home network and Tailscale only.
+
 - **Announcements talk over the music.** A regular announcement turns the music down while chota speaks and puts it back; one marked important pauses it.
 - **The house speaker runs on `@khalido/home`.** chota's own Spotify speaker code is replaced by the library's. chota now knows when the family's music is on a phone or another speaker and leaves it alone.
 - **Printer check:** every 15 minutes chota asks the thermal printer how it is and sends an alert when it can't print (not connected, cover open, paper out, an error), then "working again" once it can. No paper used.

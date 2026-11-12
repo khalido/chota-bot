@@ -67,6 +67,9 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
  * Deliberately public:
  *   - the kiosk pages (/, /clock, /weather, /lists, /morning) — the point of
  *     a wall kiosk is that the family can see them without logging in
+ *   - /me/<who> — a person's phone page, read-only (docs/phone.md). It shows
+ *     their reminders, including ones made in a direct message; it gets a
+ *     family sign-in before it can change anything or leave the home network
  *   - /print/<who> — the screenshot pipeline (snapshot.ts) hits these via
  *     localhost with no session
  *   - /api/print — the on-screen print button on /print; worst case is paper

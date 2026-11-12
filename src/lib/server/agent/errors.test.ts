@@ -112,7 +112,15 @@ describe('WRITE_DONE', () => {
 		// A new write tool must be added here, or a failed turn tells the person to
 		// ask again after it ran, and a quiet turn would not show its reaction.
 		expect(Object.keys(WRITE_DONE).sort()).toEqual(
-			['announce', 'music_control', 'music_play', 'save', 'ticktick_add', 'ticktick_done'].sort()
+			[
+				'announce',
+				'music_control',
+				'music_play',
+				'save',
+				'schedule',
+				'ticktick_add',
+				'ticktick_done'
+			].sort()
 		);
 	});
 });

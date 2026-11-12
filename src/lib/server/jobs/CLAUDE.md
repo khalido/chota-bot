@@ -75,9 +75,9 @@ defineJob('weekly-news', '0 7 * * 1', async () => {
 
 `runAgent` lives in `#lib/server/agent` — built and exported (Telegram drives the streaming variant `runAgentStream`); no cron job calls it yet. See `docs/agent.md` for the exact signature before wiring the first agent job.
 
-## Future: user-defined jobs
+## Jobs made in chat
 
-Eventually one job here will be `run-user-jobs.ts` — every 5 min, read a `user_jobs` DB table, and execute any due rows by invoking the agent with the row's prompt + tool whitelist. Lets users say "hey Chota, every Monday tell me X" and have it scheduled. The agent runtime exists (`runAgent` / `runAgentStream`); the user-jobs table + dispatcher are what's still unbuilt.
+Reminders are rows in the `user_job` table, not files here (`#lib/server/userjobs.ts`). One system job, `user-jobs.ts`, runs every minute and sends the due ones. Scheduled asks are designed, not built: `docs/jobs.md` §User jobs.
 
 ## Don't
 

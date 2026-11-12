@@ -49,6 +49,7 @@ chota.config.example.ts  # committed reference shape — uses placeholder names
 
 src/
   routes/                # pages (/, /clock, /weather, /lists, /morning, /print, /admin, /login)
+                         # /me/<who>: a person's phone page (docs/phone.md)
                          # /api: health (deploy check), print, agent, admin, sentral, ticktick
                          # /admin has sub-routes: /admin/sentral (per-kid timetable
                          # cache + manual refresh), /admin/logs (live tail of
@@ -94,7 +95,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - **New env var:** declare it in `src/env.ts`, import it by name from `$app/env/private`.
 - **Per-family data:** add a typed field to `ChotaConfig` in `src/lib/config.ts`, fill in both `chota.config.example.ts` and your real `chota.config.ts`. No JSON files, no zod — TypeScript catches shape mismatches at compile time.
 - **AI calls** through AI Gateway (one key), voice transcription included (`google/gemini-3.5-transcribe`, `src/lib/server/transcribe.ts`).
-- **Auth** — Google OAuth (better-auth). Deny-by-default guard in `hooks.server.ts`: `/admin` and every `/api/*` require a session whose email is in `chota.config.ts > adminEmails` (fail-closed; sign-in at `/login`), except the deliberately-public `/api/auth`, `/api/health`, `/api/print` plus the kiosk dashboard + `/print/<who>` pages (LAN-open by design). A new API route is gated unless you add it to the public allowlist.
+- **Auth** — Google OAuth (better-auth). Deny-by-default guard in `hooks.server.ts`: `/admin` and every `/api/*` require a session whose email is in `chota.config.ts > adminEmails` (fail-closed; sign-in at `/login`), except the deliberately-public `/api/auth`, `/api/health`, `/api/print` plus the kiosk dashboard, `/print/<who>` and the read-only `/me/<who>` phone pages (LAN-open by design). A new API route is gated unless you add it to the public allowlist.
 
 ## Where to read more
 
@@ -109,6 +110,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - [`docs/memory.md`](docs/memory.md) — family memory design: the markdown home folder (soul, memory, project folders), its tools and git sync. Not built yet.
 - [`docs/agent.md`](docs/agent.md) — how the ToolLoopAgent is wired (shipped; live at `/admin/agent` + Telegram).
 - [`docs/telegram.md`](docs/telegram.md) — Telegram bot: chat + streaming + on-demand prints shipped (June 2026); voice still ahead.
+- [`docs/phone.md`](docs/phone.md) — the phone companion app: pages under `/me`, what each shows, sign-in and reach. First page built (reminders, read-only).
 - [`docs/artifacts.md`](docs/artifacts.md) — idea: quick phone-friendly pages built from a chat ask, at `<word>.<domain>`. Not built.
 - [`docs/frame.md`](docs/frame.md) — photo frames: a A$75 Frameo frame opened with ADB, and a Pico 2 W e-ink panel that shows a PNG chota draws. Not built.
 - [`docs/spotify.md`](docs/spotify.md) — the box as a Spotify Connect speaker through Spotify Soloist; chota reads and controls it over Soloist's local WebSocket. Built, not yet on the Pi.

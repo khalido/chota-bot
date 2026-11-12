@@ -41,11 +41,12 @@ agent/
     content.ts         # save + saved — keep links/photos/voice/documents/notes; the asker comes as call options, never from the model
     spotify.ts         # music_now + music_control + music_play — the Soloist speaker; music_play also searches (tools/spotify-web.ts)
     speech.ts          # announce — say something out loud on the speaker at home ($lib/server/speech.ts)
+    schedule.ts        # schedule — reminders sent at a time (#lib/server/userjobs.ts); create, list, update, pause, resume, remove
     web.ts             # web_search (Exa) + web_fetch (Browserbase) — AI Gateway tools, no data lib
 ```
 
 Registered in `index.ts > tools: { … }`: `weather` (also returns the beach
-report), `calendar` (range / date / search), `ticktick` + `ticktick_add` + `ticktick_done`, `bus`, `chores`, `school_day`, `school_dates`, `title_info`, `watch_ideas`, `book`, `volleyball`, `save`, `saved`, `music_now`, `music_control`, `music_play`, `announce`, `web_search` and `web_fetch` (AI Gateway's Exa search
+report), `calendar` (range / date / search), `ticktick` + `ticktick_add` + `ticktick_done`, `bus`, `chores`, `school_day`, `school_dates`, `title_info`, `watch_ideas`, `book`, `volleyball`, `save`, `saved`, `music_now`, `music_control`, `music_play`, `announce`, `schedule`, `web_search` and `web_fetch` (AI Gateway's Exa search
 and Browserbase Fetch, run gateway-side, so they work with any model).
 
 The system prompt has four layers (see `prompts.ts`):

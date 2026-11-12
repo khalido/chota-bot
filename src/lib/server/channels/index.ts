@@ -33,7 +33,7 @@ import { ThreadQueue } from './queue';
 import { photoIsActionable, triage, triageHint } from './triage';
 import { telegramChannel } from './telegram';
 import { whatsappChannel } from './whatsapp';
-import type { Channel, Incoming } from './types';
+import type { Channel, ChannelName, Incoming, Outgoing } from './types';
 
 const SCOPE = 'channels';
 /** A message delivered late (after a reconnect) is answered only if newer than this. */
@@ -360,6 +360,13 @@ export async function bootChannels(): Promise<void> {
 		channels.push(channel);
 		await channel.start((m) => accept(channel, m));
 	}
+}
+
+/** Send a message the bot starts itself (a reminder) to a chat on a named channel. */
+export async function sendTo(name: ChannelName, threadId: string, out: Outgoing): Promise<void> {
+	const channel = channels.find((c) => c.name === name);
+	if (!channel) throw new Error(`${name} is not connected`);
+	await channel.send(threadId, out);
 }
 
 /** Stop polling/sockets, then let running turns finish (deploy SIGTERM). */

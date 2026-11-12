@@ -38,6 +38,7 @@ import { volleyballTool } from './tools/volleyball';
 import { webFetchTool, webSearchTool } from './tools/web';
 import { musicControlTool, musicNowTool, musicPlayTool } from './tools/spotify';
 import { announceTool } from './tools/speech';
+import { scheduleTool } from './tools/schedule';
 
 export { changedSomething, describeChatError, EMPTY_REPLY, failureMessage } from './errors';
 
@@ -72,7 +73,8 @@ export const chotaAgent = new ToolLoopAgent({
 			saved: { asker: options?.asker },
 			announce: { asker: options?.asker },
 			music_control: { asker: options?.asker },
-			music_play: { asker: options?.asker }
+			music_play: { asker: options?.asker },
+			schedule: { asker: options?.asker }
 		},
 		// A quiet turn gets the list tools only (see QUIET_TOOLS).
 		...(options?.asker?.quiet ? { activeTools: [...QUIET_TOOLS] } : {}),
@@ -84,7 +86,14 @@ export const chotaAgent = new ToolLoopAgent({
 	// A hard step cap, and the last step answers without tools (see ./loop.ts).
 	stopWhen: STOP_WHEN,
 	prepareStep: answerWhenDone,
-	toolsContext: { save: {}, saved: {}, announce: {}, music_control: {}, music_play: {} },
+	toolsContext: {
+		save: {},
+		saved: {},
+		announce: {},
+		music_control: {},
+		music_play: {},
+		schedule: {}
+	},
 	tools: {
 		weather: weatherTool,
 		calendar: calendarTool,
@@ -105,6 +114,7 @@ export const chotaAgent = new ToolLoopAgent({
 		music_control: musicControlTool,
 		music_play: musicPlayTool,
 		announce: announceTool,
+		schedule: scheduleTool,
 		// AI Gateway's own web tools — work with any model (see tools/web.ts).
 		web_search: webSearchTool,
 		web_fetch: webFetchTool

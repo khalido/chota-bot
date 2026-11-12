@@ -29,6 +29,7 @@ const TOOL_EMOJI: Record<string, string> = {
 	music_control: '🎛️',
 	music_play: '🎶',
 	announce: '📢',
+	schedule: '⏰',
 	saved: '🗂️',
 	web_search: '🔍',
 	web_fetch: '🌐'

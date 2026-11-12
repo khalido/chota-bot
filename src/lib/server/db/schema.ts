@@ -10,3 +10,4 @@ export * from './alert.schema';
 export * from './decision.schema';
 export * from './job.schema';
 export * from './content.schema';
+export * from './userjob.schema';

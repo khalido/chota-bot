@@ -52,7 +52,8 @@ export const WRITE_DONE: Record<string, string> = {
 	music_play: 'started music',
 	music_control: 'changed the music',
 	announce: 'made an announcement',
-	save: 'saved something'
+	save: 'saved something',
+	schedule: 'set or changed a reminder'
 };
 
 /**
@@ -80,6 +81,9 @@ export function changedSomething(tool: string, output: unknown): boolean {
 	if (tool === 'ticktick_add') return typeof o.added === 'string';
 	if (tool === 'announce') return o.said === true;
 	if (tool === 'save') return o.saved !== undefined;
+	// `list` is a read: only these keys mean a reminder was made or changed.
+	if (tool === 'schedule')
+		return ['created', 'updated', 'removed', 'paused', 'resumed'].some((k) => k in o);
 	return false;
 }
 
