@@ -129,13 +129,9 @@ export function createMusic(opts: MusicOptions = {}) {
 		};
 	}
 
-	/** Music on another device: playing or buffering, and not from here. */
-	const elsewhere = () => {
-		const n = nowPlaying();
-		return (
-			n.speaker === 'online' && !n.here && (n.status === 'playing' || n.status === 'buffering')
-		);
-	};
+	/** Music on another device: playing or buffering, and not from here. The
+	 *  library owns the rule (`speakerState`, home 0.2.0). */
+	const elsewhere = () => speakerState(part()) === 'elsewhere';
 
 	/** Run a write, return what it left, and word any failure for a person. */
 	async function run(write: () => Promise<{ confirmed: boolean }>): Promise<Done> {
