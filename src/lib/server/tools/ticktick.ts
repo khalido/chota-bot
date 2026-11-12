@@ -338,9 +338,14 @@ export async function addToList(
 		task.timeZone = SYDNEY_TZ;
 	}
 	// create_task takes `{ task: OpenTask }` — not flat fields.
-	const created = await callTool<Task>('create_task', { task, client_timezone: SYDNEY_TZ });
-	projectDataCache.delete(list.project.id);
-	return { task: created, existed: false };
+	// Drop the cache even when the call fails: a create that timed out may still
+	// have landed, and the retry must read the list fresh to see it.
+	try {
+		const created = await callTool<Task>('create_task', { task, client_timezone: SYDNEY_TZ });
+		return { task: created, existed: false };
+	} finally {
+		projectDataCache.delete(list.project.id);
+	}
 }
 
 /**
