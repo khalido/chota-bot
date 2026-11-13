@@ -111,13 +111,21 @@ The 2026 roundups (PromptQuorum and others) change nothing: they cite no Pi 5 me
 
 ## Later: talking to chota (KO, 8 Nov)
 
+**Decided (KO, 12 Nov), not built:**
+
+- **Which voice, by length.** Quick, short lines (a "listening" cue, "done", a one-line answer at the board) use a voice on the Pi, Piper, kept loaded as its own service. Longer things (a briefing, a factoid) stream from the gateway with `experimental_streamSpeech`, so they start within a second. Announcements to the house keep Gemini. This replaces "not adopted" above for Piper.
+- **Streaming only reaches the box and the board speaker.** Raw chunks go straight into the Pi's player. Cast fetches a whole file, so a long piece for the house is cut into sentence clips, the first played while the rest are made.
+- **Known phrases are made ahead, in the good voice.** A list of fixed lines in code ("listening", "done", "sorry, I didn't catch that", "time to leave for school", each person's name) is made once with Gemini and kept in `data/speech/`, the clip cache `speech.ts` already has. A job fills in any that are missing, so a changed voice or style remakes them. They play at once, and Piper is left for short lines nobody wrote down in advance.
+- **Which speaker.** The board speaker (on the ReSpeaker Lite, so its echo cancelling hears it) answers whoever is at the board: clicks, the listening cue, the reply. The house speakers carry music and announcements.
+- **The agent takes the finished sentence.** Streaming transcription is only there so the text is ready when the button is let go. jaldi already streams speech to text with the AI SDK: `~/code/jaldi/jaldi-agent/src/dictation/stream.ts`, `docs/dictation-online.md`. Start from that.
+
 Start with a button, a wake word later. The flow:
 
 1. **Press TALK** (the board's hardware button, later "hey chota"). The light or the screen goes red: listening.
 2. **Record** from the USB mic with `pw-record` (16 kHz mono) until the button is released, or a VAD hears the end.
 3. **Transcribe** with the transcriber chota already uses (Gemini through AI Gateway). `plan.md`'s Groq Whisper is out of date. The AI SDK's `experimental_streamTranscribe` could transcribe while you're still talking, so the text is ready at release; worth measuring.
 4. **The agent answers** as a `voice` channel, with the same tools and history. In voice mode it gives two things: one short spoken line, and the detail for the screen. For the screen, a `show` tool tells the board what to display, so "what's on the calendar" puts today's calendar up and zooms to the next slot.
-5. **Speak and show at once:** the line goes through the fastest voice (ElevenLabs Flash, 0.4–1 s), the board renders the view. Announcements keep Gemini, where the mood matters more than the second.
+5. **Speak and show at once:** the line goes through Piper on the Pi (0.3–0.4 s; ElevenLabs Flash at 0.4–1 s if Piper's voice doesn't hold up), the board renders the view. Announcements keep Gemini, where the mood matters more than the second.
 
 Rough wait after release: transcription about 1 s, the agent 2–4 s (one tool call), speech 0.5–1 s, so 3–6 s, less if the reply starts speaking at its first sentence. Gemini's TTS mood is for announcements, where nobody is waiting.
 
