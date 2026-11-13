@@ -1,14 +1,15 @@
 [Unit]
 # systemd unit for the chota kiosk server.
 #
-# Bootstrap (once on a fresh box, see docs/deploy.md for the full rundown):
-#   sudo cp /home/ko/code/chota-bot/deploy/chota.service /etc/systemd/system/chota.service
-#   sudo systemctl daemon-reload
-#   sudo systemctl enable --now chota
-#
-# After deploy/deploy.sh updates code + rebuilds, it `systemctl restart`s us.
-# This file lives in the repo so changes to it are versioned — but editing it
-# requires the cp + daemon-reload above to take effect.
+# A template: deploy/bootstrap.sh fills in @USER@ and @HOME@ (the account chota
+# runs as, and its home) and installs it as /etc/systemd/system/chota.service.
+# By hand, from the repo root:
+#   sed -e "s|@USER@|$USER|g" -e "s|@HOME@|$HOME|g" deploy/chota.service \
+#     | sudo tee /etc/systemd/system/chota.service >/dev/null
+#   sudo systemctl daemon-reload && sudo systemctl enable --now chota
+# The repo must be at @HOME@/code/chota-bot. After deploy/deploy.sh rebuilds,
+# it `systemctl restart`s us. Editing this file takes effect only after the
+# install above is run again.
 Description=Chota kiosk server (SvelteKit / adapter-node)
 # `network.target` (not network-online): we're a server, not a client — no need
 # for a routable address to start. Per systemd.io/NETWORK_ONLINE: "server
@@ -23,31 +24,29 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=ko
-WorkingDirectory=/home/ko/code/chota-bot
+User=@USER@
+WorkingDirectory=@HOME@/code/chota-bot
 
 # .env is the single source of truth for runtime config (PORT, ORIGIN, KIOSK,
 # all the API keys). It's gitignored and must be copied over manually — see
 # docs/deploy.md.
-EnvironmentFile=/home/ko/code/chota-bot/.env
+EnvironmentFile=@HOME@/code/chota-bot/.env
 
 # Cron patterns are pinned to Sydney in scheduler.ts, but any code reading the
 # local clock (getHours(), toLocaleDateString()) follows the process TZ — and a
 # fresh Pi OS box may be on UTC. Pin it here too.
 Environment=TZ=Australia/Sydney
 
-# Bun first, then fnm (on the X230 the global `agent-browser` chota spawns for
-# screenshots + Sentral login still lives there; the Pi has no fnm and gets
-# agent-browser from `bun add -g` in ~/.bun/bin). The rest is the standard
-# systemd default PATH.
-Environment=PATH=/home/ko/.bun/bin:/home/ko/.local/share/fnm/aliases/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Bun's bin first (bun itself, and the global `agent-browser` chota runs for
+# screenshots and the Sentral login, from `bun add -g`). The rest is the
+# standard systemd default PATH.
+Environment=PATH=@HOME@/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 
-# adapter-node build output, run on Bun (tested on the X230 28 Oct 2026: tests,
-# build, pages and USB prints). Boots SvelteKit on $PORT (8000 in .env, to match
-# Caddy / mDNS). `bun upgrade` updates the binary in place. systemd doesn't
-# expand `~`, hence the absolute path. Back to Node: point this at fnm's node.
-ExecStart=/home/ko/.bun/bin/bun /home/ko/code/chota-bot/build/index.js
+# adapter-node build output, run on Bun. Boots SvelteKit on $PORT (8000 in
+# .env, behind Caddy). `bun upgrade` updates the binary in place. systemd
+# doesn't expand `~`, hence the absolute path.
+ExecStart=@HOME@/.bun/bin/bun @HOME@/code/chota-bot/build/index.js
 
 Restart=on-failure
 RestartSec=5

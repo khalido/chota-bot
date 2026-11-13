@@ -104,7 +104,7 @@ export function parseTitles(xml: string): LibraryTitle[] {
 }
 
 /**
- * "2 Items available. Surry Hills Library  792.92 / HARR, Ultimo Library  792.92 / HARR"
+ * "2 Items available. Surry Hills Library  792.92 / HARR, Glebe Library  792.92 / HARR"
  * "0 Items available. (Total items: 5)"
  */
 export function parseAvailability(text: string): {

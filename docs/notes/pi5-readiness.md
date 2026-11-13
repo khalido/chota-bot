@@ -1,6 +1,6 @@
 # Pi 5 (4GB) readiness
 
-Hardware-readiness analysis for migrating chota from the X230 to a **Raspberry Pi 5 4GB** (official 27W PSU + Active Cooler, both already bought). Pressure-tests [`next.md`](next.md)'s migration + dual-screen plan, with the 4GB-RAM angle the focus. Screen picks were independently double-checked against current (June 2026) product pages, Pi forums, and the kernel tracker.
+Hardware-readiness analysis for migrating chota from the X230 to a **Raspberry Pi 5 4GB** (official 27W PSU + Active Cooler, both already bought). Pressure-tests [`next.md`](../next.md)'s migration + dual-screen plan, with the 4GB-RAM angle the focus. Screen picks were independently double-checked against current (June 2026) product pages, Pi forums, and the kernel tracker.
 
 ---
 

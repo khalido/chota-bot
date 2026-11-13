@@ -1,6 +1,6 @@
 # What next
 
-Direction + near-term plan, as of June 2026. This supersedes the scattered idea lists for "what do we actually do next" — the archives are still worth mining: [`plan.md`](plan.md) §Phase roadmap + §v3 candidates, [`tools.md`](tools.md) §Future ideas, [`audit-2026-05.md`](audit-2026-05.md) §Future Plans + §Useful Feature Ideas, [`inspiration.md`](inspiration.md).
+Direction + near-term plan, as of June 2026. This supersedes the scattered idea lists for "what do we actually do next" — the archives are still worth mining: [`plan.md`](plan.md) §Phase roadmap + §v3 candidates, [`tools.md`](tools.md) §Future ideas, [`audit-2026-05.md`](notes/audit-2026-05.md) §Future Plans + §Useful Feature Ideas, [`inspiration.md`](inspiration.md).
 
 ## The direction shift (June 2026)
 

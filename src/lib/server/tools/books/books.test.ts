@@ -48,13 +48,13 @@ describe('library parsing', () => {
 	it('reads copies on the shelf, or the total when none are', () => {
 		expect(
 			parseAvailability(
-				'2 Items available. Surry Hills Library  792.92 / HARR, Ultimo Library  792.92 / HARR'
+				'2 Items available. Surry Hills Library  792.92 / HARR, Glebe Library  792.92 / HARR'
 			)
 		).toEqual({
 			available: 2,
 			copies: [
 				{ branch: 'Surry Hills Library', callNumber: '792.92 / HARR' },
-				{ branch: 'Ultimo Library', callNumber: '792.92 / HARR' }
+				{ branch: 'Glebe Library', callNumber: '792.92 / HARR' }
 			],
 			total: null
 		});
@@ -94,7 +94,7 @@ describe('library parsing', () => {
 		const sequel = { ...t, id: 'R2', title: 'Wonder: the sequel', available: 3 };
 		expect(matchLibrary(book, [sequel, t]).map((x) => x.id)).toEqual(['R0000411101', 'R2']);
 		expect(nearbyCopies([t], ['Green Square'])).toHaveLength(1);
-		expect(nearbyCopies([t], ['Ultimo', 'Darling Square'])).toEqual([]);
+		expect(nearbyCopies([t], ['Glebe', 'Newtown'])).toEqual([]);
 	});
 });
 
@@ -115,14 +115,14 @@ describe('holdings', () => {
 	});
 
 	it('counts print books only, and a total only when every record has one', () => {
-		const onShelf = rec('BK', '1 Items available. Ultimo Library  J PALA');
+		const onShelf = rec('BK', '1 Items available. Glebe Library  J PALA');
 		const out = rec('BK', '0 Items available. (Total items: 5)', 2);
 		const audio = rec('AB', '3 Items available. Glebe Library  CD');
 		expect(holdings([onShelf, out, audio])).toEqual({
 			onShelf: 1,
 			total: null,
 			waiting: 2,
-			branches: ['Ultimo Library']
+			branches: ['Glebe Library']
 		});
 		expect(holdings([out]).total).toBe(5);
 		expect(holdings([audio]).onShelf).toBe(3);

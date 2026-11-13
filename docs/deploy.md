@@ -25,10 +25,10 @@ The kiosk box (currently a ThinkPad X230 running Pop!_OS, reached as `pop-os` ov
                               #   chota reads ../curios/dist/* at runtime.
                               #   deploy.sh keeps it current with `git pull`.
 
-/etc/systemd/system/chota.service   # symlink isn't supported by systemd — copy
+/etc/systemd/system/chota.service   # filled in from deploy/chota.service (a template)
 ```
 
-The repo lives at `~/code/chota-bot` on both machines so paths in scripts are identical (Mac dev → Linux box). The systemd unit hard-codes `/home/ko/...` because systemd doesn't expand `~`.
+The repo lives at `~/code/chota-bot` on both machines so paths in scripts are identical (Mac dev → Linux box). `deploy/chota.service` is a template: systemd doesn't expand `~`, so the install fills in `@USER@` and `@HOME@` with absolute values.
 
 ## First-time bootstrap (fresh box)
 
@@ -111,8 +111,9 @@ sudo udevadm trigger --attr-match=idVendor=0483
 # 6. Build
 bun run build
 
-# 7. Install + enable the systemd unit
-sudo cp deploy/chota.service /etc/systemd/system/chota.service
+# 7. Install + enable the systemd unit (a template: fill in user and home)
+sed -e "s|@USER@|$USER|g" -e "s|@HOME@|$HOME|g" deploy/chota.service \
+  | sudo tee /etc/systemd/system/chota.service >/dev/null
 sudo systemctl daemon-reload
 sudo systemctl enable --now chota
 sudo systemctl status chota          # should be active (running)
@@ -157,7 +158,7 @@ gsettings set org.cinnamon.settings-daemon.plugins.power sleep-display-ac 0
 ssh chota '~/.bun/bin/bun upgrade && sudo systemctl restart chota'
 ```
 
-The X230 still has fnm and Node only for its global `agent-browser`; the Pi has neither. To go back to Node, point `ExecStart` in `chota.service` at fnm's `node` and redeploy.
+To go back to Node, install it, point `ExecStart` in `chota.service` at its `node`, add its bin folder to the unit's `PATH`, and reinstall the unit.
 
 Caddy reverse-proxy and mDNS are listed at the bottom as optional hardening — not Phase 1 blockers.
 

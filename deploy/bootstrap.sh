@@ -70,10 +70,14 @@ sudo loginctl enable-linger "$USER"
 XDG_RUNTIME_DIR="/run/user/$(id -u)" systemctl --user enable --now pipewire pipewire-pulse wireplumber
 echo "✓ PipeWire enabled as user services"
 
-# ── 4. CUPS + usblp off ────────────────────────────────────────────────────
-say "Step 4/9 — disable CUPS + blacklist usblp (so neither claims the MUNBYN)"
-sudo systemctl disable --now cups cups-browsed cups.socket cups.path 2>/dev/null || true
-echo "✓ CUPS units disabled"
+# ── 4. CUPS for network printers, usblp off ────────────────────────────────
+# CUPS prints A4 to a network laser (docs/printers.md §A4). The MUNBYN stays
+# on raw USB: usblp is blacklisted so the kernel never claims it, and
+# cups-browsed (which adds every printer it finds) is left out.
+say "Step 4/9 — CUPS for network printers; blacklist usblp (so nothing claims the MUNBYN)"
+sudo apt-get install -y --no-install-recommends cups cups-filters
+sudo systemctl disable --now cups-browsed 2>/dev/null || true
+echo "✓ CUPS installed (listens on localhost only); cups-browsed off"
 if [ -f /etc/modprobe.d/blacklist-usblp.conf ]; then
 	echo "✓ usblp already blacklisted"
 else
@@ -158,12 +162,16 @@ fi
 say "Step 9/9 — deploy.sh handles build, DB bootstrap, systemd install + health check"
 # deploy.sh expects the chota.service unit installed already; install it now if
 # this is truly a fresh box (idempotent: -f compares content via cmp).
+# The unit is a template: fill in this account and its home first.
+UNIT=$(mktemp)
+sed -e "s|@USER@|$(id -un)|g" -e "s|@HOME@|$HOME|g" deploy/chota.service >"$UNIT"
 if [ ! -f /etc/systemd/system/chota.service ] \
-	|| ! sudo cmp -s deploy/chota.service /etc/systemd/system/chota.service; then
-	sudo install -m 0644 deploy/chota.service /etc/systemd/system/chota.service
+	|| ! sudo cmp -s "$UNIT" /etc/systemd/system/chota.service; then
+	sudo install -m 0644 "$UNIT" /etc/systemd/system/chota.service
 	sudo systemctl daemon-reload
 	echo "✓ chota.service unit installed + daemon-reloaded"
 fi
+rm -f "$UNIT"
 sudo systemctl enable chota >/dev/null 2>&1
 
 # deploy.sh does the rest — but it bails on "Already at $SHA". On a fresh box

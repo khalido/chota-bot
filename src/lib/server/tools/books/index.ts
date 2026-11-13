@@ -156,7 +156,7 @@ export function holdings(titles: LibraryTitle[]) {
 	};
 }
 
-/** Copies on the shelf at any of the family's branches ("Ultimo" matches "Ultimo Library"). */
+/** Copies on the shelf at any of the family's branches ("Glebe" matches "Glebe Library"). */
 export function nearbyCopies(titles: LibraryTitle[], branches: string[]): LibraryCopy[] {
 	const want = branches.map(norm);
 	return titles.flatMap((t) =>

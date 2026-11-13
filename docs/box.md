@@ -1,6 +1,6 @@
 # The chota box
 
-The Pi 5 counter-top box: thermal printer, a control deck of dials and a big PRINT button, a lid screen, speakers, a mic array and a camera. One power cord. This is the hardware plan; [`next.md`](next.md) has the overall direction, [`pi5-readiness.md`](pi5-readiness.md) the RAM/CPU budget and verified screen picks.
+The Pi 5 counter-top box: thermal printer, a control deck of dials and a big PRINT button, a lid screen, speakers, a mic array and a camera. One power cord. This is the hardware plan; [`next.md`](next.md) has the overall direction, [`notes/pi5-readiness.md`](notes/pi5-readiness.md) the RAM/CPU budget and verified screen picks.
 
 ## Status (2026-10-15)
 

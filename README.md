@@ -60,13 +60,33 @@ In [work AI things I build](https://khalido.dev/), now that every biz is furious
 
 ## status
 
-**Phase 1 shipped** — the weekday-morning briefs and the Friday-evening weekend sheet are live, firing on the box. Genuinely useful already.
+_November 2026, running on a Raspberry Pi 5._
 
-**Phase 2 in progress** — the agent loop (Vercel AI SDK `ToolLoopAgent`) is wired, debuggable at `/admin/agent`, and live over Telegram (chat, streamed replies, on-demand prints). It doesn't yet drive the cron jobs on its own.
+**Prints** — live. Per-person briefs on weekdays at 06:45, the family weekend sheet on Fridays at 18:00, and any brief on demand from chat.
+
+**Chat** — live on Telegram and WhatsApp: one agent with about 20 tools (calendar, lists, buses, weather and surf, school, books, films, saving links and photos, web search, the house speaker).
+
+**Reminders** — "remind me at 4 to leave" from chat, one-off or repeating, sent back to the chat they were made in. A read-only phone page lists each person's reminders.
+
+**Sound** — the box is a Spotify Connect speaker (Spotify's Soloist) that chat can play, pause and turn down, and it can announce things out loud.
 
 Next:
 
-- **Phase 3** — voice (push-to-talk + Groq Whisper).
+- **A wall board** — a touch screen, a push-to-talk button and a mic, so you can talk to it.
+- **A4 prints** on the home laser, both sides: a newspaper-style day for a parent, a zine for each kid.
+- **Home control** — lights, aircon and announcements on every speaker in the house, through [`@khalido/home`](https://github.com/khalido/home.ts).
+
+## run your own
+
+1. Clone this repo and [`curios`](https://github.com/khalido/curios) side by side (`~/code/chota-bot`, `~/code/curios`). The quotes and puzzles come from `../curios/dist`.
+2. `cp chota.config.example.ts chota.config.ts` and fill in your family, stops, school and `adminEmails`. Real names live only in this file.
+3. `cp .env.example .env` and add the API keys for the sources you want. A source without a key is skipped.
+4. `bun install`, then `bun run dev` for the dashboard at `http://localhost:8000/`.
+5. For the designed print: `bun add -g agent-browser && agent-browser install` (the headless browser that screenshots `/print/<who>`).
+6. Printer: any 80 mm ESC/POS printer on USB. Put its USB vendor and product IDs in the config and check with `bun scripts/printer-test.mjs visible` ([`docs/printers.md`](docs/printers.md)).
+7. On the box (Linux with systemd, repo at `~/code/chota-bot`): `deploy/bootstrap.sh` installs everything and the service. [`docs/deploy.md`](docs/deploy.md) has the details.
+
+Optional: a Telegram bot token, a WhatsApp number for the bot, and Google OAuth for the calendar and `/admin` sign-in.
 
 ## FAQ
 

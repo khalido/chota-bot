@@ -293,7 +293,7 @@ The boring stuff that bites if not planned.
 
 ### Auto-start on boot
 
-Linux + systemd. `deploy/chota.service` is committed; `sudo cp` once to `/etc/systemd/system/`, `daemon-reload`, `enable --now`. Auto-restart on crash, auto-start on boot. See `docs/deploy.md`.
+Linux + systemd. `deploy/chota.service` is a committed template; `deploy/bootstrap.sh` fills in the user and home and installs it (by hand: `docs/deploy.md` step 7). Auto-restart on crash, auto-start on boot. See `docs/deploy.md`.
 
 ### Backup of `data/memory/`
 

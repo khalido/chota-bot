@@ -86,8 +86,8 @@ export default defineChota({
 	// nearest first. The member barcode + PIN go in .env.
 	library: {
 		system: 'city-of-sydney',
-		pickup: 'Darling Square Library',
-		branches: ['Darling Square', 'Ultimo']
+		pickup: 'Newtown Library',
+		branches: ['Newtown', 'Glebe']
 	},
 	school: { region: 'NSW', division: 'E' }, // division: 'E' (Eastern) or 'W' (Western) NSW
 	// Google Calendar to read for the family schedule. List your calendar IDs

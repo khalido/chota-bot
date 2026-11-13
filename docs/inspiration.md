@@ -161,7 +161,7 @@ User idea: small news section on dashboard + print receipt. Pull from a mix of R
 
 ### Photo of the day (Google Photos memories)
 
-User idea: random pic from older Google Photos library, LLM caption ("On this day 2 years ago — Blue Mountains hike"). v1 had a Python `gen_image.py` with a safety-gate + warm-style suffix pattern worth preserving (see `docs/audit-2026-05.md` §"Ideas Worth Salvaging").
+User idea: random pic from older Google Photos library, LLM caption ("On this day 2 years ago — Blue Mountains hike"). v1 had a Python `gen_image.py` with a safety-gate + warm-style suffix pattern worth preserving (see `docs/notes/audit-2026-05.md` §"Ideas Worth Salvaging").
 
 | Source            | Notes                                                                                                    |
 | ----------------- | -------------------------------------------------------------------------------------------------------- |

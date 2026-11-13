@@ -123,8 +123,8 @@ export interface ChotaConfig {
 		beach?: { name: string };
 	};
 	/** The family's library. Book lookups check its catalogue when this is
-	 *  set; `branches` are the local ones, nearest first ("Ultimo" matches
-	 *  "Ultimo Library"). The member barcode and PIN live in .env
+	 *  set; `branches` are the local ones, nearest first ("Glebe" matches
+	 *  "Glebe Library"). The member barcode and PIN live in .env
 	 *  (LIBRARY_BARCODE, LIBRARY_PIN). */
 	library?: {
 		/** The library system's catalogue. Only City of Sydney is built. */
