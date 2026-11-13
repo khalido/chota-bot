@@ -4,6 +4,19 @@ const cfg: { speech?: Record<string, unknown>; music?: object } = {};
 vi.mock('#lib/server/config.ts', () => ({ getConfig: () => cfg }));
 vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
+// Clips live in memory: the real cache is `data/speech/`, and a fake clip left
+// there would be played by the app for any phrase a test used.
+const files = vi.hoisted(() => new Map<string, Uint8Array>());
+vi.mock('node:fs', async (real) => ({
+	...(await real<typeof import('node:fs')>()),
+	existsSync: (p: string) => files.has(p)
+}));
+vi.mock('node:fs/promises', async (real) => ({
+	...(await real<typeof import('node:fs/promises')>()),
+	mkdir: async () => undefined,
+	writeFile: async (p: string, b: Uint8Array) => void files.set(p, b)
+}));
+
 const generateSpeech = vi.fn();
 vi.mock('ai', () => ({ generateSpeech: (o: unknown) => generateSpeech(o) }));
 
@@ -46,6 +59,7 @@ beforeEach(() => {
 		quietHours: { from: '21:00', to: '07:00' }
 	};
 	delete cfg.music;
+	files.clear();
 	generateSpeech.mockReset().mockResolvedValue({ audio: wav, warnings: [] });
 	interrupt.mockClear();
 	duck.mockClear();
