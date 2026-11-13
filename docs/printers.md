@@ -157,3 +157,22 @@ printer: {
 
 - **Zadig** — replace Microsoft's USB-printer driver with WinUSB; without this the `usb` package can't open the device
 - Vendor/product IDs may differ — check Device Manager → Properties → Hardware IDs
+
+## A4: the Brother laser through CUPS
+
+Double-sided A4 prints (the `print-brief` skill, `.agents/skills/print-brief/`) go to a Brother HL-L2350DW on the network through CUPS on the Pi. The receipt printer doesn't use CUPS: it stays on raw USB, and `usblp` is blacklisted so the kernel never claims it.
+
+Set up once (bootstrap step 4 installs CUPS; the queue is per printer):
+
+```sh
+sudo apt install -y --no-install-recommends cups cups-filters    # no cups-browsed
+sudo lpadmin -p brother -E -v ipp://<printer>.local:631/ipp/print -m everywhere \
+  -o media-default=iso_a4_210x297mm
+sudo lpadmin -p brother -o Duplex-default=DuplexNoTumble          # two-sided by default
+sudo lpadmin -d brother
+```
+
+- **Driverless** (`-m everywhere`): the printer describes itself over IPP, so no Brother driver. Find its `.local` name with `avahi-browse -rt _ipp._tcp`; the name survives a new DHCP address.
+- **What CUPS takes:** PDF (use this), PNG or JPEG, PostScript, plain text. Not HTML: make the PDF with headless Chromium `--print-to-pdf`, which follows the page's `@page` size. `agent-browser pdf` ignores it and writes US Letter.
+- **Checks:** `lpstat -p -v`; `lpoptions -p brother -l | grep Duplex` shows `*DuplexNoTumble`. CUPS listens on localhost only.
+- Set up on the Pi 12 Nov 2026 (CUPS 2.4.10). The 06:45 receipt prints next morning were unaffected.
