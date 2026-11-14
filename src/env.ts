@@ -27,6 +27,9 @@ export const variables = defineEnvVars({
 	TELEGRAM_BOT_TOKEN: optional,
 	WHATSAPP_ENABLED: optional,
 
+	// The house (@khalido/home): path to its JSONC config, default data/home.jsonc
+	HOME_CONFIG: optional,
+
 	// Data sources
 	EXA_API_KEY: optional,
 	GOOGLE_BOOKS_API_KEY: optional,

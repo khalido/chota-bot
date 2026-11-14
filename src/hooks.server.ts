@@ -10,6 +10,7 @@ import { bootChannels, stopChannels } from '#lib/server/channels/index.ts';
 import { configureLogging, shutdownLogging } from '#lib/server/log.ts';
 import { runPreflight } from '#lib/server/preflight.ts';
 import { bootMusic, stopMusic } from '#lib/server/tools/music.ts';
+import { bootHome, stopHome } from '#lib/server/home.ts';
 
 // Runs once at server startup (not during build) — env vars are available.
 export const init: ServerInit = async () => {
@@ -29,6 +30,8 @@ export const init: ServerInit = async () => {
 	// and an absent speaker is just "offline". No-op without `music` in config.
 	const music = getConfig().music;
 	bootMusic(music ? { url: SOLOIST_WS || undefined, maxVolume: music.maxVolume } : null);
+	// The house (@khalido/home): AC, Cast, printer, weather. Off without its config.
+	bootHome();
 
 	// On systemd's SIGTERM (deploy restart) drain in this order: stop the
 	// cron timers (croner's intervals outlive adapter-node's server.close()
@@ -40,6 +43,7 @@ export const init: ServerInit = async () => {
 		process.once(signal, async () => {
 			await stopJobs();
 			stopMusic(); // its reconnect timer would otherwise keep the process up
+			stopHome();
 			await stopChannels();
 			await shutdownLogging();
 		});

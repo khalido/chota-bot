@@ -18,12 +18,13 @@ const FAMILY = [
 	{ name: 'Kid1', role: 'kid', aliases: ['Kid1'] },
 	{ name: 'Kid2', role: 'kid', aliases: ['Kid2'] }
 ];
-vi.mock('#lib/server/config.ts', () => ({
-	findMember: (name: string) =>
+vi.mock('#lib/server/config.ts', () => {
+	const findMember = (name: string) =>
 		FAMILY.find((f) =>
 			[f.name, ...f.aliases].some((a) => a.toLowerCase() === name.trim().toLowerCase())
-		)
-}));
+		);
+	return { findMember, isParent: (name: string) => findMember(name)?.role === 'parent' };
+});
 const raiseAlert = vi.fn();
 const clearAlert = vi.fn();
 vi.mock('#lib/server/alerts.ts', () => ({ raiseAlert, clearAlert }));

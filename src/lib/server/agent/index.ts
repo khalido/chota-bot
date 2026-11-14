@@ -40,6 +40,7 @@ import { webFetchTool, webSearchTool } from './tools/web';
 import { musicControlTool, musicNowTool, musicPlayTool } from './tools/spotify';
 import { announceTool } from './tools/speech';
 import { scheduleTool } from './tools/schedule';
+import { airconTool, homeStatusTool } from './tools/home';
 
 export {
 	changedSomething,
@@ -81,7 +82,8 @@ export const chotaAgent = new ToolLoopAgent({
 			announce: { asker: options?.asker },
 			music_control: { asker: options?.asker },
 			music_play: { asker: options?.asker },
-			schedule: { asker: options?.asker }
+			schedule: { asker: options?.asker },
+			aircon: { asker: options?.asker }
 		},
 		// A quiet turn gets the list tools only (see QUIET_TOOLS).
 		...(options?.asker?.quiet ? { activeTools: [...QUIET_TOOLS] } : {}),
@@ -99,7 +101,8 @@ export const chotaAgent = new ToolLoopAgent({
 		announce: {},
 		music_control: {},
 		music_play: {},
-		schedule: {}
+		schedule: {},
+		aircon: {}
 	},
 	tools: {
 		weather: weatherTool,
@@ -123,6 +126,8 @@ export const chotaAgent = new ToolLoopAgent({
 		music_play: musicPlayTool,
 		announce: announceTool,
 		schedule: scheduleTool,
+		home_status: homeStatusTool,
+		aircon: airconTool,
 		// AI Gateway's own web tools — work with any model (see tools/web.ts).
 		web_search: webSearchTool,
 		web_fetch: webFetchTool

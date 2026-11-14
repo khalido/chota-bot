@@ -72,6 +72,7 @@ src/
     telegram/            # Telegram rich-message reply streamer
     db/                  # Drizzle schema + client
     auth.ts              # better-auth config
+    home.ts              # the house via @khalido/home (AC, Cast, printer, weather): one home, booted at start; config data/home.jsonc
     browser-lock.ts      # process-wide agent-browser mutex (print screenshots + Sentral login)
     version.ts           # build commit + is-the-box-behind-origin check
     log.ts               # LogTape structured logging

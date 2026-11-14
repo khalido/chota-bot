@@ -38,6 +38,8 @@ const TOOL_STATUS: Record<string, string> = {
 	ticktick_add: 'Adding to the list',
 	ticktick_done: 'Ticking it off',
 	schedule: 'Checking reminders',
+	home_status: 'Checking the house',
+	aircon: 'Checking the aircon',
 	bus: 'Checking the buses',
 	chores: 'Checking the chores',
 	school_day: 'Checking the timetable',

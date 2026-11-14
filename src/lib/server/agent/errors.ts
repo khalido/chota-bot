@@ -53,7 +53,8 @@ export const WRITE_DONE: Record<string, string> = {
 	music_control: 'changed the music',
 	announce: 'made an announcement',
 	save: 'saved something',
-	schedule: 'set or changed a reminder'
+	schedule: 'set or changed a reminder',
+	aircon: 'changed the aircon'
 };
 
 /**
@@ -84,6 +85,8 @@ export function changedSomething(tool: string, output: unknown): boolean {
 	// `list` is a read: only these keys mean a reminder was made or changed.
 	if (tool === 'schedule')
 		return ['created', 'updated', 'removed', 'paused', 'resumed'].some((k) => k in o);
+	// `status` has no `confirmed`; a dry run sent nothing.
+	if (tool === 'aircon') return 'confirmed' in o && o.dryRun !== true;
 	return false;
 }
 

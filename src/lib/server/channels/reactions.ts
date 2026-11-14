@@ -31,6 +31,8 @@ const TOOL_EMOJI: Record<string, string> = {
 	music_play: '🎶',
 	announce: '📢',
 	schedule: '⏰',
+	home_status: '🏠',
+	aircon: '❄️',
 	saved: '🗂️',
 	web_search: '🔍',
 	web_fetch: '🌐'

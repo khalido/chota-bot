@@ -113,6 +113,7 @@ describe('WRITE_DONE', () => {
 		// ask again after it ran, and a quiet turn would not show its reaction.
 		expect(Object.keys(WRITE_DONE).sort()).toEqual(
 			[
+				'aircon',
 				'announce',
 				'music_control',
 				'music_play',

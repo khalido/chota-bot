@@ -13,7 +13,7 @@ import { and, asc, eq, isNull, lte, or } from 'drizzle-orm';
 import { Cron } from 'croner';
 import { db } from '#lib/server/db/index.ts';
 import { userJob } from '#lib/server/db/schema.ts';
-import { findMember } from '#lib/server/config.ts';
+import { findMember, isParent } from '#lib/server/config.ts';
 import { clearAlert, raiseAlert } from '#lib/server/alerts.ts';
 import { recordSent, sessionKeyFor } from '#lib/server/agent/history.ts';
 import { log, logErr, errorMessage } from '#lib/server/log.ts';
@@ -78,8 +78,6 @@ export function parseLocal(at: string): Date | null {
 }
 
 // ── who may do what ─────────────────────────────────────────────────────────
-
-const isParent = (name: string) => findMember(name)?.role === 'parent';
 
 /** The asker, checked: a known family member on a turn they started. */
 function knownAsker(asker: JobAsker | undefined): JobAsker & { sender: string } {

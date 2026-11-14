@@ -27,6 +27,9 @@ export function findMember(name: string): FamilyMember | undefined {
 	);
 }
 
+/** True for a family member whose role is parent (by name or alias). */
+export const isParent = (name: string): boolean => findMember(name)?.role === 'parent';
+
 export function findKid(name: string, c: ChotaConfig = getConfig()): Kid | undefined {
 	return c.kids.find((k) => k.name.toLowerCase() === name.toLowerCase());
 }
