@@ -87,7 +87,7 @@
   This used to be gated on `?bare=1` — the query-string contract is now a
   pathname contract, so the URL self-documents the rendering mode.
 -->
-{#if page.url.pathname !== '/clock' && !page.url.pathname.match(/^\/print\/[^/]+$/) && !page.url.pathname.startsWith('/me/')}
+{#if page.url.pathname !== '/clock' && !page.url.pathname.match(/^\/print\/[^/]+$/) && !page.url.pathname.startsWith('/me/') && page.url.pathname !== '/tv' && !page.url.pathname.startsWith('/tv/')}
 	<nav class="border-b border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 		<div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
 			{#each tabs as tab (tab.href)}
