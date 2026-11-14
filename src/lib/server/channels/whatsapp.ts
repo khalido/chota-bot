@@ -19,6 +19,7 @@
  */
 import makeWASocket, {
 	type ConnectionState,
+	DisconnectReason,
 	downloadMediaMessage,
 	fetchLatestWaWebVersion,
 	useMultiFileAuthState
@@ -32,12 +33,14 @@ import { errorMessage, log, logErr } from '#lib/server/log.ts';
 import { mediaOf, personByPhone, toIncoming, userOf, type WaMessage } from './whatsapp-message';
 import { toWhatsApp } from './whatsapp-format';
 import { FAILED, THINKING, toolEmoji, WRITE_TOOLS } from './reactions';
-import { afterClose, afterConnectFailed, notConnected, type Conn } from './whatsapp-conn';
+import { afterClose, afterConnectFailed, markRead, notConnected, type Conn } from './whatsapp-conn';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'whatsapp';
 const AUTH_DIR = 'data/whatsapp-auth';
 const ALERT_KEY = 'whatsapp';
+/** WhatsApp refused this client's Web build (405): only an update fixes it. */
+const REJECTED_KEY = 'whatsapp:rejected';
 
 type Socket = ReturnType<typeof makeWASocket>;
 
@@ -134,7 +137,11 @@ export function whatsappChannel(): Channel | null {
 		conn = { kind: 'connecting' };
 		const { state } = await useMultiFileAuthState(AUTH_DIR);
 		// The bundled WA Web version is rejected (405); ask web.whatsapp.com.
-		const { version } = await fetchLatestWaWebVersion();
+		// When the fetch fails it quietly returns the bundled version instead, which
+		// WhatsApp then rejects with 405 and chota would give up for good. So a
+		// failed fetch is a failed connect: retried with backoff and alerted.
+		const { version, isLatest } = await fetchLatestWaWebVersion();
+		if (!isLatest) throw new Error("couldn't fetch WhatsApp Web's current version");
 		if (stopped) return; // stop() landed while we were getting ready
 		log(SCOPE, `connecting (WA Web ${version.join('.')})`);
 		const s = makeWASocket({ auth: state, logger: libLogger, version });
@@ -163,6 +170,7 @@ export function whatsappChannel(): Channel | null {
 				if (pairKey) await clearAlert(pairKey, { recovered: 'WhatsApp linked' });
 				pairKey = undefined;
 				await clearAlert(ALERT_KEY, { recovered: 'WhatsApp is connected again' });
+				await clearAlert(REJECTED_KEY, { recovered: 'WhatsApp accepts this version again' });
 			}
 			if (connection !== 'close' || stopped) return;
 			sock = undefined;
@@ -176,9 +184,23 @@ export function whatsappChannel(): Channel | null {
 
 			const code = err?.output?.statusCode;
 			log(SCOPE, `closed (${code ?? '?'}: ${err?.message ?? 'no reason'})`);
+			// 500 is usually a startup storage or setup error: the cause says which.
+			// It keeps the plain retry.
+			if (code === DisconnectReason.badSession) {
+				const cause = (err as { cause?: unknown } | undefined)?.cause;
+				logErr(SCOPE, 'closed with 500, cause', cause ?? 'none given');
+			}
 			const next = afterClose(code, err?.data?.expire, Date.now());
 			conn = next;
 			if (next.kind === 'dead') {
+				if (next.reason === 'rejected') {
+					log(SCOPE, 'WhatsApp rejected the client version (405); not reconnecting');
+					await raiseAlert(
+						REJECTED_KEY,
+						'WhatsApp rejected the client version, so chota stopped reconnecting. Update @oxidezap/baileyrs and redeploy.'
+					);
+					return;
+				}
 				await raiseAlert(
 					ALERT_KEY,
 					next.reason === 'logged-out'
@@ -257,6 +279,8 @@ export function whatsappChannel(): Channel | null {
 			// work (🤔, then each tool's emoji), typing… runs alongside, then one
 			// message and the reaction clears. 💔 stays if it failed.
 			const react = (emoji: string) => this.react?.(m, emoji).catch(() => {});
+			// Taken to answer: blue ticks. Quiet (triaged) turns stay unread.
+			if (!m.triage) void markRead(sock, raws.get(rawKey(m))?.key);
 			// A quiet (triaged) turn shows nothing until it changes a list.
 			if (!m.triage) await react(THINKING);
 			try {

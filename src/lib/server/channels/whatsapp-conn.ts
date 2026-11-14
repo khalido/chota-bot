@@ -7,6 +7,10 @@
  *                                               ↘ dead (needs a person)
  */
 import { DisconnectReason } from '@oxidezap/baileyrs';
+import { logErr } from '#lib/server/log.ts';
+
+/** WhatsApp rejected this client's Web build; the library has no constant for it. */
+export const CLIENT_OUTDATED = 405;
 
 /** The shortest wait before reconnecting after a close. */
 export const RECONNECT_MS = 5_000;
@@ -20,7 +24,7 @@ export type Conn =
 	/** Reconnecting at `until`: after a plain drop, a temporary ban, or a failed connect. */
 	| { kind: 'waiting'; until: number; reason: 'dropped' | 'banned' | 'connect-failed' }
 	/** Stays down until someone re-links (logged out) or restarts it (replaced). */
-	| { kind: 'dead'; reason: 'logged-out' | 'replaced' };
+	| { kind: 'dead'; reason: 'logged-out' | 'replaced' | 'rejected' };
 
 type Waiting = Extract<Conn, { kind: 'waiting' }>;
 type Dead = Extract<Conn, { kind: 'dead' }>;
@@ -35,6 +39,9 @@ export function afterClose(
 	// Another connection on the same login took over (the Mac and the box both
 	// linked, or a dev reload). Fighting back makes the two kick each other off.
 	if (code === DisconnectReason.connectionReplaced) return { kind: 'dead', reason: 'replaced' };
+	// The version was fetched fresh (connect() fails otherwise), so WhatsApp
+	// refuses the library itself; only an update fixes it.
+	if (code === CLIENT_OUTDATED) return { kind: 'dead', reason: 'rejected' };
 	if (code === DisconnectReason.forbidden) {
 		const until = Math.max(now + RECONNECT_MS, (banExpireS ?? 0) * 1000);
 		return { kind: 'waiting', until, reason: 'banned' };
@@ -52,6 +59,7 @@ export function afterConnectFailed(failures: number, now: number): Waiting {
 export function notConnected(c: Conn): string {
 	switch (c.kind) {
 		case 'dead':
+			if (c.reason === 'rejected') return 'WhatsApp stopped: it rejected the client version';
 			return c.reason === 'logged-out'
 				? 'WhatsApp is logged out; re-link it on the bot phone'
 				: 'WhatsApp stopped: another instance took over the login';
@@ -65,5 +73,18 @@ export function notConnected(c: Conn): string {
 			return 'WhatsApp is not running';
 		default:
 			return 'WhatsApp is not connected yet';
+	}
+}
+
+/** Mark a message read so the sender sees blue ticks. A failure is logged, never thrown. */
+export async function markRead(
+	sock: { readMessages(keys: never[]): Promise<unknown> } | undefined,
+	key: unknown
+) {
+	if (!sock || !key) return;
+	try {
+		await sock.readMessages([key] as never[]);
+	} catch (err) {
+		logErr('whatsapp', 'read receipt failed', err);
 	}
 }

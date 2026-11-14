@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 import { DisconnectReason } from '@oxidezap/baileyrs';
-import { afterClose, afterConnectFailed, notConnected, RECONNECT_MS } from './whatsapp-conn';
+import {
+	afterClose,
+	CLIENT_OUTDATED,
+	markRead,
+	afterConnectFailed,
+	notConnected,
+	RECONNECT_MS
+} from './whatsapp-conn';
 
 const now = 1_800_000_000_000;
 
@@ -56,5 +65,41 @@ describe('notConnected', () => {
 		expect(notConnected({ kind: 'waiting', until: now, reason: 'dropped' })).toMatch(
 			/reconnecting/
 		);
+	});
+});
+
+describe('rejected build and bad session', () => {
+	it('405 stops for good', () => {
+		expect(afterClose(CLIENT_OUTDATED, undefined, now)).toEqual({
+			kind: 'dead',
+			reason: 'rejected'
+		});
+		expect(notConnected({ kind: 'dead', reason: 'rejected' })).toMatch(/rejected/);
+	});
+	it('500 keeps the plain retry', () => {
+		expect(afterClose(DisconnectReason.badSession, undefined, now)).toEqual({
+			kind: 'waiting',
+			until: now + RECONNECT_MS,
+			reason: 'dropped'
+		});
+	});
+});
+
+describe('markRead', () => {
+	const key = { id: 'A1', remoteJid: 'x@s.whatsapp.net' };
+	it('sends a read receipt for the message key', async () => {
+		const readMessages = vi.fn().mockResolvedValue(undefined);
+		await markRead({ readMessages }, key);
+		expect(readMessages).toHaveBeenCalledWith([key]);
+	});
+	it('swallows a failure', async () => {
+		const readMessages = vi.fn().mockRejectedValue(new Error('offline'));
+		await expect(markRead({ readMessages }, key)).resolves.toBeUndefined();
+	});
+	it('does nothing without a socket or key', async () => {
+		await expect(markRead(undefined, key)).resolves.toBeUndefined();
+		const readMessages = vi.fn();
+		await markRead({ readMessages }, undefined);
+		expect(readMessages).not.toHaveBeenCalled();
 	});
 });
