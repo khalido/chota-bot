@@ -17,3 +17,4 @@ bun.lockb
 docs/box-design/
 devices/
 docs/chota-overview.html
+src/lib/server/tools/calc/places.json

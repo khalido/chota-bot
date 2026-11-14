@@ -28,6 +28,7 @@ import { streamRichReply } from '#lib/server/telegram/stream.ts';
 import { log, logErr } from '#lib/server/log.ts';
 import { registerAlertChannel } from '#lib/server/alerts.ts';
 import { recordSent, sessionKeyFor } from '#lib/server/agent/history.ts';
+import { cleanLinks } from '#lib/server/links.ts';
 import type { Channel, Incoming, Outgoing } from './types';
 
 const SCOPE = 'telegram';
@@ -79,8 +80,8 @@ export function telegramChannel(): Channel | null {
 		const chatId = chatIdOf(threadId);
 		if ('markdown' in out) {
 			await bot.api
-				.sendRichMessage(chatId, { markdown: out.markdown })
-				.catch(() => bot.api.sendMessage(chatId, out.markdown));
+				.sendRichMessage(chatId, { markdown: cleanLinks(out.markdown) })
+				.catch(() => bot.api.sendMessage(chatId, cleanLinks(out.markdown)));
 		} else if ('image' in out) {
 			await bot.api.sendPhoto(chatId, new InputFile(out.image), { caption: out.caption });
 		} else {

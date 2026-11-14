@@ -20,6 +20,7 @@ const TOOL_EMOJI: Record<string, string> = {
 	chores: '🧹',
 	school_day: '🏫',
 	school_dates: '🏫',
+	calc: '🧮',
 	title_info: '🎬',
 	watch_ideas: '🍿',
 	book: '📚',

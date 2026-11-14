@@ -1,13 +1,16 @@
+import { cleanLinks } from '#lib/server/links.ts';
+
 /**
  * Markdown (what the agent writes) → WhatsApp's own formatting. WhatsApp has
  * *bold*, _italic_, ~strike~ and ```mono```, no headings, tables or link
- * syntax. A long URL in the middle of a sentence reads badly (WhatsApp shows
- * and previews it whole), so links become footnotes: "Tempe [1]" in the text,
- * "[1] https://…" at the end. Headings become bold lines.
+ * syntax (faq.whatsapp.com/539178204879377). A link is only tappable as the
+ * full address, and a long one mid-sentence reads badly, so links become
+ * footnotes: "Tempe [1]" in the text, "[1] https://…" at the end, with tracking
+ * taken out (`links.ts`). Headings become bold lines.
  */
 export function toWhatsApp(md: string): string {
 	const notes: string[] = [];
-	const body = md
+	const body = cleanLinks(md)
 		// Fenced code stays as WhatsApp mono.
 		.replace(/```[a-z]*\n([\s\S]*?)```/g, '```$1```')
 		// [text](url) → text [n]; a link whose text is its url stays bare.

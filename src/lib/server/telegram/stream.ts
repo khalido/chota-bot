@@ -22,6 +22,7 @@
  */
 import type { Context } from 'grammy';
 import { finalText, type ChotaStreamResult } from '#lib/server/agent/index.ts';
+import { cleanLinks } from '#lib/server/links.ts';
 import { logErr } from '#lib/server/log.ts';
 
 const SCOPE = 'telegram';
@@ -41,6 +42,7 @@ const TOOL_STATUS: Record<string, string> = {
 	chores: 'Checking the chores',
 	school_day: 'Checking the timetable',
 	school_dates: 'Checking the school calendar',
+	calc: 'Working it out',
 	title_info: 'Looking that up',
 	watch_ideas: 'Finding ideas',
 	book: 'Looking up the book',
@@ -88,7 +90,7 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 	const sendDraft = async () => {
 		try {
 			if (answering) {
-				await ctx.api.sendRichMessageDraft(chatId, draftId, { markdown: acc });
+				await ctx.api.sendRichMessageDraft(chatId, draftId, { markdown: cleanLinks(acc) });
 			} else {
 				await ctx.api.sendRichMessageDraft(chatId, draftId, {
 					html: `<tg-thinking>${escapeHtml(thinking)}</tg-thinking>`
@@ -177,7 +179,7 @@ export async function streamRichReply(ctx: Context, result: ChotaStreamResult) {
 	// The last step's text, the same text the router keeps and checks: an empty
 	// one sends nothing here, and the router says so once. Rejects if the run
 	// failed, so the router's error message is the only one.
-	const text = await finalText(result);
+	const text = cleanLinks(await finalText(result));
 	if (!text) return;
 	if (richOk) {
 		try {

@@ -32,6 +32,7 @@ import { ticktickAddTool, ticktickDoneTool, ticktickTool } from './tools/ticktic
 import { busTool } from './tools/bus';
 import { choresTool } from './tools/chores';
 import { schoolDatesTool, schoolDayTool } from './tools/school';
+import { calcTool } from './tools/calc';
 import { bookTool } from './tools/books';
 import { titleInfoTool, watchIdeasTool } from './tools/tmdb';
 import { volleyballTool } from './tools/volleyball';
@@ -40,7 +41,13 @@ import { musicControlTool, musicNowTool, musicPlayTool } from './tools/spotify';
 import { announceTool } from './tools/speech';
 import { scheduleTool } from './tools/schedule';
 
-export { changedSomething, describeChatError, EMPTY_REPLY, failureMessage } from './errors';
+export {
+	changedSomething,
+	describeChatError,
+	EMPTY_REPLY,
+	failureMessage,
+	OVER_BUDGET
+} from './errors';
 
 /** Default model — AI Gateway slug. Swap to bench other providers (use the
  *  highest version available from `curl https://ai-gateway.vercel.sh/v1/models`). */
@@ -104,6 +111,7 @@ export const chotaAgent = new ToolLoopAgent({
 		chores: choresTool,
 		school_day: schoolDayTool,
 		school_dates: schoolDatesTool,
+		calc: calcTool,
 		title_info: titleInfoTool,
 		watch_ideas: watchIdeasTool,
 		book: bookTool,

@@ -10,6 +10,7 @@ import {
 	describeChatError,
 	failureMessage,
 	EMPTY_REPLY,
+	OVER_BUDGET,
 	finalText,
 	runAgentStream
 } from '#lib/server/agent/index.ts';
@@ -22,8 +23,11 @@ import {
 	newTurnId,
 	openSession,
 	QUIET_PREFIX,
-	sessionKeyFor
+	sessionKeyFor,
+	spentToday
 } from '#lib/server/agent/history.ts';
+import { DAILY_COST_USD } from '#lib/server/agent/loop.ts';
+import { clearAlert, raiseAlert } from '#lib/server/alerts.ts';
 import { type StepLike, toolParts, turnStats } from '#lib/server/agent/turns.ts';
 import { LRUCache } from 'lru-cache';
 import { event, logErr } from '#lib/server/log.ts';
@@ -265,6 +269,19 @@ async function runTurn(latest: Turn, skipped: Turn[]): Promise<void> {
 				channel: t.channel
 			});
 		}
+		// The house's daily agent budget: past it, say so (unless nobody asked) and
+		// alert the admin once. The alert clears on the next turn under budget.
+		if (spentToday() >= DAILY_COST_USD) {
+			await raiseAlert(
+				'agent:daily-cost',
+				`The chat agent passed today's US$${DAILY_COST_USD} limit. It answers again after midnight.`
+			);
+			if (!m.triage) await channel.send(m.threadId, { markdown: OVER_BUDGET }).catch(() => {});
+			keepRun(sessionId, turnId, [], m.channel, m.triage ? '' : OVER_BUDGET, 'over-budget');
+			ev.done();
+			return;
+		}
+		await clearAlert('agent:daily-cost');
 		const messages = loadHistory(sessionId);
 		// This turn's own extras ride on the last message only — a triage note
 		// and the photo itself. History keeps the text line.

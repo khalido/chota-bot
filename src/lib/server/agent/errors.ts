@@ -162,3 +162,8 @@ export function describeChatError(outer: unknown): ChatFailure {
 
 /** When a turn finishes with no text at all. */
 export const EMPTY_REPLY = "I looked but couldn't put an answer together. Try asking another way.";
+
+/** Said instead of a reply once the house has used the day's agent budget
+ *  (loop.ts DAILY_COST_USD). Prints, reminders and the lists don't need it. */
+export const OVER_BUDGET =
+	"I've done all the thinking I can for today. I'll be back after midnight; prints and reminders still run.";

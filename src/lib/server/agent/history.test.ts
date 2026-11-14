@@ -172,3 +172,22 @@ describe('run numbers', () => {
 		]);
 	});
 });
+
+describe('spentToday', () => {
+	it('adds up run costs since midnight in Sydney, across chats', async () => {
+		const { spentToday } = await import('./history');
+		const id = openSession('person:Spend/main');
+		const at = (iso: string, cost: number) =>
+			sqlite
+				.prepare(
+					`INSERT INTO chat_message (session_id, turn_id, role, content, cost_usd, created_at)
+					 VALUES (?, 't', 'assistant', 'x', ?, ?)`
+				)
+				.run(id, cost, Date.parse(iso));
+		const before = spentToday(new Date('2026-11-13T12:00:00+11:00'));
+		at('2026-11-12T23:30:00+11:00', 1); // yesterday in Sydney
+		at('2026-11-13T00:30:00+11:00', 0.25);
+		at('2026-11-13T09:00:00+11:00', 0.5);
+		expect(spentToday(new Date('2026-11-13T12:00:00+11:00')) - before).toBeCloseTo(0.75);
+	});
+});

@@ -40,4 +40,10 @@ describe('toWhatsApp', () => {
 	it('collapses a link whose text is its url', () => {
 		expect(toWhatsApp('[https://x.io](https://x.io)')).toBe('https://x.io');
 	});
+
+	it('gives the full link in the footnote, with tracking taken out', () => {
+		expect(toWhatsApp('read [this](https://x.io/a?id=2&utm_source=nl&fbclid=z)')).toBe(
+			'read this [1]\n\n[1] https://x.io/a?id=2'
+		);
+	});
 });

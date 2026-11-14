@@ -6,12 +6,28 @@
  *
  * Long-term facts (the deferred memory store) are a separate concern.
  */
-import { and, desc, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { generateId, type ModelMessage } from 'ai';
 import { db } from '#lib/server/db/index.ts';
 import { chatMessage, chatSession } from '#lib/server/db/chat.schema.ts';
 import type { ChannelName } from '#lib/server/channels/types.ts';
+import { sydneyNoon, sydneyOffset, sydneyYMD, ymdAddDays } from '#lib/time.ts';
 import { runNote, type ToolPart, type turnStats } from './turns';
+
+/** What the agent has cost, across every chat, since midnight in Sydney (AI
+ *  Gateway's own price per run). The daily limit reads this. */
+export function spentToday(now = new Date()): number {
+	// The offset at midnight, not now: on a daylight-saving day the clocks change
+	// at 2 or 3 am, so midnight still has the evening before's offset.
+	const ymd = sydneyYMD(now);
+	const midnight = new Date(`${ymd}T00:00:00${sydneyOffset(sydneyNoon(ymdAddDays(ymd, -1)))}`);
+	const row = db
+		.select({ total: sql<number | null>`sum(${chatMessage.costUsd})` })
+		.from(chatMessage)
+		.where(gte(chatMessage.createdAt, midnight))
+		.get();
+	return row?.total ?? 0;
+}
 
 /** How many recent messages to feed back as context (~25 turns). Replies are
  *  short and tool calls aren't sent back, so 50 messages is a few thousand

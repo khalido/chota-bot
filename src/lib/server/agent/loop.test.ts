@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
 	ANSWER_NOW,
 	MAX_STEPS,
+	STOP_WHEN,
+	TURN_COST,
+	pastHardCost,
 	answerWhenDone,
 	lookupsAsText,
 	QUIET_TOOLS,
@@ -22,6 +25,33 @@ describe('answerWhenDone', () => {
 			activeTools: [],
 			instructions: `base\n\n${ANSWER_NOW}`
 		});
+	});
+});
+
+describe('money per turn', () => {
+	const priced = (...costs: number[]) =>
+		costs.map((c) => ({ content: [], providerMetadata: { gateway: { cost: String(c) } } }));
+
+	it('answers without tools once the turn passes the soft limit', () => {
+		const r = answerWhenDone({
+			stepNumber: 1,
+			steps: priced(0.06, TURN_COST.softUsd),
+			messages: [],
+			instructions: 'base'
+		});
+		expect(r).toMatchObject({ toolChoice: 'none', activeTools: [] });
+	});
+
+	it('leaves a cheap turn alone', () => {
+		expect(
+			answerWhenDone({ stepNumber: 1, steps: priced(0.01), messages: [], instructions: 'x' })
+		).toEqual({});
+	});
+
+	it('ends the turn past the hard limit, and not before', () => {
+		expect(STOP_WHEN).toContain(pastHardCost);
+		expect(pastHardCost({ steps: priced(TURN_COST.hardUsd - 0.01) })).toBe(false);
+		expect(pastHardCost({ steps: priced(0.15, 0.06) })).toBe(true);
 	});
 });
 

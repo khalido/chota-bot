@@ -1,10 +1,10 @@
 /**
- * The turn's step budget, and the last step that has to answer.
+ * A turn's limits (steps, time, money), and the last step that has to answer.
  *
- * The SDK stops at 20 steps by default, and a model still calling tools then
- * ends with an empty reply. The cap is pinned here so the last-step rule stays
- * in step with it: on the final step the tools are taken away and the model is
- * told to answer from what it found.
+ * A model still calling tools when the step cap hits ends with an empty reply,
+ * so the cap is pinned here with the last-step rule beside it: on the final
+ * step, or once the turn has spent its soft limit, the tools are taken away and
+ * the model is told to answer from what it found.
  *
  * Ported from syntechfibres `agent/loop-guard.ts` (answerWhenDone,
  * lookupsAsText). There, GLM still wrote one more tool call out as text when
@@ -12,11 +12,33 @@
  * as plain text.
  */
 import { isStepCount, type Instructions, type ModelMessage } from 'ai';
+import { turnStats, type StepLike } from './turns';
 
-/** Steps per turn. Generous: a WhatsApp turn shows each tool's emoji as it goes. */
-export const MAX_STEPS = 20;
+/** Steps per turn. Real turns take one or two (the Pi's runs, Nov 2026); 12
+ *  leaves room for a long lookup and stops a loop early. */
+export const MAX_STEPS = 12;
 
-export const STOP_WHEN = isStepCount(MAX_STEPS);
+/**
+ * Money per turn, from AI Gateway's own price for each step. Real turns cost
+ * about half a cent. Past `softUsd` the next step answers without tools; past
+ * `hardUsd` the turn ends (a guard in case one step alone is dear).
+ */
+export const TURN_COST = { softUsd: 0.1, hardUsd: 0.2 };
+
+/** Money for the chat agent's turns in a Sydney day, across every chat. Past it,
+ *  chota says it's done for the day and raises an alert (channels/index.ts).
+ *  Only turns count: triage, saving links, transcription and book lookups
+ *  aren't recorded per call, and are a small share. */
+export const DAILY_COST_USD = 2;
+
+/** What the turn has cost so far; 0 while the gateway hasn't priced it. */
+export const spentUsd = (steps: readonly StepLike[]): number => turnStats(steps).costUsd ?? 0;
+
+/** Ends the turn once it has spent `TURN_COST.hardUsd`. */
+export const pastHardCost = ({ steps }: { steps: readonly StepLike[] }): boolean =>
+	spentUsd(steps) >= TURN_COST.hardUsd;
+
+export const STOP_WHEN = [isStepCount(MAX_STEPS), pastHardCost];
 
 /**
  * The tools of a quiet turn: an untagged group message (or photo) the triage
@@ -35,31 +57,35 @@ export const QUIET_TOOLS = [
 ] as const;
 
 /**
- * How long a turn may take. Without a limit one hung model stream or tool
+ * How long a turn may take: two minutes in all, 45 s for the model to start or
+ * to go quiet. Real turns take seconds. Without a limit one hung model stream or tool
  * blocked that chat's queue for good, and made a deploy's shutdown wait.
  * `firstChunkMs` is how long the model may take to start answering, `chunkMs`
  * the longest silence once it has. No per-tool limit: the SDK enforces one only
  * through the abort signal it hands a tool, and chota's tools don't read it, so
  * a hung tool is ended by `totalMs` (and keeps running in the background).
  */
-export const TURN_TIMEOUT = { totalMs: 4 * 60_000, firstChunkMs: 60_000, chunkMs: 60_000 };
+export const TURN_TIMEOUT = { totalMs: 2 * 60_000, firstChunkMs: 45_000, chunkMs: 45_000 };
 
 /** Said to the model on the step where its tools are taken away. */
 export const ANSWER_NOW =
 	'NO MORE TOOLS: the lookups for this question are over. Write the answer now from the tool ' +
 	'results above, in plain text. Say plainly what you could not find. Never write a tool call.';
 
-/** `prepareStep`: on the last step (stepNumber counts from 0), answer without tools. */
+/** `prepareStep`: on the last step (stepNumber counts from 0), or once the turn
+ *  has spent `TURN_COST.softUsd`, answer without tools. */
 export function answerWhenDone({
 	stepNumber,
+	steps = [],
 	messages,
 	instructions
 }: {
 	stepNumber: number;
+	steps?: readonly StepLike[];
 	messages: ModelMessage[];
 	instructions: Instructions | undefined;
 }) {
-	if (stepNumber < MAX_STEPS - 1) return {};
+	if (stepNumber < MAX_STEPS - 1 && spentUsd(steps) < TURN_COST.softUsd) return {};
 	// prepareCall always sets the instructions as one string (buildSystemPrompt).
 	return {
 		toolChoice: 'none' as const,
