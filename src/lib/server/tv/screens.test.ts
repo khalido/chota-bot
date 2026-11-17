@@ -232,4 +232,12 @@ describe('buildScreens', () => {
 		});
 		expect(short.blocks).toMatchObject([{ type: 'image', caption: 'Beach day' }]);
 	});
+
+	it("shortens a recurring event's long Google id so the receiver takes it", () => {
+		const long = { ...data.events[0], id: '_60q30c1g'.repeat(20) + '_20261118T043000Z' };
+		const out = buildScreens({ ...data, events: [long] }, now)[0];
+		const id = (out.blocks![0] as Extract<Block, { type: 'calendar-day' }>).events[0].id!;
+		expect(id).toHaveLength(40);
+		expect(Screen.safeParse(out).error).toBeUndefined();
+	});
 });

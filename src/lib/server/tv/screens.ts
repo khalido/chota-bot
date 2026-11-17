@@ -8,6 +8,7 @@
  * From 18:00 the Today screen looks ahead (KO, 17 Nov): the calendar, chores,
  * school line and weather note are tomorrow's, as on the evening print.
  */
+import { createHash } from 'node:crypto';
 import type { Screen } from '../../../../cast/src/protocol/schema.ts';
 import type { Ventilation } from '@khalido/home';
 import { collectTripReports, type TripReport } from '#lib/server/print/brief.ts';
@@ -132,10 +133,18 @@ const WEEK_DAYS = 7;
 type Block = NonNullable<Screen['blocks']>[number];
 type CalendarEventOut = Extract<Block, { type: 'calendar-day' }>['events'][number];
 
+/** The receiver's cap on an id; a recurring Google event's id runs well past it. */
+const MAX_ID = 100;
+
+/** The event's id, or a short stable hash of it when it's too long for the receiver. */
+export function eventId(id: string): string {
+	return id.length <= MAX_ID ? id : createHash('sha1').update(id).digest('hex');
+}
+
 function eventOut(e: CalendarEvent, family: FamilyMember[]): CalendarEventOut {
 	const who = parseEventPeople(e.summary, family);
 	return {
-		id: e.id,
+		id: eventId(e.id),
 		title: e.summary,
 		...(e.isAllDay ? {} : { start: e.start.toISOString(), end: e.end.toISOString() }),
 		...(e.location ? { where: e.location } : {}),
