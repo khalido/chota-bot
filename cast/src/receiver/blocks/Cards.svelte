@@ -10,7 +10,11 @@
 		class="grid min-h-0 flex-1 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] content-start gap-7"
 	>
 		{#each block.items as card, i (i)}
-			<article class="flex min-h-0 flex-col overflow-hidden rounded-[1rem] bg-white/[0.04]">
+			<article
+				data-item
+				data-item-id={card.id}
+				class="flex min-h-0 flex-col overflow-hidden rounded-[1rem] border border-white/[0.07]"
+			>
 				{#if card.image}<img
 						src={card.image}
 						alt=""

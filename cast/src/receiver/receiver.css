@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Self-hosted: the CSP lets fonts load only from this site. Only the subsets on screen are fetched. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/fraunces';
 
 /* Everything is sized in rem, and a rem is a fraction of the screen's height: 20 px at 1080p comfortable, about
    17 px compact. So the same classes read the same from across the room on any TV. */
@@ -13,7 +16,23 @@
 
 @theme inline {
 	--color-accent: var(--accent);
-	--font-sans: 'Google Sans', Roboto, system-ui, sans-serif;
+	--font-sans: 'Inter Variable', Roboto, system-ui, sans-serif;
+	/* For the few words with character: the greeting, the date. */
+	--font-display: 'Fraunces Variable', Georgia, serif;
+}
+
+/* Made for an OLED TV in a living room: a warm grey scale, dimmer than Tailwind's, so the brightest text is
+   off-white and the rest steps down clearly. Every block's neutral-* classes use it. */
+@theme {
+	--color-neutral-100: #ebe6dc;
+	--color-neutral-200: #d9d3c7;
+	--color-neutral-300: #bdb6a9;
+	--color-neutral-400: #948d81;
+	--color-neutral-500: #6f695f;
+	--color-neutral-600: #514c45;
+	--color-neutral-700: #39352f;
+	--color-neutral-800: #23211d;
+	--color-neutral-900: #141310;
 }
 
 html,
@@ -22,12 +41,30 @@ body,
 	height: 100%;
 	margin: 0;
 	overflow: hidden;
-	/* Not pure black, nothing pure white: a TV shows this for hours. */
-	background: #0c0e11;
-	color: #cfd2d6;
+	/* Pure black: an OLED pixel at #000 is off. Nothing pure white: a TV shows this for hours. */
+	background: #000;
+	color: var(--color-neutral-200);
 	-webkit-font-smoothing: antialiased;
+	font-feature-settings: 'cv11', 'ss01';
+}
+
+/* A block's cell: no fill (grey fills glow on OLED), just a hairline. */
+.cell {
+	border: 1px solid rgb(255 255 255 / 0.07);
+	border-radius: 1.4rem;
 }
 
 .label {
-	@apply text-[1.15rem] font-semibold tracking-[0.18em] text-neutral-500 uppercase;
+	@apply text-[1.15rem] font-medium tracking-[0.2em] text-neutral-500 uppercase;
+}
+
+/* The remote's focus ring on a row (App.svelte). */
+[data-item] {
+	border-radius: 0.6rem;
+	scroll-margin: 1rem;
+}
+[data-focused] {
+	outline: 0.25rem solid var(--accent);
+	outline-offset: 0.4rem;
+	background: rgb(255 255 255 / 0.03);
 }

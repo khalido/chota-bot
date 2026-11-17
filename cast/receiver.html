@@ -9,8 +9,9 @@
     { "v": 1, "id": "a1", "type": "screens", "revision": 1763164800000,
       "data": { "screens": [ { "id": "home", "title": "Home",
         "blocks": [ { "type": "clock" }, { "type": "stat", "label": "Inside", "value": 21, "unit": "°C" } ] } ] } }
-  Types: screens, screen, show, theme, clear. Payloads over 60 KB are split into parts (seq, total, chunk).
-  Replies to the sender: { "v": 1, "type": "ack" | "error", ... }.
+  Types: screens, screen, show, theme, clear, banner, ping. Payloads over 60 KB are split into parts (seq, total, chunk).
+  Replies to the sender: { "v": 1, "type": "ack" | "error" | "pong", ... }; unused remote keys go to every sender as
+  { "v": 1, "type": "key", "key", "screen", "item" }.
 
   Source: https://github.com/khalido/chota-bot/tree/main/cast
 -->

@@ -120,7 +120,8 @@ describe('WRITE_DONE', () => {
 				'save',
 				'schedule',
 				'ticktick_add',
-				'ticktick_done'
+				'ticktick_done',
+				'tv'
 			].sort()
 		);
 	});

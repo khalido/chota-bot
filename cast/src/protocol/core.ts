@@ -6,6 +6,7 @@ import {
 	LIMITS,
 	Payloads,
 	VERSION,
+	type Banner,
 	type ErrorCode,
 	type MessageType,
 	type Reply,
@@ -22,6 +23,8 @@ export type State = {
 	revision: number;
 	/** When content last changed (ms), for the "updated … ago" line. */
 	updatedAt?: number;
+	/** The banner and when it goes (ms). */
+	banner?: { text: string; tone: NonNullable<Banner['tone']>; until: number };
 };
 
 export const initialState = (): State => ({ screens: [], theme: {}, revision: 0 });
@@ -57,7 +60,13 @@ const issue = (e: z.ZodError) =>
 		.map((i) => `${i.path.join('.') || 'message'}: ${i.message}`)
 		.join('; ');
 
-export function createCore(now: () => number = Date.now) {
+/** What a `pong` reports about the device: its user agent and recent frame rate, for checking a TV from a sender. */
+export type About = { userAgent: string; fps?: number };
+
+export function createCore(
+	now: () => number = Date.now,
+	about: () => About = () => ({ userAgent: '' })
+) {
 	let state = initialState();
 	const partials = new Map<string, Partial>();
 	const key = (sender: string, id: string) => `${sender}\u0000${id}`;
@@ -112,7 +121,14 @@ export function createCore(now: () => number = Date.now) {
 				next.screens = [];
 				next.current = undefined;
 				next.updatedAt = undefined;
+				next.banner = undefined;
 				break;
+			case 'banner': {
+				const { text, tone = 'info', seconds = 30 } = parsed.data as Banner;
+				next.banner = seconds > 0 ? { text, tone, until: now() + seconds * 1000 } : undefined;
+				next.updatedAt = state.updatedAt;
+				break;
+			}
 		}
 		state = next;
 	}
@@ -134,6 +150,18 @@ export function createCore(now: () => number = Date.now) {
 			});
 			if (m.v !== VERSION) return fail('version', `this receiver speaks v${VERSION}, not v${m.v}`);
 			if (!(m.type in Payloads)) return fail('bad-message', `unknown type "${m.type}"`);
+			if (m.type === 'ping') {
+				const reply: Reply = {
+					v: 1,
+					type: 'pong',
+					id: m.id,
+					revision: state.revision,
+					screen: state.current,
+					screens: state.screens.map((s) => s.id),
+					...about()
+				};
+				return { out: [{ to: sender, reply }], changed: false };
+			}
 			if (m.revision < state.revision) {
 				partials.delete(key(sender, m.id));
 				return fail('stale', `revision ${m.revision} is older than ${state.revision}`);
@@ -200,6 +228,13 @@ export function createCore(now: () => number = Date.now) {
 				out: [{ to: sender, reply: { v: 1, type: 'ack', id: m.id, revision: state.revision } }],
 				changed: true
 			};
+		},
+
+		/** Show another screen from the remote: no revision, nothing to reply. False when there is no such screen. */
+		select(id: string) {
+			if (!state.screens.some((s) => s.id === id)) return false;
+			state = { ...state, current: id };
+			return true;
 		},
 
 		/** A sender left: drop its half-received payloads. */

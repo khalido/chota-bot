@@ -54,7 +54,8 @@ export const WRITE_DONE: Record<string, string> = {
 	announce: 'made an announcement',
 	save: 'saved something',
 	schedule: 'set or changed a reminder',
-	aircon: 'changed the aircon'
+	aircon: 'changed the aircon',
+	tv: 'changed the TV'
 };
 
 /**
@@ -87,6 +88,8 @@ export function changedSomething(tool: string, output: unknown): boolean {
 		return ['created', 'updated', 'removed', 'paused', 'resumed'].some((k) => k in o);
 	// `status` has no `confirmed`; a dry run sent nothing.
 	if (tool === 'aircon') return 'confirmed' in o && o.dryRun !== true;
+	// `status` has no `ok`.
+	if (tool === 'tv') return o.ok === true;
 	return false;
 }
 

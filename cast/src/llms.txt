@@ -6,13 +6,13 @@
 - Cast app id: {{APP_ID}} (published, unlisted)
 - Namespace: {{NAMESPACE}}
 - Source and full schema: {{SOURCE}} (src/protocol/schema.ts)
-- Demo in a browser: https://cast.khalido.dev/receiver?demo (add &screen=<id>, &density=compact, &accent=%23RRGGBB)
+- Demo in a browser: https://cast.khalido.dev/receiver?demo (add &screen=<id>, &density=compact, &accent=%23RRGGBB, &banner=<text>, &cycle=<seconds>)
 
 ## Sending
 
 1. Launch app {{APP_ID}} on the TV with any Cast sender library (TypeScript: @khalido/home `launch(target, appId)`; Python: pychromecast `BaseController(namespace, app_id)`).
 2. Send JSON messages on {{NAMESPACE}} (`send(target, namespace, message)` / `send_message(data)`).
-3. Send again whenever something changes. Back on the remote closes the app; launch again to come back.
+3. Send again whenever something changes. Back on the remote closes the app, and so does leaving it (Home, another app, an input switch); launch again to come back.
 
 ## Envelope (v1)
 
@@ -27,8 +27,10 @@ Every message: `{ "v": 1, "id": string, "type": string, "revision": integer, "da
 - `screens`: `data: { screens: Screen[], show?: screenId }`. Replaces the list. Without `show`, the current screen stays if still present, else the first.
 - `screen`: `data: { screen: Screen }`. Replaces the screen with that id, or appends it.
 - `show`: `data: { screen: screenId }`. Switches screens. Unknown id: error `unknown-screen`.
-- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", timezone?: IANA zone, hour12?: boolean }`. Replaces the whole theme.
-- `clear`: no data. Back to the waiting clock.
+- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", timezone?: IANA zone, hour12?: boolean, rotate?: seconds 5-3600 }`. Replaces the whole theme. `rotate` shows each screen in turn, pausing for 2 minutes after a remote key.
+- `clear`: no data. Back to the waiting clock (also removes the banner).
+- `banner`: `data: { text, tone?: "info" | "good" | "warn" | "bad", seconds?: 0-3600 (default 30) }`. A line over any screen, the waiting clock included. A newer banner replaces it; `seconds: 0` removes it.
+- `ping`: no data. The receiver answers `pong` (below). Any revision is accepted.
 
 Example:
 
@@ -48,6 +50,7 @@ Blocks share an optional `span` (columns taken, 1-4). Instants are ISO 8601 with
 - `image`: `src`, `alt?`, `caption?`, `fit?: "contain" | "cover"`
 - `weather`: `place?`, `now: { tempC, condition, feelsLikeC?, note? }`, `hours?: { at, tempC, rainPct? }[]` (past hours hidden)
 - `calendar-day`: `title?`, `events: { id?, title, start?, end?, where?, who? }[]` (no start = all day; current event marked, past dimmed)
+- `week`: `title?`, `days: { date: "YYYY-MM-DD", events: (as calendar-day)[] }[]` (1-7 days in columns; today marked, past days dimmed; best alone on a screen with `columns: 1`)
 - `bus`: `title?`, `routes: { route, to?, departures: { at, realtime?, cancelled? }[] }[]` (minutes count down on the TV; gone departures hidden)
 
 HTML screens: sanitised with DOMPurify (no script, event handlers, iframe, object, embed, form, link, meta, base; URLs https: or data:image/ only) and rendered in a Shadow DOM. `css` is applied as a constructed stylesheet (no @import). 1rem = 1/54 of screen height.
@@ -60,9 +63,15 @@ Cast caps a message at 64 KiB. Keep each message under {{PART_BYTES}} bytes. To 
 
 {{LIMITS}}
 
+## Remote
+
+Back closes the app; leaving it does too. Other keys keep their TV default (volume, Home, assistant). Left and right switch screens (the senders aren't told). Up and down move a focus ring over the rows of the screen: list items, cards, calendar and week events, bus routes. The ring goes after 30 s without a key.
+
 ## Replies (receiver → sender, same namespace)
 
 - `{ "v": 1, "type": "ack", "id": string, "revision": integer }` after a payload is applied.
 - `{ "v": 1, "type": "error", "id"?: string, "code": string, "message": string, "revision": integer }`.
+- `{ "v": 1, "type": "pong", "id": string, "revision": integer, "screen"?: string, "screens": string[], "userAgent": string }` for a `ping`.
+- To every connected sender, for each remote key the receiver doesn't use (Enter, media, colour and digit keys): `{ "v": 1, "type": "key", "key": string, "code"?: string, "keyCode"?: number, "screen"?: string, "item"?: string }`. `item` is the focused row's `id`, or "<block>.<row>" counted from 0 when it has none.
 
 Codes: `version` (v is not 1), `bad-message` (not an envelope, unknown type, payload doesn't match, parts disagree), `too-big` (over a limit), `busy` (too many half-received payloads), `stale` (revision older than the receiver's; `revision` in the reply is the current one), `timeout` (parts stopped arriving), `unknown-screen`.

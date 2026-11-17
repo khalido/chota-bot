@@ -9,6 +9,10 @@ Categories: `Added` `Changed` `Fixed` `Security` `Removed` `Deprecated`.
 
 ## [Unreleased]
 
+### Added
+
+- **TV board:** the living-room TV shows a daily briefing through chota's own Cast receiver: the day's events and times, clock, weather with a sky that matches it, buses, chores, and school hours or the day's quote. From 18:00 it shows tomorrow. It turns on at 07:00, updates every minute, and leaves a TV that's playing something else alone. Ask in chat to show the week or the house, put up a list, note or photo for two hours, or turn it off. The remote's Home and other buttons work as usual, and leaving the board ends the cast.
+
 ### Fixed
 
 - **Telegram allowlist (live 10 Nov):** only the exact `/start` command is answered for a chat that isn't on the list; everything else from that chat is dropped.

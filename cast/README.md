@@ -4,11 +4,12 @@ A Google Cast Web Receiver that puts dashboards on a Google TV. A program on you
 
 ![The Today demo screen](docs/screens/today.png)
 
-- **Blocks**: `clock`, `stat`, `list`, `cards`, `text`, `image`, `weather`, `calendar-day`, `bus`. Sized for a TV across a room (1 rem = 1/54 of the screen height), dark, with 5% safe margins. Times count down on the TV, so a bus board stays right between updates.
+- **Blocks**: `clock`, `stat`, `list`, `cards`, `text`, `image`, `weather`, `calendar-day`, `week`, `bus`. Sized for a TV across a room (1 rem = 1/54 of the screen height), dark, with 5% safe margins. Times count down on the TV, so a bus board stays right between updates.
 - **HTML screens**: your HTML and CSS, sanitised with DOMPurify and shown in a Shadow DOM.
 - **Theme**: accent colour, density, time zone, 12-hour clock.
 - **Protocol** (v1, namespace `urn:x-cast:dev.khalido.cast`): `screens`, `screen`, `show`, `theme`, `clear`, with `ack`/`error` replies. Payloads over 60 KB go in parts and are joined on the TV. The newest `revision` wins. Full spec on the home page (`/`) and in [`src/llms.txt`](src/llms.txt) (served as `/llms.txt` with the limits filled in); the schema is [`src/protocol/schema.ts`](src/protocol/schema.ts).
-- Without a sender it shows a clock and "Waiting for a sender". Back on the remote closes it.
+- **Remote**: Back or leaving the app closes it, left/right switch screens, up/down move a focus ring over rows; other keys go to the senders as `key` messages. A `banner` message puts a line over any screen; `theme.rotate` cycles screens.
+- Without a sender it shows a clock and "Waiting for a sender".
 
 ## Run it
 
@@ -24,7 +25,7 @@ Demo options: `/receiver?demo=waiting`, `?demo&screen=bus` (any id from [`src/pr
 
 ## Send to it
 
-[`examples/sender.ts`](examples/sender.ts) (TypeScript, `@khalido/home`) and [`examples/sender.py`](examples/sender.py) (Python, pychromecast) launch the app and push a screen. `split()` in [`src/protocol/split.ts`](src/protocol/split.ts) cuts a payload into parts.
+[`examples/sender.ts`](examples/sender.ts) (TypeScript, `@khalido/home`) and [`examples/sender.py`](examples/sender.py) (Python, pychromecast) launch the app and push a screen. `split()` in [`src/protocol/split.ts`](src/protocol/split.ts) cuts a payload into parts. [`examples/listen.py`](examples/listen.py) pings a TV and prints what it sends back (acks, errors, the pong with its user agent, remote keys).
 
 ## Layout
 

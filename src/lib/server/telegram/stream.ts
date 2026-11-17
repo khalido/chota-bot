@@ -40,6 +40,7 @@ const TOOL_STATUS: Record<string, string> = {
 	schedule: 'Checking reminders',
 	home_status: 'Checking the house',
 	aircon: 'Checking the aircon',
+	tv: 'Checking the TV',
 	bus: 'Checking the buses',
 	chores: 'Checking the chores',
 	school_day: 'Checking the timetable',

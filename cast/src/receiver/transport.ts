@@ -1,5 +1,5 @@
 // How messages reach the core: Cast on a TV, or the demo in a browser. Both hand over parsed JSON per sender.
-import { NAMESPACE, type Reply } from '../protocol/schema.ts';
+import { NAMESPACE, type KeyEvent, type Reply } from '../protocol/schema.ts';
 
 export type Handlers = {
 	message(sender: string, data: unknown): void;
@@ -10,6 +10,8 @@ export type Transport = {
 	name: string;
 	start(h: Handlers): void;
 	reply(to: string, reply: Reply): void;
+	/** To every connected sender. */
+	broadcast(message: KeyEvent): void;
 	/** Close the app (Back on the remote). */
 	close(): void;
 };
@@ -43,6 +45,13 @@ export async function castTransport(): Promise<Transport> {
 			ctx.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, (e) =>
 				h.gone((e as unknown as { senderId: string }).senderId)
 			);
+			// Never hold the TV: when the page is hidden (Home, another app, an input switch), end the Cast session so the
+			// sender sees it stop and the cast icon goes. pagehide covers a page torn down without a visibility change.
+			const leave = () => {
+				if (document.visibilityState === 'hidden') ctx.stop();
+			};
+			document.addEventListener('visibilitychange', leave);
+			addEventListener('pagehide', () => ctx.stop(), { once: true });
 			ctx.start({
 				disableIdleTimeout: true,
 				customNamespaces: { [NAMESPACE]: cast.framework.system.MessageType.JSON },
@@ -56,6 +65,13 @@ export async function castTransport(): Promise<Transport> {
 				ctx.sendCustomMessage(NAMESPACE, to, reply);
 			} catch {
 				// The sender has gone; nothing to tell.
+			}
+		},
+		broadcast(message) {
+			try {
+				ctx.sendCustomMessage(NAMESPACE, undefined, message);
+			} catch {
+				// No sender connected.
 			}
 		},
 		close: () => ctx.stop()

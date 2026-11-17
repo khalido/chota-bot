@@ -31,6 +31,32 @@ export const hour = (ms: number) =>
 export const longDate = (ms: number, tz?: string) =>
 	fmt(ms, { weekday: 'long', day: 'numeric', month: 'long' }, tz);
 
+/** The calendar day of `ms` in the theme's zone, "2026-11-17". */
+export function isoDay(ms: number) {
+	const parts = new Intl.DateTimeFormat('en', {
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		timeZone: zone()
+	}).formatToParts(ms);
+	const part = (t: string) => parts.find((p) => p.type === t)?.value;
+	return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+/** The hour of `ms` with minutes as a fraction (7.5 is 7:30), in the theme's zone. */
+export function hourOf(ms: number, tz?: string) {
+	const [h, m] = new Intl.DateTimeFormat('en', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hourCycle: 'h23',
+		timeZone: zone(tz)
+	})
+		.format(ms)
+		.split(':')
+		.map(Number);
+	return h + m / 60;
+}
+
 /** Whole minutes from now to `ms`. */
 export const minutesFrom = (ms: number) => Math.floor((ms - view.now) / 60_000);
 

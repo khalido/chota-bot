@@ -38,9 +38,7 @@ export function scheduleSection(
 		teacher: abbreviateTeacher(p.teacher),
 		period: p.period
 	}));
-	const reminder = rows.some((r) => /\bsport\b/i.test(r.subject))
-		? 'Take sports stuff!'
-		: undefined;
+	const reminder = sportsNudge(periods);
 	return {
 		title: schoolWeek ? `SCHOOL · T${schoolWeek.term} Wk${schoolWeek.week}` : 'SCHOOL',
 		kind: 'schedule',
@@ -49,6 +47,11 @@ export function scheduleSection(
 		...(schoolUpcoming.length ? { upcoming: schoolUpcoming } : {}),
 		...(busLine ? { busLine } : {})
 	};
+}
+
+/** "Take sports stuff!" on a day with a sport period, else undefined. The print and the TV board share it. */
+export function sportsNudge(periods: Pick<SchedulePeriod, 'subject'>[]): string | undefined {
+	return periods.some((p) => /\bsport\b/i.test(p.subject)) ? 'Take sports stuff!' : undefined;
 }
 
 /**

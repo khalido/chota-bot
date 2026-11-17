@@ -16,4 +16,5 @@
 	const html = $derived(hljs.highlight(code, { language: lang }).value);
 </script>
 
+<!-- eslint-disable-next-line svelte/no-at-html-tags -- highlight.js output of our own samples -->
 <pre class="mt-4"><code class="hljs">{@html html}</code></pre>

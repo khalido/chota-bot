@@ -6,11 +6,7 @@
 	let width = $state(0);
 </script>
 
-<a
-	href="/receiver?demo"
-	class="group mt-8 block"
-	aria-label="Open the demo screens at full size"
->
+<a href="/receiver?demo" class="group mt-8 block" aria-label="Open the demo screens at full size">
 	<div
 		bind:clientWidth={width}
 		class="relative aspect-video overflow-hidden rounded-xl bg-[#0c0e11] shadow-lg ring-1 ring-black/10 transition group-hover:ring-current/40 dark:ring-white/10"

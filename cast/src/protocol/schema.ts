@@ -55,12 +55,17 @@ const imageUrl = z
 
 /** How many grid columns a block takes on a screen; the screen sets the column count. */
 const span = z.number().int().min(1).max(4).optional();
+/** How many grid rows a block takes. Default 1. */
+const rows = z.number().int().min(1).max(4).optional();
 
 export const ClockBlock = z.object({
 	type: z.literal('clock'),
 	span,
+	rows,
 	/** Show the date under the time. Default true. */
 	date: z.boolean().optional(),
+	/** "Good morning" (afternoon, evening) above the time. Default true. */
+	greeting: z.boolean().optional(),
 	/** IANA zone; default the theme's, else the TV's. */
 	timezone: timezone.optional()
 });
@@ -68,6 +73,7 @@ export const ClockBlock = z.object({
 export const StatBlock = z.object({
 	type: z.literal('stat'),
 	span,
+	rows,
 	label: text(200),
 	value: z.union([z.string().max(40), z.number()]),
 	unit: text(20).optional(),
@@ -81,6 +87,7 @@ export const StatBlock = z.object({
 export const ListBlock = z.object({
 	type: z.literal('list'),
 	span,
+	rows,
 	title: text(200).optional(),
 	items: items(
 		z.object({
@@ -97,6 +104,7 @@ export const ListBlock = z.object({
 export const CardsBlock = z.object({
 	type: z.literal('cards'),
 	span,
+	rows,
 	title: text(200).optional(),
 	items: items(
 		z.object({
@@ -112,6 +120,7 @@ export const CardsBlock = z.object({
 export const TextBlock = z.object({
 	type: z.literal('text'),
 	span,
+	rows,
 	title: text(200).optional(),
 	/** Markdown-ish: "# heading", "- bullet", blank-line paragraphs, **bold**, *italic*, `code`. No HTML. */
 	text: text()
@@ -120,6 +129,7 @@ export const TextBlock = z.object({
 export const ImageBlock = z.object({
 	type: z.literal('image'),
 	span,
+	rows,
 	src: imageUrl,
 	alt: text(300).optional(),
 	caption: text(300).optional(),
@@ -130,10 +140,13 @@ export const ImageBlock = z.object({
 export const WeatherBlock = z.object({
 	type: z.literal('weather'),
 	span,
+	rows,
 	place: text(100).optional(),
 	now: z.object({
 		tempC: z.number(),
 		condition: text(80),
+		/** The mood behind the numbers. Default: read from `condition` ("Showers" is rain) and the hour. */
+		sky: z.enum(['sun', 'partly', 'cloud', 'rain', 'storm', 'snow', 'fog', 'night']).optional(),
 		feelsLikeC: z.number().optional(),
 		/** e.g. "High 24° · Low 15°" or "Rain from 3pm". */
 		note: text(200).optional()
@@ -149,26 +162,46 @@ export const WeatherBlock = z.object({
 	).optional()
 });
 
+const CalendarEvent = z.object({
+	id: z.string().max(100).optional(),
+	title: text(300),
+	/** Omit for an all-day event. */
+	start: instant.optional(),
+	end: instant.optional(),
+	where: text(200).optional(),
+	who: text(200).optional()
+});
+
 export const CalendarDayBlock = z.object({
 	type: z.literal('calendar-day'),
 	span,
+	rows,
 	title: text(200).optional(),
-	events: items(
-		z.object({
-			id: z.string().max(100).optional(),
-			title: text(300),
-			/** Omit for an all-day event. */
-			start: instant.optional(),
-			end: instant.optional(),
-			where: text(200).optional(),
-			who: text(200).optional()
-		})
-	)
+	events: items(CalendarEvent)
+});
+
+/** Several days side by side, one column each; today is marked. Usually alone on its screen (columns: 1). */
+export const WeekBlock = z.object({
+	type: z.literal('week'),
+	span,
+	rows,
+	title: text(200).optional(),
+	days: z
+		.array(
+			z.object({
+				/** The calendar day, "2026-11-17"; the column is headed "Tue 17". */
+				date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date is YYYY-MM-DD'),
+				events: items(CalendarEvent)
+			})
+		)
+		.min(1)
+		.max(7)
 });
 
 export const BusBlock = z.object({
 	type: z.literal('bus'),
 	span,
+	rows,
 	title: text(200).optional(),
 	/** One row per route and direction; minutes count down on the receiver, departures gone are hidden. */
 	routes: items(
@@ -199,6 +232,7 @@ export const Block = z.discriminatedUnion('type', [
 	ImageBlock,
 	WeatherBlock,
 	CalendarDayBlock,
+	WeekBlock,
 	BusBlock
 ]);
 export type Block = z.infer<typeof Block>;
@@ -211,6 +245,8 @@ export const Screen = z
 		title: text(60),
 		/** Grid columns for the blocks, 1–4. Default 2. */
 		columns: z.number().int().min(1).max(4).optional(),
+		/** Relative row heights, top first: [3, 2] makes the first row 1.5× the second. Rows not listed weigh 1. */
+		rows: z.array(z.number().positive().max(10)).max(8).optional(),
 		blocks: z.array(Block).max(LIMITS.blocksPerScreen).optional(),
 		/** Your own HTML and CSS, sanitised (no scripts, handlers or frames) and shown in a Shadow DOM. */
 		html: z
@@ -236,8 +272,12 @@ export const Theme = z.object({
 	/** IANA zone for every time shown; default the TV's. */
 	timezone: timezone.optional(),
 	/** 12-hour clock ("7:40 pm"). Default false (24-hour). */
-	hour12: z.boolean().optional()
+	hour12: z.boolean().optional(),
+	/** Show each screen in turn for this many seconds. Pauses for ROTATE_PAUSE_MS after a remote key. Off by default. */
+	rotate: z.number().int().min(5).max(3600).optional()
 });
+/** Auto-rotate waits this long after the last remote key, so someone using the remote isn't moved on. */
+export const ROTATE_PAUSE_MS = 120_000;
 export type Theme = z.infer<typeof Theme>;
 
 /** The payload of each message type, in `data`. */
@@ -254,8 +294,18 @@ export const Payloads = {
 	/** Set the theme (replaces the whole theme). */
 	theme: Theme,
 	/** Back to the waiting clock. */
-	clear: z.object({}).optional()
+	clear: z.object({}).optional(),
+	/** A line over whatever is on screen for `seconds` (default 30); `seconds: 0` takes it down. A newer one replaces it. */
+	banner: z.object({
+		text: text(200),
+		/** Default "info". */
+		tone: z.enum(['info', 'good', 'warn', 'bad']).optional(),
+		seconds: z.number().min(0).max(3600).optional()
+	}),
+	/** Ask what the receiver is showing: it answers `pong`. No revision check. */
+	ping: z.object({}).optional()
 } as const;
+export type Banner = z.infer<typeof Payloads.banner>;
 export type MessageType = keyof typeof Payloads;
 
 /** What arrives on the namespace. A payload too big for one message is split: see `split()`. */
@@ -291,4 +341,32 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 /** Receiver → sender. `revision` is always the receiver's current one, so a sender refused as stale can catch up. */
 export type Reply =
 	| { v: 1; type: 'ack'; id: string; revision: number }
-	| { v: 1; type: 'error'; id?: string; code: ErrorCode; message: string; revision: number };
+	| { v: 1; type: 'error'; id?: string; code: ErrorCode; message: string; revision: number }
+	| {
+			v: 1;
+			type: 'pong';
+			id: string;
+			revision: number;
+			/** The screen on show; undefined while waiting. */
+			screen?: string;
+			screens: string[];
+			userAgent: string;
+			/** Frames a second the page drew over the last few seconds. */
+			fps?: number;
+	  };
+
+/**
+ * Receiver → every sender: a remote key the receiver doesn't use itself (Enter, media keys, colour keys, digits).
+ * `item` is the focused item: its `id`, or "<block>.<row>" (both from 0) when it has none.
+ */
+export type KeyEvent = {
+	v: 1;
+	type: 'key';
+	/** KeyboardEvent.key, e.g. "Enter", "MediaPlayPause", "ColorF0Red", "1". */
+	key: string;
+	/** KeyboardEvent.code and keyCode, for remotes whose keys come through as "Unidentified". */
+	code?: string;
+	keyCode?: number;
+	screen?: string;
+	item?: string;
+};

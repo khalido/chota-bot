@@ -315,3 +315,65 @@ describe('message types', () => {
 		expect(r.out[0].reply).toMatchObject({ code: 'bad-message' });
 	});
 });
+
+describe('v1 additions', () => {
+	const send = (
+		core: ReturnType<typeof createCore>,
+		type: Parameters<typeof split>[0],
+		data: unknown,
+		revision = 1
+	) => core.receive('s', wire(split(type, data, { revision })[0]));
+
+	it('shows a banner for its seconds, replaces it, and takes it down with seconds 0', () => {
+		const { core, tick } = setup();
+		send(core, 'banner', { text: 'Shoes on', seconds: 10 });
+		expect(core.state.banner).toEqual({ text: 'Shoes on', tone: 'info', until: 11_000 });
+		tick(1_000);
+		send(core, 'banner', { text: 'Bus now', tone: 'warn' });
+		expect(core.state.banner).toMatchObject({ text: 'Bus now', tone: 'warn', until: 32_000 });
+		send(core, 'banner', { text: 'x', seconds: 0 });
+		expect(core.state.banner).toBeUndefined();
+		expect(core.state.updatedAt).toBeUndefined();
+	});
+
+	it('answers ping with pong whatever the revision, and changes nothing', () => {
+		const { core } = setup();
+		send(core, 'screens', { screens: [screen('a'), screen('b')] }, 50);
+		const r = core.receive('s', { v: 1, id: 'p1', type: 'ping', revision: 0 });
+		expect(r.changed).toBe(false);
+		expect(r.out[0].reply).toEqual({
+			v: 1,
+			type: 'pong',
+			id: 'p1',
+			revision: 50,
+			screen: 'a',
+			screens: ['a', 'b'],
+			userAgent: ''
+		});
+	});
+
+	it('selects a screen from the remote without touching the revision', () => {
+		const { core } = setup();
+		send(core, 'screens', { screens: [screen('a'), screen('b')] }, 7);
+		expect(core.select('b')).toBe(true);
+		expect(core.select('nope')).toBe(false);
+		expect(core.state).toMatchObject({ current: 'b', revision: 7 });
+	});
+
+	it('accepts a week block and refuses a bad date or more than seven days', () => {
+		const { core } = setup();
+		const week = (days: unknown[]) => ({
+			screens: [{ id: 'w', title: 'Week', blocks: [{ type: 'week', days }] }]
+		});
+		const day = (date: string) => ({
+			date,
+			events: [{ title: 'Swim', start: '2026-11-17T16:00:00+11:00' }]
+		});
+		expect(send(core, 'screens', week([day('2026-11-17'), day('2026-11-18')])).changed).toBe(true);
+		expect(send(core, 'screens', week([day('17/11/2026')])).out[0].reply).toMatchObject({
+			code: 'bad-message'
+		});
+		const eight = Array.from({ length: 8 }, (_, i) => day(`2026-11-${10 + i}`));
+		expect(send(core, 'screens', week(eight)).out[0].reply).toMatchObject({ type: 'error' });
+	});
+});

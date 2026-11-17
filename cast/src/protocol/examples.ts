@@ -89,13 +89,128 @@ export function exampleScreens(now = Date.now()) {
 		]
 	};
 
+	// The next seven days, from today in the TV's zone.
+	const ymd = (d: Date) =>
+		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	const at = (days: number, hour: number, minute = 0) => {
+		const d = new Date(now);
+		d.setDate(d.getDate() + days);
+		d.setHours(hour, minute, 0, 0);
+		return d;
+	};
+	const plans: [string, number, string?][][] = [
+		[
+			['Swim lesson', 16, 'Aquatic centre'],
+			['Video call with the grandparents', 18]
+		],
+		[
+			['Dentist', 10, 'Main St'],
+			['Bins out', 18]
+		],
+		[['Piano', 17, 'Music room']],
+		[
+			['Footy training', 16, 'Oval 2'],
+			['Book club', 19]
+		],
+		[['Pizza night', 18]],
+		[
+			['Market', 9],
+			['Birthday party', 13, 'The park'],
+			['Movie', 19]
+		],
+		[]
+	];
+	const week: Of<'week'> = {
+		type: 'week',
+		days: plans.map((events, i) => ({
+			date: ymd(at(i, 0)),
+			events: events.map(([title, hour, where]) => ({
+				title,
+				start: at(i, hour).toISOString(),
+				where
+			}))
+		}))
+	};
+
+	// The daily briefing, as chota lays it out: the day's calendar large, the clock beside it, then weather, buses,
+	// chores and the school day along the bottom (a quote in that last cell after school hours).
+	const briefing: Screen = {
+		id: 'today',
+		title: 'Today',
+		columns: 4,
+		rows: [3, 2],
+		blocks: [
+			{
+				type: 'calendar-day',
+				span: 3,
+				title: 'Today',
+				events: [
+					{ id: 'b0', title: 'Library books due' },
+					{ id: 'b1', title: 'School run', start: iso(now, -150), end: iso(now, -120) },
+					{
+						id: 'b2',
+						title: 'Video call with the grandparents',
+						start: iso(now, -15),
+						end: iso(now, 20)
+					},
+					{
+						id: 'b3',
+						title: 'Swim lesson',
+						start: iso(now, 55),
+						end: iso(now, 100),
+						where: 'Aquatic centre'
+					},
+					{ id: 'b4', title: 'Piano practice', start: iso(now, 130), end: iso(now, 160) },
+					{ id: 'b5', title: 'Dinner with friends', start: iso(now, 240), where: 'Their place' }
+				]
+			},
+			{ type: 'clock' },
+			{
+				type: 'weather',
+				now: { tempC: 21.4, condition: 'Partly cloudy', note: 'High 24° · Showers from 4 pm' },
+				hours: [1, 2, 3, 4].map((h, i) => ({
+					at: onHour(now, h),
+					tempC: [22, 23, 21, 19][i],
+					rainPct: [10, 40, 70, 30][i]
+				}))
+			},
+			{
+				type: 'bus',
+				routes: [
+					{
+						route: '501',
+						to: 'Town',
+						departures: [{ at: iso(now, 6.2), realtime: true }, { at: iso(now, 18) }]
+					},
+					{
+						route: 'M30',
+						to: 'School',
+						departures: [{ at: iso(now, 11.5), realtime: true }, { at: iso(now, 26) }]
+					}
+				]
+			},
+			{
+				type: 'list',
+				title: 'Chores',
+				items: [
+					{ id: 'c1', text: 'Feed the cat', meta: 'Sam' },
+					{ id: 'c2', text: 'Empty the dishwasher', meta: 'Jo' },
+					{ id: 'c3', text: 'Water the plants', meta: 'Alex', done: true }
+				]
+			},
+			{
+				type: 'list',
+				title: 'School · T4 Wk6',
+				items: [
+					{ text: '8:50am-3:10pm · Take sports stuff!', meta: 'Sam' },
+					{ text: '8:50am-3:10pm · Library day', meta: 'Jo' }
+				]
+			}
+		]
+	};
+
 	const screens: Screen[] = [
-		{
-			id: 'today',
-			title: 'Today',
-			columns: 2,
-			blocks: [{ type: 'clock' }, weather, calendar, bus]
-		},
+		briefing,
 		{ id: 'clock', title: 'Clock', columns: 1, blocks: [{ type: 'clock' }] },
 		{
 			id: 'energy',
@@ -209,6 +324,7 @@ export function exampleScreens(now = Date.now()) {
 		{ id: 'weather', title: 'Weather', columns: 1, blocks: [weather] },
 		{ id: 'calendar', title: 'Calendar', columns: 1, blocks: [calendar] },
 		{ id: 'bus', title: 'Buses', columns: 1, blocks: [bus] },
+		{ id: 'week', title: 'Week', columns: 1, blocks: [week] },
 		{
 			id: 'html',
 			title: 'HTML',
