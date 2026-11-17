@@ -22,19 +22,10 @@ export const APP_ID = 'FCE23D20';
 export const DEFAULT_TV = 'Living Room TV';
 /** A screen put up from chat stays this long, then the board goes back to its own. */
 const CHAT_SCREEN_MS = 2 * 60 * 60_000;
-/**
- * Resend everything this often even when nothing changed: a relaunched receiver
- * starts empty, and chota can't hear its pong yet (@khalido/home's `send`
- * doesn't read replies), so this bounds how long a TV stays blank.
- */
-const RESEND_MS = 2 * 60_000;
-
 const NOT_SET_UP = "the house isn't connected yet (no home config on this box)";
 
 /** The chat screen, while it lasts. In memory: a restart drops it, which is fine. */
 let chat: { screen: Screen; until: number } | null = null;
-/** Per TV: the last screens sent, and when. */
-const sent = new Map<string, { json: string; at: number }>();
 
 function cast() {
 	const h = getHome();
@@ -80,7 +71,6 @@ async function push(tv: string, screens: Screen[], show?: string): Promise<void>
 	const revision = Date.now();
 	for (const message of split('screens', data, { revision }))
 		await c.client.send(tv, NAMESPACE, message);
-	sent.set(tv, { json: JSON.stringify(screens), at: revision });
 }
 
 export type LaunchResult =
@@ -122,27 +112,21 @@ export async function stopTv(tv = DEFAULT_TV): Promise<{ ok: boolean; error?: st
 	const name = tvsShowing().find((n) => n.toLowerCase() === tv.toLowerCase());
 	if (!name) return { ok: false, error: `the board isn't on ${tv}` };
 	await c.client.stop(name);
-	sent.delete(name);
 	chat = null;
 	return { ok: true };
 }
 
 /**
- * Update every TV already showing the board, when its screens changed or
- * `RESEND_MS` passed. Returns the TVs sent to. Never launches.
+ * Send the board to every TV already showing it. Never launches.
+ *
+ * Every time, changed or not: a relaunched receiver starts empty and chota
+ * can't hear it (@khalido/home's `send` doesn't read replies), so sending each
+ * minute keeps a TV blank for a minute at most. A few KB on the LAN.
  */
 export async function refreshTv(now = new Date()): Promise<string[]> {
 	const tvs = tvsShowing();
-	for (const name of sent.keys()) if (!tvs.includes(name)) sent.delete(name);
 	if (!tvs.length) return [];
 	const screens = buildScreens(await gatherTv(now), now, chatScreens(now.getTime()));
-	const json = JSON.stringify(screens);
-	const updated: string[] = [];
-	for (const tv of tvs) {
-		const last = sent.get(tv);
-		if (last && last.json === json && now.getTime() - last.at < RESEND_MS) continue;
-		await push(tv, screens);
-		updated.push(tv);
-	}
-	return updated;
+	for (const tv of tvs) await push(tv, screens);
+	return tvs;
 }

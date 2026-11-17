@@ -1,4 +1,4 @@
-// Every minute: update the TV board (cast/ receiver) on any TV already showing it, when its screens changed. Never launches. Kiosk only.
+// Every minute: send the TV board (cast/ receiver) to any TV already showing it, so a relaunched receiver fills within a minute. Never launches. Kiosk only.
 import { KIOSK } from '$app/env/private';
 import { defineJob } from '#lib/server/scheduler.ts';
 import { refreshTv } from '#lib/server/tv/cast.ts';
