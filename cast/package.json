@@ -1,0 +1,32 @@
+{
+	"name": "cast",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@khalido/home": "^0.2.4",
+		"@sveltejs/vite-plugin-svelte": "^7.3.1",
+		"@tailwindcss/vite": "^4.3.5",
+		"@types/bun": "^1.4.4",
+		"@types/chromecast-caf-receiver": "^7.0.1",
+		"jsdom": "^31.0.1",
+		"svelte": "^5.57.3",
+		"svelte-check": "^4.7.8",
+		"tailwindcss": "^4.3.5",
+		"typescript": "^6",
+		"vite": "^8.3.8",
+		"vitest": "^5.1.0",
+		"wrangler": "^4.162.0"
+	},
+	"dependencies": {
+		"dompurify": "^3.4.18",
+		"highlight.js": "^11.12.0",
+		"zod": "^4.6.7"
+	}
+}

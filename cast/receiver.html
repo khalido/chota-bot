@@ -1,0 +1,31 @@
+<!--
+  cast.khalido.dev/receiver: a Google Cast Web Receiver that shows dashboards on a Google TV.
+
+  It holds no data and fetches nothing: a sender on the same network launches the app and pushes screens as JSON on
+  the namespace urn:x-cast:dev.khalido.cast. No sender JavaScript runs here; HTML screens are sanitised and shown in a
+  Shadow DOM. With no sender it shows a clock and "Waiting for a sender". Back on the remote closes it.
+
+  Message format, v1 (full protocol at /llms.txt and on the home page /):
+    { "v": 1, "id": "a1", "type": "screens", "revision": 1763164800000,
+      "data": { "screens": [ { "id": "home", "title": "Home",
+        "blocks": [ { "type": "clock" }, { "type": "stat", "label": "Inside", "value": 21, "unit": "°C" } ] } ] } }
+  Types: screens, screen, show, theme, clear. Payloads over 60 KB are split into parts (seq, total, chunk).
+  Replies to the sender: { "v": 1, "type": "ack" | "error", ... }.
+
+  Source: https://github.com/khalido/chota-bot/tree/main/cast
+-->
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<!-- csp -->
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Cast dashboard receiver</title>
+		<script type="module" src="/src/receiver/main.ts"></script>
+	</head>
+	<body>
+		<!-- On Google TV, remote keys reach the page only with a media element; this one stays hidden. -->
+		<cast-media-player class="hidden"></cast-media-player>
+		<div id="app"></div>
+	</body>
+</html>

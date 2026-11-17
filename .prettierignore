@@ -18,3 +18,9 @@ docs/box-design/
 devices/
 docs/chota-overview.html
 src/lib/server/tools/calc/places.json
+
+# cast/ build output
+/cast/dist/
+
+# Kept byte-identical with jaldi/docs/content-sync.md
+docs/content-sync.md

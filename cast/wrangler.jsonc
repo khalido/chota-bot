@@ -1,0 +1,15 @@
+// Static assets only: the built site in dist/, no Worker code. /receiver serves receiver.html.
+// Deploy: bun run build && CLOUDFLARE_ACCOUNT_ID=<khalido.dev account> bunx wrangler deploy
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "cast",
+	"compatibility_date": "2026-11-01",
+	// No account_id here (the repo is public): deploy with CLOUDFLARE_ACCOUNT_ID set to the khalido.dev account, never another account wrangler lists.
+	"assets": {
+		"directory": "./dist",
+		// /receiver → receiver.html with no redirect; / → index.html.
+		"html_handling": "drop-trailing-slash",
+		"not_found_handling": "none"
+	},
+	"routes": [{ "pattern": "cast.khalido.dev", "custom_domain": true }]
+}

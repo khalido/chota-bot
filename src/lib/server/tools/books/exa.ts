@@ -42,11 +42,20 @@ const SCHEMA = {
 	required: ['blurb']
 };
 
+/** The goal of a book-review search, prebaked: what to rank first, what to drop, what to pull. */
+const BOOK_OBJECTIVE =
+	'A family is deciding whether one book is worth reading, for adults or kids. ' +
+	"Rank first the publisher's page and reputable reviews (newspapers, magazines, children's-book review sites). " +
+	'Exclude shops, summaries for students, piracy sites and pages about other books by the same author. ' +
+	'Pull a one-line summary, the age range if given, the main themes, and what reviewers praise or criticise.';
+
 export async function bookBlurb(title: string, author?: string): Promise<BookBlurb> {
 	const r = await exa().search(`${title}${author ? ` by ${author}` : ''} book review`, {
 		type: 'auto',
 		numResults: 5,
 		contents: { highlights: true },
+		// Exa ranks by this goal, beyond the query (exa-js 2.28 `objective`).
+		objective: BOOK_OBJECTIVE,
 		systemPrompt:
 			'About this one book only. Prefer the publisher, reputable reviews and children’s-book review sites.',
 		outputSchema: SCHEMA

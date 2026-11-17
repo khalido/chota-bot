@@ -1,0 +1,68 @@
+# cast.khalido.dev
+
+> A Google Cast Web Receiver that shows dashboards on a Google TV. A sender on the same network launches the app and pushes screens as JSON. The receiver holds no data, fetches nothing, and never runs sender JavaScript.
+
+- Receiver: https://cast.khalido.dev/receiver
+- Cast app id: {{APP_ID}} (published, unlisted)
+- Namespace: {{NAMESPACE}}
+- Source and full schema: {{SOURCE}} (src/protocol/schema.ts)
+- Demo in a browser: https://cast.khalido.dev/receiver?demo (add &screen=<id>, &density=compact, &accent=%23RRGGBB)
+
+## Sending
+
+1. Launch app {{APP_ID}} on the TV with any Cast sender library (TypeScript: @khalido/home `launch(target, appId)`; Python: pychromecast `BaseController(namespace, app_id)`).
+2. Send JSON messages on {{NAMESPACE}} (`send(target, namespace, message)` / `send_message(data)`).
+3. Send again whenever something changes. Back on the remote closes the app; launch again to come back.
+
+## Envelope (v1)
+
+Every message: `{ "v": 1, "id": string, "type": string, "revision": integer, "data"?: object }`.
+
+- `id`: yours; replies name it.
+- `revision`: the receiver refuses one older than the newest it applied (equal is accepted). Use Date.now() in ms. If two senders talk, the newest wins.
+- `data`: the payload for the type.
+
+## Types
+
+- `screens`: `data: { screens: Screen[], show?: screenId }`. Replaces the list. Without `show`, the current screen stays if still present, else the first.
+- `screen`: `data: { screen: Screen }`. Replaces the screen with that id, or appends it.
+- `show`: `data: { screen: screenId }`. Switches screens. Unknown id: error `unknown-screen`.
+- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", timezone?: IANA zone, hour12?: boolean }`. Replaces the whole theme.
+- `clear`: no data. Back to the waiting clock.
+
+Example:
+
+{"v":1,"id":"a1","type":"screens","revision":1763164800000,"data":{"screens":[{"id":"today","title":"Today","columns":2,"blocks":[{"type":"clock"},{"type":"stat","label":"Solar now","value":4.2,"unit":"kW","delta":"+0.6 kW","tone":"good"}]}]}}
+
+## Screen
+
+`{ id: string, title: string (tab label), columns?: 1-4 (default 2), blocks?: Block[], html?: { html: string, css?: string } }`. Exactly one of `blocks` or `html`.
+
+Blocks share an optional `span` (columns taken, 1-4). Instants are ISO 8601 with Z or an offset. Images are `https:` or `data:image/...;base64` only.
+
+- `clock`: `date?: boolean` (default true), `timezone?`
+- `stat`: `label`, `value: string | number`, `unit?`, `delta?: string`, `tone?: "good" | "bad" | "neutral"`, `note?`
+- `list`: `title?`, `items: { id?, text, meta?, detail?, done? }[]`
+- `cards`: `title?`, `items: { id?, title, body?, meta?, image? }[]`
+- `text`: `title?`, `text` (markdown-ish: "# heading", "- bullet", blank-line paragraphs, **bold**, *italic*, `code`; no HTML)
+- `image`: `src`, `alt?`, `caption?`, `fit?: "contain" | "cover"`
+- `weather`: `place?`, `now: { tempC, condition, feelsLikeC?, note? }`, `hours?: { at, tempC, rainPct? }[]` (past hours hidden)
+- `calendar-day`: `title?`, `events: { id?, title, start?, end?, where?, who? }[]` (no start = all day; current event marked, past dimmed)
+- `bus`: `title?`, `routes: { route, to?, departures: { at, realtime?, cancelled? }[] }[]` (minutes count down on the TV; gone departures hidden)
+
+HTML screens: sanitised with DOMPurify (no script, event handlers, iframe, object, embed, form, link, meta, base; URLs https: or data:image/ only) and rendered in a Shadow DOM. `css` is applied as a constructed stylesheet (no @import). 1rem = 1/54 of screen height.
+
+## Big payloads
+
+Cast caps a message at 64 KiB. Keep each message under {{PART_BYTES}} bytes. To split: JSON.stringify(data), slice it, and send each slice as `{ v, id, type, revision, seq, total, chunk }` with the same id, type and revision on every part, `seq` from 0. The receiver joins slices in seq order and parses them as `data`.
+
+## Limits
+
+{{LIMITS}}
+
+## Replies (receiver → sender, same namespace)
+
+- `{ "v": 1, "type": "ack", "id": string, "revision": integer }` after a payload is applied.
+- `{ "v": 1, "type": "error", "id"?: string, "code": string, "message": string, "revision": integer }`.
+
+Codes: `version` (v is not 1), `bad-message` (not an envelope, unknown type, payload doesn't match, parts disagree), `too-big` (over a limit), `busy` (too many half-received payloads), `stale` (revision older than the receiver's; `revision` in the reply is the current one), `timeout` (parts stopped arriving), `unknown-screen`.

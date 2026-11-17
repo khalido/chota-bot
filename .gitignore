@@ -68,3 +68,7 @@ py/.venv/
 __pycache__/
 .ruff_cache/
 .pytest_cache/
+
+# cast/: the Cast receiver package (own build, deployed to Cloudflare)
+/cast/dist/
+/cast/.wrangler/

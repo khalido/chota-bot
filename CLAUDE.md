@@ -79,6 +79,7 @@ src/
 
 devices/                 # code for hardware around the house
   pico-display/          # Pimoroni Pico Display 2.0" + Pico W (MicroPython apps, own CLAUDE.md)
+cast/                    # Cast TV receiver at cast.khalido.dev: own package and deploy (cast/README.md)
 deploy/                  # production deploy: deploy.sh + chota.service
 scripts/                 # ad-hoc / exploratory (printer-test, *-explore)
 data/                    # runtime state — sqlite, logs, sentral cache. All gitignored.

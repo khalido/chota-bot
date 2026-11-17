@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+:root {
+	color-scheme: light dark;
+}
+body {
+	margin: 0;
+	background: light-dark(#fbfaf7, #111315);
+	color: light-dark(#23262a, #d5d7da);
+	font-family: system-ui, sans-serif;
+}
+pre {
+	background: light-dark(#f0eee8, #1a1d20);
+	border-radius: 0.5rem;
+	padding: 1rem;
+	overflow-x: auto;
+	font-size: 0.8rem;
+	line-height: 1.5;
+}
+code {
+	font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/* Syntax colours for highlight.js, muted, light and dark. */
+.hljs-attr {
+	color: light-dark(#7a3e9d, #c4a7e7);
+}
+.hljs-string {
+	color: light-dark(#3d7a3d, #a3c995);
+}
+.hljs-number,
+.hljs-literal {
+	color: light-dark(#b0552b, #e8a87c);
+}
+.hljs-keyword,
+.hljs-built_in {
+	color: light-dark(#1f5f99, #8fb8e0);
+}
+.hljs-title,
+.hljs-title.function_ {
+	color: light-dark(#8a5a00, #e0c27a);
+}
+.hljs-comment {
+	color: light-dark(#8a8f96, #7d838a);
+	font-style: italic;
+}
+.hljs-punctuation,
+.hljs-operator {
+	opacity: 0.7;
+}

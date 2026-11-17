@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/* Everything is sized in rem, and a rem is a fraction of the screen's height: 20 px at 1080p comfortable, about
+   17 px compact. So the same classes read the same from across the room on any TV. */
+:root {
+	--accent: #d9a55b;
+	font-size: calc(100vh / 54);
+	color-scheme: dark;
+}
+:root[data-density='compact'] {
+	font-size: calc(100vh / 64);
+}
+
+@theme inline {
+	--color-accent: var(--accent);
+	--font-sans: 'Google Sans', Roboto, system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+	height: 100%;
+	margin: 0;
+	overflow: hidden;
+	/* Not pure black, nothing pure white: a TV shows this for hours. */
+	background: #0c0e11;
+	color: #cfd2d6;
+	-webkit-font-smoothing: antialiased;
+}
+
+.label {
+	@apply text-[1.15rem] font-semibold tracking-[0.18em] text-neutral-500 uppercase;
+}
