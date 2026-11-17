@@ -70,7 +70,13 @@
 			id: 'a3',
 			type: 'theme',
 			revision: 1763164800000,
-			data: { accent: '#7aa2c8', density: 'compact', timezone: 'Australia/Sydney', hour12: true }
+			data: {
+				accent: '#7aa2c8',
+				density: 'compact',
+				brightness: 'bright',
+				timezone: 'Australia/Sydney',
+				hour12: true
+			}
 		},
 		{
 			v: 1,
@@ -150,8 +156,8 @@
 	</ol>
 	<p class="mt-3">
 		The receiver keeps nothing between launches and fetches nothing but the images and fonts you
-		name. It never runs your JavaScript. Launched with no sender, it shows a clock and "Waiting for
-		a sender".
+		name. It never runs your JavaScript. Launched with no sender, it shows a clock and "Nothing on
+		yet".
 	</p>
 
 	<h2 class="mt-12 text-2xl font-semibold">Messages</h2>
@@ -171,7 +177,8 @@
 		<li><code>show</code>: switch to a screen.</li>
 		<li>
 			<code>theme</code>: accent colour, density (<code>comfortable</code> or <code>compact</code>),
-			time zone, 12-hour clock, and <code>rotate</code> to show each screen in turn.
+			brightness (<code>dim</code>, <code>normal</code> or <code>bright</code>), time zone, 12-hour
+			clock, and <code>rotate</code> to show each screen in turn.
 		</li>
 		<li><code>clear</code>: back to the waiting clock.</li>
 		<li>

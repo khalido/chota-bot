@@ -267,6 +267,8 @@ export const Theme = z.object({
 		.string()
 		.regex(/^#[0-9a-f]{6}$/i, 'accent is a hex colour like #e0a458')
 		.optional(),
+	/** How bright text is: "dim" for night, "normal" (default), "bright" for a sunny room. The background stays black. */
+	brightness: z.enum(['dim', 'normal', 'bright']).optional(),
 	/** "comfortable" (default) or "compact": smaller type, more on screen. */
 	density: z.enum(['comfortable', 'compact']).optional(),
 	/** IANA zone for every time shown; default the TV's. */
@@ -353,6 +355,16 @@ export type Reply =
 			userAgent: string;
 			/** Frames a second the page drew over the last few seconds. */
 			fps?: number;
+			/** Whether the receiver is keeping the screen awake: wake lock and silent video. */
+			awake?: string;
+			/** How many screens the page is drawing; differs from `screens` if rendering failed. */
+			drawn?: number;
+			/** The last few uncaught errors in the page. */
+			errors?: string[];
+			/** Visibility, standby and shutdown events the TV fired, with UTC times, newest last. */
+			lifecycle?: string[];
+			/** The page as the TV's browser sees it: visibility, focus, and the element at the screen's centre. */
+			page?: string;
 	  };
 
 /**

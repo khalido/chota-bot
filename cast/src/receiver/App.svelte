@@ -14,6 +14,7 @@
 	import HtmlScreen from './HtmlScreen.svelte';
 	import { ROTATE_PAUSE_MS, type KeyEvent } from '../protocol/schema.ts';
 	import { keyAction } from './keys.ts';
+	import { SITE } from '../config.ts';
 	import { hourOf, longDate, time, view } from './view.svelte.ts';
 
 	let {
@@ -28,9 +29,10 @@
 
 	const screens = $derived(view.state.screens);
 	const current = $derived(screens.find((s) => s.id === view.state.current) ?? screens[0]);
-	const updatedAgo = $derived(
-		view.state.updatedAt && view.now - view.state.updatedAt > STALE_MS
-			? Math.floor((view.now - view.state.updatedAt) / 60_000)
+	/** When the board's data is old, the corner mark says when it was last updated instead of the site. */
+	const staleSince = $derived(
+		current && view.state.updatedAt && view.now - view.state.updatedAt > STALE_MS
+			? view.state.updatedAt
 			: 0
 	);
 
@@ -65,9 +67,10 @@
 
 	$effect(() => {
 		const root = document.documentElement;
-		const { accent, density } = view.state.theme;
+		const { accent, density, brightness } = view.state.theme;
 		root.style.setProperty('--accent', accent ?? '#d9a55b');
 		root.dataset.density = density ?? 'comfortable';
+		root.dataset.brightness = brightness ?? 'normal';
 	});
 
 	// Plain lets: timestamps the effects read but must not be driven by.
@@ -158,6 +161,17 @@
 
 <div class="pointer-events-none fixed inset-0" style:background={tint(view.now)}></div>
 
+<!-- The corner mark: what this app is, small and dim, drifting so it never sits on the same pixels. Amber when the
+     board's data is stale. -->
+<div
+	class="pointer-events-none fixed right-[2.4rem] bottom-[1.2rem] text-[0.75rem] tracking-wide {staleSince
+		? 'text-amber-400/70'
+		: 'text-neutral-600'}"
+	style:transform={drift(view.now, 6, 20 * 60_000)}
+>
+	{staleSince ? `updated ${time(staleSince)}` : SITE}
+</div>
+
 {#if !current}
 	<main class="relative grid h-full place-items-center">
 		<div class="text-center" style:transform={drift(view.now, 60, 30 * 60_000)}>
@@ -169,7 +183,8 @@
 			<div class="font-display mt-6 text-[2.8rem] font-light text-neutral-500 italic">
 				{longDate(view.now)}
 			</div>
-			<div class="mt-16 text-[1.5rem] tracking-wide text-neutral-600">Waiting for a sender</div>
+			<div class="mt-16 text-[1.5rem] tracking-wide text-neutral-500">Nothing on yet</div>
+			<div class="mt-2 text-[1.2rem] tracking-wide text-neutral-600">Press Back to close</div>
 		</div>
 	</main>
 {:else}
@@ -185,9 +200,6 @@
 					{/each}
 				{/if}
 			</nav>
-			{#if updatedAgo}
-				<span class="text-[1.3rem] text-neutral-600">Updated {updatedAgo} min ago</span>
-			{/if}
 			{#if !ownClock}
 				<span class="text-[1.9rem] text-neutral-400 tabular-nums">{time(view.now)}</span>
 			{/if}

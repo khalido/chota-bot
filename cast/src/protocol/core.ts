@@ -61,7 +61,16 @@ const issue = (e: z.ZodError) =>
 		.join('; ');
 
 /** What a `pong` reports about the device: its user agent and recent frame rate, for checking a TV from a sender. */
-export type About = { userAgent: string; fps?: number };
+export type About = {
+	userAgent: string;
+	fps?: number;
+	awake?: string;
+	/** Screens the page is drawing, which can differ from the core's if rendering failed. */
+	drawn?: number;
+	errors?: string[];
+	lifecycle?: string[];
+	page?: string;
+};
 
 export function createCore(
 	now: () => number = Date.now,

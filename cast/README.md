@@ -6,10 +6,10 @@ A Google Cast Web Receiver that puts dashboards on a Google TV. A program on you
 
 - **Blocks**: `clock`, `stat`, `list`, `cards`, `text`, `image`, `weather`, `calendar-day`, `week`, `bus`. Sized for a TV across a room (1 rem = 1/54 of the screen height), dark, with 5% safe margins. Times count down on the TV, so a bus board stays right between updates.
 - **HTML screens**: your HTML and CSS, sanitised with DOMPurify and shown in a Shadow DOM.
-- **Theme**: accent colour, density, time zone, 12-hour clock.
+- **Theme**: accent colour, density, brightness (dim, normal, bright), time zone, 12-hour clock.
 - **Protocol** (v1, namespace `urn:x-cast:dev.khalido.cast`): `screens`, `screen`, `show`, `theme`, `clear`, with `ack`/`error` replies. Payloads over 60 KB go in parts and are joined on the TV. The newest `revision` wins. Full spec on the home page (`/`) and in [`src/llms.txt`](src/llms.txt) (served as `/llms.txt` with the limits filled in); the schema is [`src/protocol/schema.ts`](src/protocol/schema.ts).
 - **Remote**: Back or leaving the app closes it, left/right switch screens, up/down move a focus ring over rows; other keys go to the senders as `key` messages. A `banner` message puts a line over any screen; `theme.rotate` cycles screens.
-- Without a sender it shows a clock and "Waiting for a sender".
+- Without a sender it shows a clock and "Nothing on yet".
 
 ## Run it
 
@@ -21,7 +21,7 @@ bun run check        # svelte-check
 bun run build        # static site in dist/
 ```
 
-Demo options: `/receiver?demo=waiting`, `?demo&screen=bus` (any id from [`src/protocol/examples.ts`](src/protocol/examples.ts)), `&density=compact`, `&accent=%237aa2c8`, `&hour12`. In the console, `demo.send('show', { screen: 'weather' })` sends more.
+Demo options: `/receiver?demo=waiting`, `?demo&screen=bus` (any id from [`src/protocol/examples.ts`](src/protocol/examples.ts)), `&density=compact`, `&brightness=bright`, `&accent=%237aa2c8`, `&hour12`. In the console, `demo.send('show', { screen: 'weather' })` sends more.
 
 ## Send to it
 

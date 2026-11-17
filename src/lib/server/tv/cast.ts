@@ -15,7 +15,7 @@ import { castStatus, type CastSnapshot } from '@khalido/home/cast';
 import { split } from '../../../../cast/src/protocol/split.ts';
 import { NAMESPACE, Payloads } from '../../../../cast/src/protocol/schema.ts';
 import { getHome } from '#lib/server/home.ts';
-import { buildScreens, gatherTv, type Screen } from './screens.ts';
+import { brightnessAt, buildScreens, gatherTv, type Screen } from './screens.ts';
 
 export const APP_ID = 'FCE23D20';
 /** The TV the board goes to unless a caller names another. */
@@ -70,6 +70,13 @@ async function push(tv: string, screens: Screen[], show?: string): Promise<void>
 	}
 	const revision = Date.now();
 	for (const message of split('screens', data, { revision }))
+		await c.client.send(tv, NAMESPACE, message);
+	// The theme goes with every send: a relaunched receiver starts with none.
+	for (const message of split(
+		'theme',
+		{ brightness: brightnessAt(new Date(revision)) },
+		{ revision }
+	))
 		await c.client.send(tv, NAMESPACE, message);
 }
 

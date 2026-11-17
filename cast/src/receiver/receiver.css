@@ -21,9 +21,21 @@
 	--font-display: 'Fraunces Variable', Georgia, serif;
 }
 
-/* Made for an OLED TV in a living room: a warm grey scale, dimmer than Tailwind's, so the brightest text is
-   off-white and the rest steps down clearly. Every block's neutral-* classes use it. */
+/* Made for an OLED TV in a living room: a warm grey scale, so the brightest text is off-white and the rest steps down
+   clearly. Every block's neutral-* classes use it. theme.brightness moves text shades (100–700) a step down for
+   "dim" or up for "bright"; 800 and 900 (fills and borders) and the black background stay put. */
 @theme {
+	--color-neutral-100: #f3efe7;
+	--color-neutral-200: #ebe6dc;
+	--color-neutral-300: #d9d3c7;
+	--color-neutral-400: #bdb6a9;
+	--color-neutral-500: #948d81;
+	--color-neutral-600: #6f695f;
+	--color-neutral-700: #514c45;
+	--color-neutral-800: #23211d;
+	--color-neutral-900: #141310;
+}
+:root[data-brightness='dim'] {
 	--color-neutral-100: #ebe6dc;
 	--color-neutral-200: #d9d3c7;
 	--color-neutral-300: #bdb6a9;
@@ -31,8 +43,15 @@
 	--color-neutral-500: #6f695f;
 	--color-neutral-600: #514c45;
 	--color-neutral-700: #39352f;
-	--color-neutral-800: #23211d;
-	--color-neutral-900: #141310;
+}
+:root[data-brightness='bright'] {
+	--color-neutral-100: #fffdf8;
+	--color-neutral-200: #f8f5ee;
+	--color-neutral-300: #ebe6dc;
+	--color-neutral-400: #d9d3c7;
+	--color-neutral-500: #bdb6a9;
+	--color-neutral-600: #948d81;
+	--color-neutral-700: #6f695f;
 }
 
 html,
@@ -67,4 +86,10 @@ body,
 	outline: 0.25rem solid var(--accent);
 	outline-offset: 0.4rem;
 	background: rgb(255 255 255 / 0.03);
+}
+
+/* The SDK adds its own UI to <body> (cast-media-player with an idle splash and logo, touch-controls laid over the
+   whole screen). None of it may paint over the board: only #app shows. */
+body > :not(#app) {
+	display: none !important;
 }

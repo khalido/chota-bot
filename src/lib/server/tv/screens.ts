@@ -307,6 +307,18 @@ function house(d: TvData): Screen | null {
 	};
 }
 
+/**
+ * How bright the board is (the receiver's theme): bright 06:00–10:00, when the
+ * room is in daylight and the family reads it from across it (KO, 18 Nov: too
+ * dark in the morning); dim 21:00–06:00, so the OLED isn't a lamp at night.
+ */
+export function brightnessAt(now: Date): 'dim' | 'normal' | 'bright' {
+	const h = sydneyHour(now);
+	if (h >= 6 && h < 10) return 'bright';
+	if (h >= 21 || h < 6) return 'dim';
+	return 'normal';
+}
+
 /** Today, Week and Home (when the house is connected), then `extra` (a screen put up from chat). */
 export function buildScreens(d: TvData, now: Date, extra: Screen[] = []): Screen[] {
 	return [today(d, now), week(d, now), house(d), ...extra].filter((s) => s !== null);

@@ -286,6 +286,11 @@ describe('message types', () => {
 		expect(send('theme', { timezone: 'Mars/Olympus' }).out[0].reply).toMatchObject({
 			code: 'bad-message'
 		});
+		expect(send('theme', { brightness: 'blinding' }).out[0].reply).toMatchObject({
+			code: 'bad-message'
+		});
+		send('theme', { brightness: 'bright' });
+		expect(core.state.theme).toEqual({ brightness: 'bright' });
 		send('theme', { accent: '#7aa2c8', density: 'compact' });
 		expect(core.state.theme).toEqual({ accent: '#7aa2c8', density: 'compact' });
 		send('clear', undefined);

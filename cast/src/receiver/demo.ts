@@ -22,7 +22,7 @@ export function demoTransport(params: URLSearchParams): Transport {
 			deliver = (d) => h.message(SENDER, d);
 			if (params.get('demo') === 'waiting') return;
 			const theme = Object.fromEntries(
-				['accent', 'density', 'timezone'].flatMap((k) =>
+				['accent', 'density', 'brightness', 'timezone'].flatMap((k) =>
 					params.get(k) ? [[k, params.get(k)]] : []
 				)
 			);

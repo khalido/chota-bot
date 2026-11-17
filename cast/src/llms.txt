@@ -6,7 +6,7 @@
 - Cast app id: {{APP_ID}} (published, unlisted)
 - Namespace: {{NAMESPACE}}
 - Source and full schema: {{SOURCE}} (src/protocol/schema.ts)
-- Demo in a browser: https://cast.khalido.dev/receiver?demo (add &screen=<id>, &density=compact, &accent=%23RRGGBB, &banner=<text>, &cycle=<seconds>)
+- Demo in a browser: https://cast.khalido.dev/receiver?demo (add &screen=<id>, &density=compact, &brightness=bright, &accent=%23RRGGBB, &banner=<text>, &cycle=<seconds>)
 
 ## Sending
 
@@ -27,7 +27,7 @@ Every message: `{ "v": 1, "id": string, "type": string, "revision": integer, "da
 - `screens`: `data: { screens: Screen[], show?: screenId }`. Replaces the list. Without `show`, the current screen stays if still present, else the first.
 - `screen`: `data: { screen: Screen }`. Replaces the screen with that id, or appends it.
 - `show`: `data: { screen: screenId }`. Switches screens. Unknown id: error `unknown-screen`.
-- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", timezone?: IANA zone, hour12?: boolean, rotate?: seconds 5-3600 }`. Replaces the whole theme. `rotate` shows each screen in turn, pausing for 2 minutes after a remote key.
+- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", brightness?: "dim" | "normal" | "bright", timezone?: IANA zone, hour12?: boolean, rotate?: seconds 5-3600 }`. Replaces the whole theme. `rotate` shows each screen in turn, pausing for 2 minutes after a remote key.
 - `clear`: no data. Back to the waiting clock (also removes the banner).
 - `banner`: `data: { text, tone?: "info" | "good" | "warn" | "bad", seconds?: 0-3600 (default 30) }`. A line over any screen, the waiting clock included. A newer banner replaces it; `seconds: 0` removes it.
 - `ping`: no data. The receiver answers `pong` (below). Any revision is accepted.

@@ -3,7 +3,7 @@ import { Screen, type Block } from '../../../../cast/src/protocol/schema.ts';
 
 vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
-const { buildScreens, dayEvents } = await import('./screens');
+const { brightnessAt, buildScreens, dayEvents } = await import('./screens');
 const { chatScreen } = await import('#lib/server/agent/tools/tv.ts');
 
 // 07:30 on Tue 17 Nov 2026 in Sydney.
@@ -239,5 +239,17 @@ describe('buildScreens', () => {
 		const id = (out.blocks![0] as Extract<Block, { type: 'calendar-day' }>).events[0].id!;
 		expect(id).toHaveLength(40);
 		expect(Screen.safeParse(out).error).toBeUndefined();
+	});
+
+	it('brightens the board for the morning and dims it at night (Sydney hours)', () => {
+		const at = (h: number) => new Date(Date.UTC(2026, 10, 17, h - 11)); // AEDT is UTC+11
+		expect([5, 6, 9, 10, 20, 21].map((h) => brightnessAt(at(h)))).toEqual([
+			'dim',
+			'bright',
+			'bright',
+			'normal',
+			'normal',
+			'dim'
+		]);
 	});
 });
