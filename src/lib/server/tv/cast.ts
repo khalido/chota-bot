@@ -15,7 +15,15 @@ import { castStatus, type CastSnapshot } from '@khalido/home/cast';
 import { split } from '../../../../cast/src/protocol/split.ts';
 import { NAMESPACE, Payloads } from '../../../../cast/src/protocol/schema.ts';
 import { getHome } from '#lib/server/home.ts';
-import { brightnessAt, buildScreens, gatherTv, type Screen } from './screens.ts';
+import {
+	brightnessAt,
+	buildScreens,
+	defaultScreen,
+	gatherTv,
+	peopleColours,
+	type Screen,
+	type TvData
+} from './screens.ts';
 
 export const APP_ID = 'FCE23D20';
 /** The TV the board goes to unless a caller names another. */
@@ -52,13 +60,20 @@ export function tvState(name: string): ReturnType<typeof castStatus>[number] | u
 	);
 }
 
+/**
+ * Per TV, the screen chota last put it on by the clock (morning, then today).
+ * A refresh moves the TV only when that changes, so someone who switched
+ * screens with the remote stays where they are until the next switch.
+ */
+const lastDefault = new Map<string, string>();
+
 function chatScreens(now: number): Screen[] {
 	if (chat && chat.until < now) chat = null;
 	return chat ? [chat.screen] : [];
 }
 
-/** Send the screens to one TV, in parts. `show` picks the one on screen. */
-async function push(tv: string, screens: Screen[], show?: string): Promise<void> {
+/** Send the screens and theme to one TV, in parts. `show` picks the one on screen. */
+async function push(tv: string, screens: Screen[], d: TvData, show?: string): Promise<void> {
 	const c = cast();
 	if (!c) throw new Error(NOT_SET_UP);
 	const data = { screens, ...(show ? { show } : {}) };
@@ -72,11 +87,9 @@ async function push(tv: string, screens: Screen[], show?: string): Promise<void>
 	for (const message of split('screens', data, { revision }))
 		await c.client.send(tv, NAMESPACE, message);
 	// The theme goes with every send: a relaunched receiver starts with none.
-	for (const message of split(
-		'theme',
-		{ brightness: brightnessAt(new Date(revision)) },
-		{ revision }
-	))
+	const theme = { brightness: brightnessAt(new Date(revision)), people: peopleColours(d) };
+	if (!Payloads.theme.safeParse(theme).success) throw new Error('the TV would refuse the theme');
+	for (const message of split('theme', theme, { revision }))
 		await c.client.send(tv, NAMESPACE, message);
 }
 
@@ -104,9 +117,12 @@ export async function launchTv(
 	await c.client.launch(state.name, APP_ID);
 	const now = new Date();
 	const extra = opts.extra ? [opts.extra] : chatScreens(now.getTime());
-	const screens = buildScreens(await gatherTv(now), now, extra);
-	const show = opts.extra?.id ?? opts.show;
-	await push(state.name, screens, show);
+	const d = await gatherTv(now);
+	const screens = buildScreens(d, now, extra);
+	const auto = defaultScreen(d, now);
+	const show = opts.extra?.id ?? opts.show ?? auto;
+	await push(state.name, screens, d, show);
+	lastDefault.set(state.name, auto);
 	// Kept only once it's on screen, so a failed put never turns up on a later refresh.
 	if (opts.extra) chat = { screen: opts.extra, until: Date.now() + CHAT_SCREEN_MS };
 	return { ok: true, tv: state.name, screens: screens.map((s) => s.id), showing: show };
@@ -120,6 +136,7 @@ export async function stopTv(tv = DEFAULT_TV): Promise<{ ok: boolean; error?: st
 	if (!name) return { ok: false, error: `the board isn't on ${tv}` };
 	await c.client.stop(name);
 	chat = null;
+	lastDefault.delete(name);
 	return { ok: true };
 }
 
@@ -133,7 +150,13 @@ export async function stopTv(tv = DEFAULT_TV): Promise<{ ok: boolean; error?: st
 export async function refreshTv(now = new Date()): Promise<string[]> {
 	const tvs = tvsShowing();
 	if (!tvs.length) return [];
-	const screens = buildScreens(await gatherTv(now), now, chatScreens(now.getTime()));
-	for (const tv of tvs) await push(tv, screens);
+	const d = await gatherTv(now);
+	const screens = buildScreens(d, now, chatScreens(now.getTime()));
+	const auto = defaultScreen(d, now);
+	for (const tv of tvs) {
+		const last = lastDefault.get(tv);
+		await push(tv, screens, d, last !== undefined && last !== auto ? auto : undefined);
+		lastDefault.set(tv, auto);
+	}
 	return tvs;
 }

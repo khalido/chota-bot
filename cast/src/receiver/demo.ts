@@ -27,7 +27,9 @@ export function demoTransport(params: URLSearchParams): Transport {
 				)
 			);
 			if (params.has('hour12')) Object.assign(theme, { hour12: true });
-			if (Object.keys(theme).length) send('theme', theme);
+			// Each person's colour, as chota sends them: muted, so a column reads as theirs without shouting.
+			Object.assign(theme, { people: { Kid1: '#7fa7c9', Kid2: '#c49ac0', Parent1: '#8fb89c' } });
+			send('theme', theme);
 			const screens = exampleScreens();
 			send('screens', { screens, show: params.get('screen') ?? undefined });
 			const every = Number(params.get('cycle'));

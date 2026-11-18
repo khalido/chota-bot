@@ -27,7 +27,7 @@ Every message: `{ "v": 1, "id": string, "type": string, "revision": integer, "da
 - `screens`: `data: { screens: Screen[], show?: screenId }`. Replaces the list. Without `show`, the current screen stays if still present, else the first.
 - `screen`: `data: { screen: Screen }`. Replaces the screen with that id, or appends it.
 - `show`: `data: { screen: screenId }`. Switches screens. Unknown id: error `unknown-screen`.
-- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", brightness?: "dim" | "normal" | "bright", timezone?: IANA zone, hour12?: boolean, rotate?: seconds 5-3600 }`. Replaces the whole theme. `rotate` shows each screen in turn, pausing for 2 minutes after a remote key.
+- `theme`: `data: { accent?: "#rrggbb", density?: "comfortable" | "compact", brightness?: "dim" | "normal" | "bright", people?: { [name]: "#rrggbb" } (up to 12; colours that name wherever it shows), timezone?: IANA zone, hour12?: boolean, rotate?: seconds 5-3600 }`. Replaces the whole theme. `rotate` shows each screen in turn, pausing for 2 minutes after a remote key.
 - `clear`: no data. Back to the waiting clock (also removes the banner).
 - `banner`: `data: { text, tone?: "info" | "good" | "warn" | "bad", seconds?: 0-3600 (default 30) }`. A line over any screen, the waiting clock included. A newer banner replaces it; `seconds: 0` removes it.
 - `ping`: no data. The receiver answers `pong` (below). Any revision is accepted.
@@ -48,10 +48,12 @@ Blocks share an optional `span` (columns taken, 1-4). Instants are ISO 8601 with
 - `cards`: `title?`, `items: { id?, title, body?, meta?, image? }[]`
 - `text`: `title?`, `text` (markdown-ish: "# heading", "- bullet", blank-line paragraphs, **bold**, *italic*, `code`; no HTML)
 - `image`: `src`, `alt?`, `caption?`, `fit?: "contain" | "cover"`
-- `weather`: `place?`, `now: { tempC, condition, feelsLikeC?, note? }`, `hours?: { at, tempC, rainPct? }[]` (past hours hidden)
+- `weather`: `place?`, `now: { tempC, condition, sky?, feelsLikeC?, note?, wear? }` (`wear`: "Umbrella and a jumper"), `trace?: { at, tempC }[]` (today by hour, up to 48, faint bars under the temperature), `hours?: { at, tempC, rainPct? }[]` (past hours hidden)
 - `calendar-day`: `title?`, `events: { id?, title, start?, end?, where?, who? }[]` (no start = all day; current event marked, past dimmed)
 - `week`: `title?`, `days: { date: "YYYY-MM-DD", events: (as calendar-day)[] }[]` (1-7 days in columns; today marked, past days dimmed; best alone on a screen with `columns: 1`)
 - `bus`: `title?`, `routes: { route, to?, departures: { at, realtime?, cancelled? }[] }[]` (minutes count down on the TV; gone departures hidden)
+- `leave`: `at` (when to walk out), `label?` (default "Leave"), `note?` ("M30 to school"), `from?` (the bar starts filling; default 30 min before `at`). Counts down in minutes, then "Leave now", then "Gone" 5 min after.
+- `person`: `name` (also the key into `theme.people`), `hours?: { start, end, label? }` (label default "School"), `nudge?`, `dates?: { date: "YYYY-MM-DD", title }[]` (first 2 from today), `events?: (as calendar-day)[]` (sorted; finished ones leave; 3 shown then "+N more"), `chores?: { text, done? }[]` (two lines, undone first). Best at `span: 2` in a 4-column screen.
 
 HTML screens: sanitised with DOMPurify (no script, event handlers, iframe, object, embed, form, link, meta, base; URLs https: or data:image/ only) and rendered in a Shadow DOM. `css` is applied as a constructed stylesheet (no @import). 1rem = 1/54 of screen height.
 

@@ -37,10 +37,13 @@ export function chatScreen(p: {
 }
 
 export const tvTool = tool({
-	description: `The board on the TV (${DEFAULT_TV}): today's calendar, weather, buses and chores, a week view and the house. action=status says what the TV is doing. action=show puts the board up on a screen (today, week, home), waking the TV if it's off. action=put shows something from this chat (a title with text, a list, or an https image) for two hours. action=off closes the board. Only when someone asks. If the TV is playing something else, ask before taking it over, then call again with takeOver=true.`,
+	description: `The board on the TV (${DEFAULT_TV}): today's calendar, weather, buses and chores, a week view and the house. action=status says what the TV is doing. action=show puts the board up on a screen (morning: a column per kid; today; week; home), waking the TV if it's off. action=put shows something from this chat (a title with text, a list, or an https image) for two hours. action=off closes the board. Only when someone asks. If the TV is playing something else, ask before taking it over, then call again with takeOver=true.`,
 	inputSchema: z.object({
 		action: z.enum(['status', 'show', 'put', 'off']),
-		screen: z.enum(['today', 'week', 'home']).optional().describe('For show. Default today.'),
+		screen: z
+			.enum(['morning', 'today', 'week', 'home'])
+			.optional()
+			.describe('For show. Default: the kids by day, today after school.'),
 		title: z.string().max(60).optional().describe('For put: a short heading.'),
 		text: z
 			.string()
@@ -86,7 +89,7 @@ export const tvTool = tool({
 			}
 			if (action === 'put' && !title) return { error: 'put needs a title' };
 			const r = await launchTv({
-				show: screen ?? 'today',
+				show: screen,
 				extra: action === 'put' ? chatScreen({ title: title!, text, items, image }) : undefined,
 				takeOver
 			});

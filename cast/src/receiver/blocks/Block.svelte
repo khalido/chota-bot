@@ -5,6 +5,8 @@
 	import Cards from './Cards.svelte';
 	import Clock from './Clock.svelte';
 	import Image from './Image.svelte';
+	import Leave from './Leave.svelte';
+	import Person from './Person.svelte';
 	import List from './List.svelte';
 	import Stat from './Stat.svelte';
 	import Text from './Text.svelte';
@@ -24,4 +26,6 @@
 {:else if block.type === 'calendar-day'}<CalendarDay {block} />
 {:else if block.type === 'week'}<Week {block} />
 {:else if block.type === 'bus'}<Bus {block} />
+{:else if block.type === 'leave'}<Leave {block} />
+{:else if block.type === 'person'}<Person {block} />
 {/if}

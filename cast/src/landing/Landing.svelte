@@ -19,7 +19,9 @@
 		weather: 'Now, a note and the next hours. Past hours drop off.',
 		'calendar-day': "A day's events. The one on now is marked; past ones dim.",
 		week: 'Up to seven days side by side. Today is marked.',
-		bus: 'Departures by route, counting down in minutes.'
+		bus: 'Departures by route, counting down in minutes.',
+		leave: 'When to walk out the door, counting down, with a filling bar.',
+		person: "One person's day: hours, a nudge, dates coming up, events, chores, in their colour."
 	};
 	const fields = (type: BlockType) =>
 		Object.keys(Block.options.find((o) => o.shape.type.value === type)?.shape ?? {}).filter(

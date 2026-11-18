@@ -2,6 +2,8 @@
 /* Self-hosted: the CSP lets fonts load only from this site. Only the subsets on screen are fetched. */
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/fraunces';
+@import '@fontsource/barlow-condensed/300.css';
+@import '@fontsource/barlow-condensed/400.css';
 
 /* Everything is sized in rem, and a rem is a fraction of the screen's height: 20 px at 1080p comfortable, about
    17 px compact. So the same classes read the same from across the room on any TV. */
@@ -19,6 +21,8 @@
 	--font-sans: 'Inter Variable', Roboto, system-ui, sans-serif;
 	/* For the few words with character: the greeting, the date. */
 	--font-display: 'Fraunces Variable', Georgia, serif;
+	/* Big numbers and times: condensed, so they can be larger in the same cell and read across a room. */
+	--font-num: 'Barlow Condensed', 'Roboto Condensed', sans-serif;
 }
 
 /* Made for an OLED TV in a living room: a warm grey scale, so the brightest text is off-white and the rest steps down

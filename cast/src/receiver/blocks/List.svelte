@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Block } from '../../protocol/schema.ts';
+	import { colourOf } from '../view.svelte.ts';
 
 	let { block }: { block: Extract<Block, { type: 'list' }> } = $props();
 </script>
@@ -20,9 +21,17 @@
 						{item.detail}
 					</div>{/if}
 			</div>
-			{#if item.meta}<span class="shrink-0 text-[1.8rem] text-neutral-400 tabular-nums"
-					>{item.meta}</span
-				>{/if}
+			{#if item.meta}
+				{@const who = colourOf(item.meta)}
+				<span
+					class="shrink-0 text-[1.8rem] tabular-nums {who ? '' : 'text-neutral-400'}"
+					style:color={item.done ? undefined : who}
+					>{#if who}<span
+							class="mr-3 inline-block size-[0.9rem] rounded-full align-middle"
+							style:background={who}
+						></span>{/if}{item.meta}</span
+				>
+			{/if}
 		</li>
 	{/each}
 </ul>

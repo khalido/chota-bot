@@ -61,3 +61,6 @@ export function hourOf(ms: number, tz?: string) {
 export const minutesFrom = (ms: number) => Math.floor((ms - view.now) / 60_000);
 
 export const at = (iso: string) => Date.parse(iso);
+
+/** The colour theme.people gives a name, if any. */
+export const colourOf = (name?: string) => (name ? view.state.theme.people?.[name] : undefined);

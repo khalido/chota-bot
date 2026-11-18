@@ -167,7 +167,12 @@ export function exampleScreens(now = Date.now()) {
 			{ type: 'clock' },
 			{
 				type: 'weather',
-				now: { tempC: 21.4, condition: 'Partly cloudy', note: 'High 24° · Showers from 4 pm' },
+				now: {
+					tempC: 21.4,
+					condition: 'Partly cloudy',
+					note: 'High 24° · Showers from 4 pm',
+					wear: 'Take an umbrella'
+				},
 				hours: [1, 2, 3, 4].map((h, i) => ({
 					at: onHour(now, h),
 					tempC: [22, 23, 21, 19][i],
@@ -193,24 +198,98 @@ export function exampleScreens(now = Date.now()) {
 				type: 'list',
 				title: 'Chores',
 				items: [
-					{ id: 'c1', text: 'Feed the cat', meta: 'Sam' },
-					{ id: 'c2', text: 'Empty the dishwasher', meta: 'Jo' },
-					{ id: 'c3', text: 'Water the plants', meta: 'Alex', done: true }
+					{ id: 'c1', text: 'Feed the cat', meta: 'Kid1' },
+					{ id: 'c2', text: 'Empty the dishwasher', meta: 'Kid2' },
+					{ id: 'c3', text: 'Water the plants', meta: 'Parent1', done: true }
 				]
 			},
 			{
 				type: 'list',
 				title: 'School · T4 Wk6',
 				items: [
-					{ text: '8:50am-3:10pm · Take sports stuff!', meta: 'Sam' },
-					{ text: '8:50am-3:10pm · Library day', meta: 'Jo' }
+					{ text: '8:50am-3:10pm · Take sports stuff!', meta: 'Kid1' },
+					{ text: '8:50am-3:10pm · Library day', meta: 'Kid2' }
 				]
+			}
+		]
+	};
+
+	// Mock B: the morning by person. A strip along the top (clock, when to leave, weather, a fun line), then one
+	// column per kid in their colour.
+	const day = (d: number) => new Date(now + d * 86_400_000).toISOString().slice(0, 10);
+	const kids: Screen = {
+		id: 'kids',
+		title: 'Morning',
+		columns: 4,
+		rows: [5, 8],
+		blocks: [
+			{ type: 'clock' },
+			{
+				type: 'leave',
+				label: 'School bus',
+				at: iso(now, 6.5),
+				from: iso(now, -20),
+				note: 'M30 to school'
+			},
+			{
+				type: 'weather',
+				now: {
+					tempC: 17.6,
+					condition: 'Showers',
+					note: 'High 21° · Rain easing by 2 pm',
+					wear: 'Umbrella and a jumper'
+				},
+				trace: Array.from({ length: 16 }, (_, i) => ({
+					at: onHour(now, i - 3),
+					tempC: [14, 14, 15, 16, 17, 18, 19, 20, 21, 21, 20, 19, 18, 17, 16, 15][i]
+				}))
+			},
+			{
+				type: 'text',
+				title: 'Fact',
+				text: 'A day on Venus is longer than its year: it spins once every 243 Earth days.'
+			},
+			{
+				type: 'person',
+				span: 2,
+				name: 'Kid1',
+				hours: { start: iso(now, 50), end: iso(now, 430) },
+				nudge: 'Sports uniform: PE today',
+				events: [
+					{ id: 'k1a', title: 'Drop-off', start: iso(now, -3), end: iso(now, 0.2) },
+					{ id: 'k1b', title: 'Football training', start: iso(now, 480), where: 'Oval' },
+					{ id: 'k1c', title: 'Homework club', start: iso(now, 440), end: iso(now, 470) },
+					{ id: 'k1d', title: 'Guitar', start: iso(now, 560) }
+				],
+				dates: [
+					{ date: day(3), title: 'Year 9 camp' },
+					{ date: day(8), title: 'Maths assessment' },
+					{ date: day(15), title: 'Sports carnival' }
+				],
+				chores: [{ text: 'Bins out', done: true }, { text: 'Feed the cat' }, { text: 'Tidy room' }]
+			},
+			{
+				type: 'person',
+				span: 2,
+				name: 'Kid2',
+				hours: { start: iso(now, 50), end: iso(now, 430) },
+				nudge: 'Library books back',
+				events: [
+					{ id: 'k2a', title: 'Piano', start: iso(now, 460), end: iso(now, 490) },
+					{ id: 'k2b', title: 'Swim squad', start: iso(now, 520), where: 'Aquatic centre' }
+				],
+				dates: [
+					{ date: day(1), title: 'Excursion: museum' },
+					{ date: day(12), title: 'School concert' }
+				],
+				chores: [{ text: 'Empty the dishwasher' }]
 			}
 		]
 	};
 
 	const screens: Screen[] = [
 		briefing,
+		kids,
 		{ id: 'clock', title: 'Clock', columns: 1, blocks: [{ type: 'clock' }] },
 		{
 			id: 'energy',

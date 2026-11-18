@@ -4,6 +4,7 @@ import {
 	pastBlocksFor,
 	tomorrowSummary,
 	weatherSummary,
+	weatherWear,
 	type ForecastHour,
 	type Weather
 } from './weather';
@@ -275,5 +276,23 @@ describe('groupByDay', () => {
 		expect(days[0].blocks.Evening).toBeUndefined();
 		expect(days[1].dateKey).toBe('2026-05-11');
 		expect(days[1].blocks.Morning?.condition).toBe('Patchy rain');
+	});
+});
+
+describe('weatherWear', () => {
+	it('lists what to take for the rest of today, or null when nothing is needed', () => {
+		expect(weatherWear(weather(), {}, NOW)).toBeNull();
+		const wet = weather({
+			tempC: 13,
+			uvIndex: 9,
+			hourly: [hour('2026-05-10T02:00:00Z', { rainPct: 60 })]
+		});
+		expect(weatherWear(wet, {}, NOW)).toBe('Umbrella, a jumper and sunscreen');
+		expect(weatherWear(weather({ tempC: 13 }), {}, NOW)).toBe('A jumper');
+	});
+
+	it("ignores tomorrow's rain", () => {
+		const later = weather({ hourly: [hour('2026-05-10T20:00:00Z', { rainPct: 90 })] });
+		expect(weatherWear(later, {}, NOW)).toBeNull();
 	});
 });

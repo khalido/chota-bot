@@ -7,6 +7,10 @@
  *
  * From 18:00 the Today screen looks ahead (KO, 17 Nov): the calendar, chores,
  * school line and weather note are tomorrow's, as on the evening print.
+ *
+ * Mornings lead with a column per kid (KO picked it, 18 Nov): their school
+ * hours and nudge, school dates coming up, their events and chores, under a
+ * strip of clock, the bus, weather with what to wear, and the quote.
  */
 import { createHash } from 'node:crypto';
 import type { Screen } from '../../../../cast/src/protocol/schema.ts';
@@ -16,6 +20,7 @@ import {
 	getWeather,
 	tomorrowSummary,
 	weatherSummary,
+	weatherWear,
 	type Weather
 } from '#lib/server/tools/weather.ts';
 import { getCalendar, type CalendarEvent } from '#lib/server/tools/calendar.ts';
@@ -38,6 +43,7 @@ import {
 	sydneyDateMedium,
 	sydneyHour,
 	sydneyNoon,
+	sydneyTimeCompact,
 	sydneyTimeRange,
 	sydneyYMD,
 	sydneyYMDOffset,
@@ -63,6 +69,10 @@ export interface TvData {
 	weather: Weather | null;
 	/** The weather note: today's headline, or tomorrow's in the evening. */
 	headline: string | null;
+	/** What to wear or take today ("Umbrella and a jumper"); null in the evening or when nothing's needed. */
+	wear: string | null;
+	/** The kids, in config order: one morning column each. */
+	kids: string[];
 	/** The next seven days, from now. */
 	events: CalendarEvent[];
 	chores: ChoreAssignment[];
@@ -131,6 +141,8 @@ export async function gatherTv(now = new Date()): Promise<TvData> {
 			: evening
 				? tomorrowSummary(weather, thresholds, now)
 				: weatherSummary(weather, thresholds, now),
+		wear: weather && !evening ? weatherWear(weather, thresholds, now) : null,
+		kids: config.kids.map((k) => k.name),
 		events,
 		chores: getChores({ now: ref }),
 		school: school.filter((s) => s.periods.length > 0),
@@ -205,16 +217,26 @@ function busBlock(trips: TripReport[], now: Date): Block | null {
 	return routes.length ? { type: 'bus', title: 'Buses', routes } : null;
 }
 
-function weatherBlock(w: Weather | null, headline: string | null, now: Date): Block | null {
+function weatherBlock(
+	w: Weather | null,
+	headline: string | null,
+	now: Date,
+	more: { wear?: string | null; trace?: boolean } = {}
+): Block | null {
 	if (!w) return null;
+	const today = w.hourly.filter((h) => sydneyYMD(h.at) === sydneyYMD(now));
 	return {
 		type: 'weather',
 		now: {
 			tempC: Math.round(w.tempC),
 			condition: w.condition,
 			feelsLikeC: Math.round(w.feelsLikeC),
-			...(headline ? { note: headline } : {})
+			...(headline ? { note: headline } : {}),
+			...(more.wear ? { wear: more.wear } : {})
 		},
+		...(more.trace && today.length > 1
+			? { trace: today.map((h) => ({ at: h.at.toISOString(), tempC: Math.round(h.tempC) })) }
+			: {}),
 		hours: w.hourly
 			.filter((h) => h.at.getTime() > now.getTime())
 			.slice(0, HOURS)
@@ -364,6 +386,113 @@ function house(d: TvData): Screen | null {
 	};
 }
 
+/** How long before the bus the countdown bar starts filling. */
+const LEAVE_BAR_MINS = 30;
+
+/**
+ * The next kid bus still to come, as a countdown: "School bus" in N min, "501
+ * at 8:04". No walk time is configured, so it counts to the bus itself.
+ */
+function leaveBlock(trips: TripReport[], now: Date): Block | null {
+	const next = trips
+		.flatMap(({ trip, departures }) =>
+			departures
+				.filter((d) => !d.cancelled && d.estimatedAt.getTime() > now.getTime())
+				.map((d) => ({ trip, d }))
+		)
+		.sort((a, b) => a.d.estimatedAt.getTime() - b.d.estimatedAt.getTime())[0];
+	if (!next) return null;
+	const label = `${next.trip.label[0].toUpperCase()}${next.trip.label.slice(1)} bus`;
+	return {
+		type: 'leave',
+		at: next.d.estimatedAt.toISOString(),
+		label,
+		note: `${next.d.route} at ${sydneyTimeCompact(next.d.estimatedAt)}`,
+		from: new Date(next.d.estimatedAt.getTime() - LEAVE_BAR_MINS * 60_000).toISOString()
+	};
+}
+
+/** One kid's column: school hours and nudge, school dates coming up, their events today, their chores. */
+function personBlock(d: TvData, kid: string, now: Date, span: number): Block {
+	const periods = d.school.find((s) => s.kid === kid)?.periods ?? [];
+	const dates = (d.schoolEvents.find((s) => s.kid === kid)?.events ?? []).map((e) => ({
+		// An event already running shows from today; the receiver hides past dates.
+		date: e.from < d.day ? d.day : e.from,
+		title: e.title
+	}));
+	const events = dayEvents(d, now)
+		.filter((e) => parseEventPeople(e.summary, d.family).includes(kid))
+		.map((e) => eventOut(e, d.family));
+	const chores = d.chores.find((c) => c.person === kid)?.chores ?? [];
+	const nudge = periods.length ? sportsNudge(periods) : null;
+	return {
+		type: 'person',
+		span,
+		name: kid,
+		...(periods.length
+			? {
+					hours: {
+						start: periods[0].start.toISOString(),
+						end: periods.at(-1)!.end.toISOString(),
+						label: 'School'
+					}
+				}
+			: {}),
+		...(nudge ? { nudge } : {}),
+		...(dates.length ? { dates } : {}),
+		...(events.length ? { events } : {}),
+		...(chores.length ? { chores: chores.map((text) => ({ text })) } : {})
+	};
+}
+
+/**
+ * The morning board: a strip of clock, the bus countdown, weather with what to
+ * wear and today's trace, and the quote; then one column per kid. Daytime only
+ * (in the evening Today already looks at tomorrow).
+ */
+function morning(d: TvData, now: Date): Screen | null {
+	if (d.evening || !d.kids.length) return null;
+	// The receiver's grid is at most 4 wide: two kids take two columns each,
+	// three take a column each of three, and the strip fills the same width.
+	const columns = d.kids.length === 3 ? 3 : 4;
+	const span = d.kids.length <= 2 ? 4 / d.kids.length : 1;
+	const strip = [
+		{ type: 'clock' } as Block,
+		leaveBlock(d.trips, now),
+		weatherBlock(d.weather, d.headline, now, { wear: d.wear, trace: true }),
+		d.quote ? ({ type: 'text', title: 'Quote', text: quoteText(d.quote) } as Block) : null
+	]
+		.filter((b) => b !== null)
+		.slice(0, columns);
+	// A short strip (no bus, no quote) stretches its last block to the row's end.
+	const last = strip.at(-1)!;
+	strip[strip.length - 1] = { ...last, span: columns - strip.length + 1 } as Block;
+	return {
+		id: 'morning',
+		title: 'Morning',
+		columns,
+		rows: [5, 8],
+		blocks: [...strip, ...d.kids.map((kid) => personBlock(d, kid, now, span))]
+	};
+}
+
+/** Muted colours for people, in family order: kids first. Dim enough to sit on an OLED all day. */
+const PEOPLE_COLOURS = ['#7fa7c9', '#c99ab8', '#9cc79a', '#d9b77e', '#b0a4d6', '#d69a8c'];
+
+/** A colour per person for the receiver's `theme.people`: the kids, then the rest of the family. */
+export function peopleColours(d: Pick<TvData, 'kids' | 'family'>): Record<string, string> {
+	const names = [...new Set([...d.kids, ...d.family.map((f) => f.name)])].slice(
+		0,
+		PEOPLE_COLOURS.length
+	);
+	return Object.fromEntries(names.map((n, i) => [n, PEOPLE_COLOURS[i]]));
+}
+
+/** The screen a TV should be on: the kids' columns until school's out on a school day, then Today. */
+export function defaultScreen(d: Pick<TvData, 'evening' | 'kids'>, now: Date): string {
+	return !d.evening && d.kids.length && sydneyHour(now) < SCHOOL_UNTIL_HOUR ? 'morning' : 'today';
+}
+
 /**
  * How bright the board is (the receiver's theme): bright 06:00–10:00, when the
  * room is in daylight and the family reads it from across it (KO, 18 Nov: too
@@ -376,7 +505,9 @@ export function brightnessAt(now: Date): 'dim' | 'normal' | 'bright' {
 	return 'normal';
 }
 
-/** Today, Week and Home (when the house is connected), then `extra` (a screen put up from chat). */
+/** Morning (by day), Today, Week and Home (when the house is connected), then `extra` (a screen put up from chat). */
 export function buildScreens(d: TvData, now: Date, extra: Screen[] = []): Screen[] {
-	return [today(d, now), week(d, now), house(d), ...extra].filter((s) => s !== null);
+	return [morning(d, now), today(d, now), week(d, now), house(d), ...extra].filter(
+		(s) => s !== null
+	);
 }

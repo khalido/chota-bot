@@ -413,6 +413,33 @@ export function weatherSummary(
 	return `${weather.condition}, ${Math.round(weather.tempC)}C.`;
 }
 
+/** Below this, a jumper goes on the what-to-wear line. */
+const JUMPER_C = 15;
+
+/**
+ * What to wear or take for the rest of today, for a family heading out:
+ * "Umbrella, a jumper and sunscreen". Null when nothing's needed. Uses the
+ * headline's thresholds (rain chance, UV), so the two never disagree.
+ */
+export function weatherWear(
+	weather: Weather,
+	thresholds: Partial<WeatherThresholds> = {},
+	now: Date = new Date()
+): string | null {
+	const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
+	const today = weather.hourly.filter(
+		(h) => sydneyYMD(h.at) === sydneyYMD(now) && h.at.getTime() >= now.getTime()
+	);
+	const things: string[] = [];
+	if (today.some((h) => h.rainPct >= t.rainPctSoon)) things.push('Umbrella');
+	if (Math.min(weather.tempC, ...today.map((h) => h.tempC)) < JUMPER_C) things.push('a jumper');
+	if (weather.uvIndex >= t.uvHigh) things.push('sunscreen');
+	if (!things.length) return null;
+	const list =
+		things.length > 1 ? `${things.slice(0, -1).join(', ')} and ${things.at(-1)}` : things[0];
+	return list[0].toUpperCase() + list.slice(1);
+}
+
 /**
  * Map a free-text weather condition (Google's `description.text`, e.g. "Mostly
  * sunny", "Light rain showers") to a lucide-icon key the brief understands.

@@ -149,8 +149,15 @@ export const WeatherBlock = z.object({
 		sky: z.enum(['sun', 'partly', 'cloud', 'rain', 'storm', 'snow', 'fog', 'night']).optional(),
 		feelsLikeC: z.number().optional(),
 		/** e.g. "High 24° · Low 15°" or "Rain from 3pm". */
-		note: text(200).optional()
+		note: text(200).optional(),
+		/** What to wear or take: "Umbrella and a jumper", "Sunscreen". */
+		wear: text(200).optional()
 	}),
+	/** Today's temperatures by hour, drawn as a faint bar trace under the big temperature. Past hours stay, dimmed. */
+	trace: z
+		.array(z.object({ at: instant, tempC: z.number() }))
+		.max(48)
+		.optional(),
 	/** Hours already past are hidden as the clock moves on. */
 	hours: items(
 		z.object({
@@ -161,6 +168,9 @@ export const WeatherBlock = z.object({
 		})
 	).optional()
 });
+
+/** A calendar day, "2026-11-17". */
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date is YYYY-MM-DD');
 
 const CalendarEvent = z.object({
 	id: z.string().max(100).optional(),
@@ -190,7 +200,7 @@ export const WeekBlock = z.object({
 		.array(
 			z.object({
 				/** The calendar day, "2026-11-17"; the column is headed "Tue 17". */
-				date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date is YYYY-MM-DD'),
+				date: day,
 				events: items(CalendarEvent)
 			})
 		)
@@ -223,6 +233,39 @@ export const BusBlock = z.object({
 	)
 });
 
+/** When to walk out the door, counting down, with a bar that fills as it nears. */
+export const LeaveBlock = z.object({
+	type: z.literal('leave'),
+	span,
+	rows,
+	/** When to leave (the bus time less the walk). */
+	at: instant,
+	/** Above the countdown: "School bus", "Swim". Default "Leave". */
+	label: text(100).optional(),
+	/** Under it: "501 at 8:04 · Town". */
+	note: text(200).optional(),
+	/** The bar starts filling here. Default 30 minutes before `at`. */
+	from: instant.optional()
+});
+
+/** One person's day in a column: school or work hours, a nudge, dates coming up, today's events and chores. */
+export const PersonBlock = z.object({
+	type: z.literal('person'),
+	span,
+	rows,
+	/** Also the key into theme.people for the column's colour. */
+	name: text(60),
+	/** School or work hours today; a bar shows how far through it is. */
+	hours: z.object({ start: instant, end: instant, label: text(100).optional() }).optional(),
+	/** One thing to remember today: "Sports uniform", "Library books". */
+	nudge: text(200).optional(),
+	/** Coming dates, shown "Wed 9 Dec · 3 days · Year 9 camp". Past ones are hidden. */
+	dates: items(z.object({ date: day, title: text(200) })).optional(),
+	/** Today's events; each leaves once it's over and the rest move up. */
+	events: items(CalendarEvent).optional(),
+	chores: items(z.object({ text: text(200), done: z.boolean().optional() })).optional()
+});
+
 export const Block = z.discriminatedUnion('type', [
 	ClockBlock,
 	StatBlock,
@@ -233,7 +276,9 @@ export const Block = z.discriminatedUnion('type', [
 	WeatherBlock,
 	CalendarDayBlock,
 	WeekBlock,
-	BusBlock
+	BusBlock,
+	LeaveBlock,
+	PersonBlock
 ]);
 export type Block = z.infer<typeof Block>;
 export type BlockType = Block['type'];
@@ -266,6 +311,11 @@ export const Theme = z.object({
 	accent: z
 		.string()
 		.regex(/^#[0-9a-f]{6}$/i, 'accent is a hex colour like #e0a458')
+		.optional(),
+	/** A muted colour per person ("Kid1": "#7fa7c9"), used wherever that name shows: list metas, person columns. */
+	people: z
+		.record(z.string().max(60), z.string().regex(/^#[0-9a-f]{6}$/i, 'colours are hex like #7fa7c9'))
+		.refine((p) => Object.keys(p).length <= 12, { message: 'at most 12 people' })
 		.optional(),
 	/** How bright text is: "dim" for night, "normal" (default), "bright" for a sunny room. The background stays black. */
 	brightness: z.enum(['dim', 'normal', 'bright']).optional(),

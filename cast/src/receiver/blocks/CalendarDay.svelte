@@ -80,7 +80,7 @@
 						: ''}"
 				>
 					<span
-						class="text-[2.6rem] leading-none font-light tabular-nums {e.now || e.next
+						class="font-num text-[2.7rem] leading-none tabular-nums {e.now || e.next
 							? 'text-accent'
 							: 'text-neutral-300'}">{time(e.startMs)}</span
 					>

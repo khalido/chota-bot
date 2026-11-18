@@ -3,7 +3,8 @@ import { Screen, type Block } from '../../../../cast/src/protocol/schema.ts';
 
 vi.mock('#lib/server/log.ts', () => import('#lib/server/log.mock.ts'));
 
-const { brightnessAt, buildScreens, dayEvents } = await import('./screens');
+const { brightnessAt, buildScreens, dayEvents, defaultScreen, peopleColours } =
+	await import('./screens');
 const { chatScreen } = await import('#lib/server/agent/tools/tv.ts');
 
 // 07:30 on Tue 17 Nov 2026 in Sydney.
@@ -60,6 +61,9 @@ const data = {
 	evening: false,
 	day: '2026-11-17',
 	headline: 'Mild, dry morning',
+	wear: 'Umbrella and a jumper',
+	// No kids here, so these tests see Today first; the morning tests add one.
+	kids: [] as string[],
 	events: [
 		{
 			id: 'a',
@@ -275,5 +279,85 @@ describe('buildScreens', () => {
 		const long = { id: 8, title: 'x'.repeat(80), from: '2026-11-20', to: '2026-11-20' };
 		const out = buildScreens({ ...data, schoolEvents: [{ kid: 'Kid1', events: [long] }] }, now);
 		for (const s of out) expect(Screen.safeParse(s).error).toBeUndefined();
+	});
+
+	describe('morning', () => {
+		const kid = { ...data, kids: ['Kid1', 'Kid2'] };
+		const [morning] = buildScreens(kid, now);
+
+		it('leads by day with a strip and one two-wide column per kid, which the receiver accepts', () => {
+			expect(morning.id).toBe('morning');
+			expect(morning.blocks!.map((b) => b.type)).toEqual([
+				'clock',
+				'leave',
+				'weather',
+				'text',
+				'person',
+				'person'
+			]);
+			expect(morning.blocks!.filter((b) => b.type === 'person').map((b) => b.span)).toEqual([2, 2]);
+			expect(Screen.safeParse(morning).error).toBeUndefined();
+		});
+
+		it("fills a kid's column with school hours, nudge, school dates, their events and chores", () => {
+			expect(morning.blocks![4]).toEqual({
+				type: 'person',
+				span: 2,
+				name: 'Kid1',
+				hours: {
+					start: '2026-11-16T21:50:00.000Z',
+					end: '2026-11-17T04:10:00.000Z',
+					label: 'School'
+				},
+				nudge: 'Take sports stuff!',
+				dates: [{ date: '2026-12-09', title: 'Year 9 Camp' }],
+				events: [expect.objectContaining({ title: 'Swim k1', who: 'Kid1' })],
+				chores: [{ text: 'Dishes' }, { text: 'Bins' }]
+			});
+			expect(morning.blocks![5]).toEqual({ type: 'person', span: 2, name: 'Kid2' });
+		});
+
+		it('counts down to the next bus that is still coming, and says what to wear', () => {
+			expect(morning.blocks![1]).toMatchObject({
+				type: 'leave',
+				at: '2026-11-16T20:41:00.000Z',
+				label: 'School bus',
+				note: '501 at 7:41am'
+			});
+			expect(morning.blocks![2]).toMatchObject({ now: { wear: 'Umbrella and a jumper' } });
+		});
+
+		it('fits three kids in three columns, dropping the quote from the strip', () => {
+			const three = buildScreens({ ...data, kids: ['Kid1', 'Kid2', 'Kid3'] }, now)[0];
+			expect(three.columns).toBe(3);
+			expect(three.blocks!.map((b) => `${b.type}:${b.span ?? 1}`)).toEqual([
+				'clock:1',
+				'leave:1',
+				'weather:1',
+				'person:1',
+				'person:1',
+				'person:1'
+			]);
+			expect(Screen.safeParse(three).error).toBeUndefined();
+		});
+
+		it('stretches a short strip to fill its row', () => {
+			const bare = buildScreens({ ...kid, trips: [], quote: null }, now)[0];
+			expect(bare.blocks!.slice(0, 2).map((b) => `${b.type}:${b.span ?? 1}`)).toEqual([
+				'clock:1',
+				'weather:3'
+			]);
+		});
+
+		it("isn't built in the evening, and Today takes over after school", () => {
+			expect(buildScreens({ ...kid, evening: true }, now)[0].id).toBe('today');
+			expect(defaultScreen(kid, now)).toBe('morning');
+			expect(defaultScreen(kid, new Date('2026-11-17T04:30:00Z'))).toBe('today'); // 15:30
+			expect(defaultScreen(data, now)).toBe('today');
+		});
+
+		it('gives each person a colour, kids first', () => {
+			expect(peopleColours(kid)).toEqual({ Kid1: '#7fa7c9', Kid2: '#c99ab8' });
+		});
 	});
 });

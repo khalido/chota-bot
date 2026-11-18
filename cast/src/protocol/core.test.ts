@@ -272,6 +272,44 @@ describe('revision', () => {
 });
 
 describe('message types', () => {
+	it('takes the morning-by-person screen: people colours, leave, person, wear and trace', () => {
+		const { core } = setup();
+		const send = (type: Parameters<typeof split>[0], data: unknown) =>
+			core.receive('s', wire(split(type, data, { revision: 1 })[0]));
+		const at = '2026-11-18T08:30:00+11:00';
+		expect(send('theme', { people: { Kid1: '#7fa7c9' } }).out[0].reply.type).toBe('ack');
+		expect(send('theme', { people: { Kid1: 'blue' } }).out[0].reply).toMatchObject({
+			code: 'bad-message'
+		});
+		const morning = {
+			id: 'm',
+			title: 'Morning',
+			columns: 4,
+			blocks: [
+				{ type: 'leave', at, note: 'M30 to school' },
+				{
+					type: 'weather',
+					now: { tempC: 18, condition: 'Showers', wear: 'Umbrella' },
+					trace: [{ at, tempC: 18 }]
+				},
+				{
+					type: 'person',
+					span: 2,
+					name: 'Kid1',
+					hours: { start: at, end: at },
+					nudge: 'PE today',
+					dates: [{ date: '2026-12-09', title: 'Camp' }],
+					events: [{ title: 'Football', start: at }],
+					chores: [{ text: 'Feed the cat', done: true }]
+				}
+			]
+		};
+		expect(send('screens', { screens: [morning] }).out[0].reply.type).toBe('ack');
+		expect(
+			send('screens', { screens: [{ ...morning, blocks: [{ type: 'person' }] }] }).out[0].reply
+		).toMatchObject({ code: 'bad-message' });
+	});
+
 	it('updates one screen in place, adds a new one, shows, themes and clears', () => {
 		const { core } = setup();
 		const send = (type: Parameters<typeof split>[0], data: unknown) =>

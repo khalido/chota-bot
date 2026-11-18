@@ -24,7 +24,7 @@
 		</div>
 	{/if}
 	<div
-		class="mt-2 text-[min(9.5rem,30cqi)] leading-none font-extralight tracking-tight whitespace-nowrap text-neutral-200 tabular-nums"
+		class="font-num mt-2 text-[min(12.5rem,42cqi)] leading-none font-light tracking-tight whitespace-nowrap text-neutral-200 tabular-nums"
 	>
 		{time(view.now, block.timezone)}
 	</div>

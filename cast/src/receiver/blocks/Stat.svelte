@@ -23,7 +23,9 @@
 <div class="flex h-full flex-col justify-center">
 	<div class="label">{block.label}</div>
 	<div class="mt-4 flex items-baseline gap-3">
-		<span class="text-[6.5rem] leading-none font-light text-neutral-200 tabular-nums">{shown}</span>
+		<span class="font-num text-[8.5rem] leading-none font-light text-neutral-100 tabular-nums"
+			>{shown}</span
+		>
 		{#if block.unit}<span class="text-[2.4rem] text-neutral-400">{block.unit}</span>{/if}
 	</div>
 	{#if block.delta}<div class="mt-5 text-[1.9rem] {TONE[block.tone ?? 'neutral']}">
