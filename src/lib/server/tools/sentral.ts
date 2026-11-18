@@ -83,7 +83,7 @@ function cookiePath(person: string): string {
  * The file wins because .env is read once at process start — a fresh login
  * writing the file takes effect immediately; rewriting .env wouldn't.
  */
-async function getCookie(person: string): Promise<string | null> {
+export async function getCookie(person: string): Promise<string | null> {
 	const fromFile = (await readFile(cookiePath(person), 'utf8').catch(() => '')).trim();
 	if (fromFile) return fromFile;
 	return env[`SENTRAL_${person.toUpperCase()}_COOKIE`]?.trim() || null;
@@ -193,7 +193,7 @@ export async function refreshSentralCookie(person: string): Promise<string> {
 }
 
 /** The stable per-kid config — base URL + student id. The cookie is volatile and read separately. */
-function sentralConfig(person: string): { baseUrl: string; studentId: string } | null {
+export function sentralConfig(person: string): { baseUrl: string; studentId: string } | null {
 	const baseUrl = env.SENTRAL_BASE_URL;
 	const studentId = env[`SENTRAL_${person.toUpperCase()}_STUDENT_ID`];
 	if (!baseUrl || !studentId) return null;
@@ -210,6 +210,25 @@ export function configuredSentralKids(): string[] {
 		.filter((u): u is string => !!u)
 		.map((u) => u.toLowerCase())
 		.filter((name) => sentralConfig(name) !== null);
+}
+
+/**
+ * `person`'s school year (7–12), read from the timetable's subject codes
+ * ("9MAT…" is Year 9): the year most periods start with. Undefined without a
+ * cached timetable or a clear majority, so nothing is shown for a wrong guess.
+ */
+export async function kidYear(person: string): Promise<number | undefined> {
+	const text = await readFile(timetablePath(person), 'utf8').catch(() => null);
+	if (!text) return undefined;
+	const years = parseIcsEvents(text)
+		.map((e) => /^(\d{1,2})[A-Za-z]/.exec(e.summary)?.[1])
+		.filter((y): y is string => y !== undefined);
+	if (!years.length) return undefined;
+	const counts = Map.groupBy(years, (y) => y);
+	const [top, n] = [...counts]
+		.map(([y, ys]) => [y, ys.length] as const)
+		.sort((a, b) => b[1] - a[1])[0];
+	return n / years.length >= 0.8 ? Number(top) : undefined;
 }
 
 /** Strip a leading subject code like "7CRE&: " or "12ENGADV: " off a SUMMARY. */

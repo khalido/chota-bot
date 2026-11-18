@@ -104,6 +104,12 @@ const data = {
 			]
 		}
 	],
+	schoolEvents: [
+		{
+			kid: 'Kid1',
+			events: [{ id: 7, title: 'Year 9 Camp', from: '2026-12-09', to: '2026-12-11' }]
+		}
+	],
 	schoolWeek: { term: 4, week: 6 },
 	family: [{ name: 'Kid1', role: 'kid' as const, aliases: ['k1'] }],
 	quote: { kind: 'tv', quote: 'Wackadoo!', speaker: 'Bandit', title: 'Bluey' },
@@ -138,15 +144,18 @@ describe('buildScreens', () => {
 	});
 
 	it("shows the day's quote in school's cell when there's no school", () => {
-		const out = buildScreens({ ...data, school: [] }, now)[0].blocks!;
+		const out = buildScreens({ ...data, school: [], schoolEvents: [] }, now)[0].blocks!;
 		expect(out.at(-1)).toMatchObject({ title: 'Quote', text: '“Wackadoo!”\n\n— Bandit, *Bluey*' });
 	});
 
-	it("gives each kid one school line: the day's hours and the sports nudge", () => {
+	it("gives each kid the day's hours and sports nudge, then school events coming up", () => {
 		expect(screens[0].blocks![5]).toEqual({
 			type: 'list',
 			title: 'School · T4 Wk6',
-			items: [{ id: 'school:Kid1', text: '8:50am-3:10pm · Take sports stuff!', meta: 'Kid1' }]
+			items: [
+				{ id: 'school:Kid1', text: '8:50am-3:10pm · Take sports stuff!', meta: 'Kid1' },
+				{ id: 'school-event:7:Kid1', text: 'Wed, 9 Dec (3 days) · Year 9 Camp', meta: 'Kid1' }
+			]
 		});
 	});
 
@@ -208,7 +217,7 @@ describe('buildScreens', () => {
 	it('leaves Home out when the house is not connected, and adds a chat screen last', () => {
 		const chat = chatScreen({ title: 'Shopping', items: [{ text: 'Milk' }] });
 		const out = buildScreens(
-			{ ...data, home: null, chores: [], trips: [], quote: null, school: [] },
+			{ ...data, home: null, chores: [], trips: [], quote: null, school: [], schoolEvents: [] },
 			now,
 			[chat]
 		);
@@ -251,5 +260,20 @@ describe('buildScreens', () => {
 			'normal',
 			'dim'
 		]);
+	});
+
+	it("shows a school event as Now, with its last day, once it's started", () => {
+		const camp = { id: 7, title: 'Year 9 Camp', from: '2026-11-16', to: '2026-11-18' };
+		const out = buildScreens(
+			{ ...data, school: [], schoolEvents: [{ kid: 'Kid1', events: [camp] }] },
+			now
+		)[0].blocks!;
+		expect(out.at(-1)).toMatchObject({ items: [{ text: 'Now, to Wed, 18 Nov · Year 9 Camp' }] });
+	});
+
+	it('takes a school event with the longest title the calendar keeps', () => {
+		const long = { id: 8, title: 'x'.repeat(80), from: '2026-11-20', to: '2026-11-20' };
+		const out = buildScreens({ ...data, schoolEvents: [{ kid: 'Kid1', events: [long] }] }, now);
+		for (const s of out) expect(Screen.safeParse(s).error).toBeUndefined();
 	});
 });

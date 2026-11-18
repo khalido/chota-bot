@@ -21,8 +21,13 @@ import {
 import { getCalendar, type CalendarEvent } from '#lib/server/tools/calendar.ts';
 import { getChores, type ChoreAssignment } from '#lib/server/chores.ts';
 import { getQuote, type Quote } from '#lib/server/tools/quotes.ts';
-import { getSchedule, type SchedulePeriod } from '#lib/server/tools/sentral.ts';
+import { getSchedule, kidYear, type SchedulePeriod } from '#lib/server/tools/sentral.ts';
 import { getSchoolWeek } from '#lib/server/tools/schoolterms.ts';
+import {
+	forKid,
+	getSentralCalendar,
+	type SentralEvent
+} from '#lib/server/tools/sentral-calendar.ts';
 import { sportsNudge } from '#lib/server/print/school-section.ts';
 import { getConfig } from '#lib/server/config.ts';
 import { houseNow } from '#lib/server/home.ts';
@@ -30,12 +35,14 @@ import { parseEventPeople } from '#lib/server/people.ts';
 import type { FamilyMember } from '#lib/config.ts';
 import { logErr } from '#lib/server/log.ts';
 import {
+	sydneyDateMedium,
 	sydneyHour,
 	sydneyNoon,
 	sydneyTimeRange,
 	sydneyYMD,
 	sydneyYMDOffset,
-	ymdAddDays
+	ymdAddDays,
+	ymdDiffDays
 } from '#lib/time.ts';
 
 export type { Screen };
@@ -44,6 +51,8 @@ export type { Screen };
 export const EVENING_HOUR = 18;
 /** The school line stays on Today until this hour (then it's back at 18:00, for tomorrow). */
 const SCHOOL_UNTIL_HOUR = 15;
+/** How far ahead school events show: three weeks, so a camp or swim week is on the board well before. */
+export const SCHOOL_EVENT_DAYS = 21;
 
 export interface TvData {
 	/** True from 18:00: Today shows tomorrow. */
@@ -59,6 +68,8 @@ export interface TvData {
 	chores: ChoreAssignment[];
 	/** Each kid's periods on `day`; empty on a weekend, a holiday, or mid-afternoon. */
 	school: { kid: string; periods: SchedulePeriod[] }[];
+	/** Each kid's school-calendar events from `day` to `SCHOOL_EVENT_DAYS` ahead (the ones naming their year). */
+	schoolEvents: { kid: string; events: SentralEvent[] }[];
 	schoolWeek: { term: number; week: number } | null;
 	/** For who each event is for, read from its title. */
 	family: FamilyMember[];
@@ -76,7 +87,7 @@ export async function gatherTv(now = new Date()): Promise<TvData> {
 	const ref = evening ? sydneyNoon(sydneyYMDOffset(1, now)) : now;
 	const day = sydneyYMD(ref);
 	const showSchool = evening || hour < SCHOOL_UNTIL_HOUR;
-	const [trips, weather, events, school, schoolWeek] = await Promise.all([
+	const [trips, weather, events, school, schoolWeek, schoolEvents] = await Promise.all([
 		collectTripReports(now),
 		getWeather().catch((err) => {
 			logErr('tv', 'weather lookup failed:', err);
@@ -100,6 +111,13 @@ export async function gatherTv(now = new Date()): Promise<TvData> {
 		getSchoolWeek(ref).catch((err) => {
 			logErr('tv', 'school week lookup failed:', err);
 			return null;
+		}),
+		schoolEventsFor(
+			config.kids.map((k) => k.name),
+			day
+		).catch((err) => {
+			logErr('tv', 'school calendar read failed:', err);
+			return [];
 		})
 	]);
 	const thresholds = config.home?.weather;
@@ -116,11 +134,28 @@ export async function gatherTv(now = new Date()): Promise<TvData> {
 		events,
 		chores: getChores({ now: ref }),
 		school: school.filter((s) => s.periods.length > 0),
+		schoolEvents,
 		schoolWeek,
 		family: config.family ?? [],
 		quote: getQuote({ date: now, kind: 'tv' }),
 		home: houseNow(now.getTime())
 	};
+}
+
+/** Each kid's events from the saved school calendar; a kid whose year isn't known gets none. */
+async function schoolEventsFor(
+	kids: string[],
+	day: string
+): Promise<{ kid: string; events: SentralEvent[] }[]> {
+	const cal = await getSentralCalendar();
+	if (!cal) return [];
+	const out = await Promise.all(
+		kids.map(async (kid) => {
+			const year = await kidYear(kid);
+			return { kid, events: year ? forKid(cal.events, year, day, SCHOOL_EVENT_DAYS) : [] };
+		})
+	);
+	return out.filter((k) => k.events.length > 0);
 }
 
 const HOURS = 4;
@@ -187,19 +222,41 @@ function weatherBlock(w: Weather | null, headline: string | null, now: Date): Bl
 	};
 }
 
-/** One row per kid: the day's hours ("8:50–3:10") and the sports nudge. */
+/** "Today" (or "Tomorrow" on the evening board), "Now, to Fri, 11 Dec", or the first day and how many days it runs. */
+function whenText(e: SentralEvent, d: Pick<TvData, 'day' | 'evening'>): string {
+	const short = (ymd: string) => sydneyDateMedium(sydneyNoon(ymd));
+	if (e.from <= d.day)
+		return e.to > d.day ? `Now, to ${short(e.to)}` : d.evening ? 'Tomorrow' : 'Today';
+	const days = ymdDiffDays(e.from, e.to) + 1;
+	return `${short(e.from)}${days > 1 ? ` (${days} days)` : ''}`;
+}
+
+/**
+ * Per kid: the day's hours and sports nudge, then what's coming up at school
+ * ("Wed, 9 Dec (3 days) · Year 9 Camp"). Shown when either is there.
+ */
 function schoolBlock(d: TvData): Block | null {
-	if (!d.school.length) return null;
+	const kids = [...new Set([...d.school.map((s) => s.kid), ...d.schoolEvents.map((s) => s.kid)])];
+	if (!kids.length) return null;
 	const week = d.schoolWeek ? ` · T${d.schoolWeek.term} Wk${d.schoolWeek.week}` : '';
-	return {
-		type: 'list',
-		title: `School${week}`,
-		items: d.school.map(({ kid, periods }) => {
+	const items = kids.flatMap((kid) => {
+		const periods = d.school.find((s) => s.kid === kid)?.periods ?? [];
+		const events = d.schoolEvents.find((s) => s.kid === kid)?.events ?? [];
+		const rows: { id: string; text: string; meta: string }[] = [];
+		if (periods.length) {
 			const hours = sydneyTimeRange(periods[0].start, periods.at(-1)!.end);
 			const nudge = sportsNudge(periods);
-			return { id: `school:${kid}`, text: nudge ? `${hours} · ${nudge}` : hours, meta: kid };
-		})
-	};
+			rows.push({ id: `school:${kid}`, text: nudge ? `${hours} · ${nudge}` : hours, meta: kid });
+		}
+		for (const e of events)
+			rows.push({
+				id: `school-event:${e.id}:${kid}`,
+				text: `${whenText(e, d)} · ${e.title}`,
+				meta: kid
+			});
+		return rows;
+	});
+	return { type: 'list', title: `School${week}`, items };
 }
 
 /**

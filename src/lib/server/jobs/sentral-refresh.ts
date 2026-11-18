@@ -1,5 +1,5 @@
-// Re-download each configured kid's Sentral timetable .ics across the school
-// day. Morning ticks (06:30/07:30/08:30) keep the print cache current before
+// Re-download each configured kid's Sentral timetable .ics, and the school's
+// calendar (tools/sentral-calendar.ts), across the school day. Morning ticks (06:30/07:30/08:30) keep the print cache current before
 // the 06:45 morning print, and catch same-day school changes. An evening tick
 // at 17:30 picks up any school updates pushed during/after class so a kid (or
 // parent) viewing the dashboard after-school sees the latest, AND a "print
@@ -11,6 +11,7 @@
 // good .ics on disk.
 import { defineJob } from '#lib/server/scheduler.ts';
 import { configuredSentralKids, refreshTimetable } from '#lib/server/tools/sentral.ts';
+import { refreshSentralCalendar } from '#lib/server/tools/sentral-calendar.ts';
 import { errorMessage } from '#lib/server/log.ts';
 
 defineJob(
@@ -34,6 +35,12 @@ defineJob(
 			} catch (err) {
 				failed.push(`${kid}: ${errorMessage(err)}`);
 			}
+		}
+		// Then the school calendar (one per school, so after the kids' cookies are fresh).
+		try {
+			results.push(`calendar: ${await refreshSentralCalendar()} events`);
+		} catch (err) {
+			failed.push(`calendar: ${errorMessage(err)}`);
 		}
 		// Every kid is tried; any failure fails the run. Alerts on the second miss in
 		// a row — one flaky login is covered by the cached .ics.
