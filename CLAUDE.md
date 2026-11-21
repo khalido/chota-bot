@@ -127,7 +127,7 @@ docs/                    # plan, deploy, printers, jobs, logging, agent, tools, 
 - **Deploy = `bun run deploy`** (SSH from the Mac over Tailscale). It runs two preflight checks — is this Mac on the tailnet, then the faster-expiring Tailscale SSH re-auth — and tells you what to approve. After it lands, `curl pop-os/api/health` (or `?format=json | jq .version`) shows the running commit — the proof the box rebuilt on your push. See [`docs/deploy.md`](docs/deploy.md).
 - **`auth` (the Better Auth CLI, devDep) pins `better-auth` exactly** — bump both together, or the install pulls a second better-auth copy for the CLI.
 - **Bun runs install scripts only for `package.json > trustedDependencies`** (`better-sqlite3`, `esbuild`, `usb`); `bun pm untrusted` lists the blocked ones (`protobufjs`, on purpose). A native addon missing from the list shows up as a load error at run time, not at install.
-- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
+- **`typescript` stays on 6** (7 breaks svelte-check) and **`usb` on 2** (3 untested against the printer). Pinned exactly since 21 Nov: **`vitest` 5.1.0** (5.1.1's fork workers fail under Bun: `child.channel?.unref is not a function`) and **`prettier-plugin-svelte` 4.1.1** (4.2 adds spaces inside inline `<span>` text, visible as gaps). Re-try both on each update. `cast/` runs vitest 5.1.1 fine. Keep other deps current — Vercel-ecosystem especially (`ai`, `@ai-sdk/*`).
 
 ## UI + tooling
 

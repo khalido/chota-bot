@@ -1,32 +1,30 @@
-# Handover
+# Handover — 2026-11-21
 
-State on 2026-11-17: deployed at `https://cast.khalido.dev` (Worker `cast`, KO's khalido.dev Cloudflare account) and working on the Living Room TV (Google TV Streamer, Chrome 140, `CrKey/1.56`, `DeviceType/AndroidTV`). App FCE23D20 is published, unlisted. The first version is in chota-bot `main` (f3be434); everything since is uncommitted.
+KO is away a few days; nothing here needs doing before he's back. The receiver is live at `https://cast.khalido.dev` (Worker `cast`, KO's khalido.dev Cloudflare account), app FCE23D20 (published, unlisted), on the Living Room TV (Google TV Streamer, Chrome 140, `CrKey/1.56`). All of `cast/` is committed in chota-bot `main` up to 548ff69. Uncommitted: the Google TV app design docs below.
 
-Since f3be434: replies and remote keys to the senders, remote navigation (left/right, up/down focus, Back), `banner` and `ping` messages, `theme.rotate`, the `week` block, colour and motion (weather skies, springs, entrances; `now.sky`, `fps` in `pong`), the landing page's live preview and coloured code, and `examples/listen.py`. All v1 and additive: older senders keep working.
+Redeploy after a change: `bun run build && CLOUDFLARE_ACCOUNT_ID=<khalido.dev account> bunx wrangler deploy` from `cast/`. A receiver loaded before a deploy keeps the old code: `home cast stop "<TV>"`, then launch again.
 
-## On the TV, 17 Nov
+## Where it stands
 
-- Acks and errors reach a pychromecast sender (`examples/listen.py`). `ping` got a `pong` with the user agent; a banner showed over the waiting clock.
-- A receiver loaded before a deploy keeps running the old code: `home cast stop "<TV>"`, then launch again. A relaunched receiver is empty until a sender sends screens again, so a sender should resend when a `pong` shows no screens.
-- Colour and motion deployed (abd86a0c; sky words widened in 411c0b6e): all eight skies on one screen hold 59–60 fps (`pong.fps`), 52 during the cell entrances.
-- Which remote keys reach the page: see "Not yet checked".
+- **Daily use:** chota launches the board at 07:00 and sends screens and theme every minute, so a relaunched receiver is blank for a minute at most. Morning (a column per kid: hours, the bus, chores, school events) until 15:00, then Today, Week, Home. `theme.brightness` follows the hour (bright 6–10, dim 21–6). At 08:30 chota closes the board if it is still showing.
+- **Fixed on the TV:** the SDK's `touch-controls` overlay drawing over the board (`body > :not(#app)` hidden); the screensaver (a Screen Wake Lock; pong `awake: "lock held"`). Don't add the silent `<video>` fallback back: it froze the Streamer on the waiting clock.
+- **The remote:** only Back and the arrows lose their default; leaving the page (`visibilitychange` hidden or `pagehide`) calls `ctx.stop()`, so Home or an input switch frees the TV.
+- **Senders get no replies yet:** `@khalido/home`'s cast `send` is fire-and-forget, so chota never sees acks, pongs or keys. `examples/listen.py` (pychromecast) does: `uv run --with pychromecast examples/listen.py "Living Room TV" 15`.
 
-## Needs KO
+## Not yet checked on the TV
 
-1. **Commit and push** chota-bot's `cast/`. The landing page, llms.txt and `receiver.html` link to `github.com/khalido/chota-bot/tree/main/cast`.
+- Whether the wake lock alone holds through a long stretch, and whether the screensaver hides the page (if it does, stopping on hidden kills the board).
+- Which of Home, input switch, screensaver and the Google Home stop button each end the session. Read `lifecycle` in a pong.
+- Which remote keys reach the page, and whether Back reaches it or Google TV takes it: run `listen.py "<TV>" 300` and press keys.
 
-Redeploy after a change: `bun run build && CLOUDFLARE_ACCOUNT_ID=<khalido.dev account> bunx wrangler deploy` from `cast/`.
+## Google TV app (design, not built)
 
-## Not yet checked on a TV
+Issue khalido/chota-bot#2. A Play Store app anyone can install: the same board without a sender, simple D-pad games, and a code to link it to a chota.
 
-- Which keys arrive from the remote, and whether Back reaches the page or Google TV handles it. Run `examples/listen.py "<TV>" 300`, press the keys, and read the `key` lines (Back closes the app if it arrives). The Streamer has no remote-debug port open (9222 refused, no adb), so `chrome://inspect` isn't an option from the Mac.
-- Up/down focus and left/right screen switching, seen on the TV.
-- Morning by person (KO picked mock B, deployed 8ed6a578, not relaunched): `leave` and `person` blocks, `weather.now.wear`, `weather.trace`, `theme.people`. Barlow Condensed (`font-num`) is used for big numbers and times. The demo screen `kids` is the reference layout (`columns: 4, rows: [5, 8]`). Screenshot: `docs/screens/mock-b-kids.png`.
-- "Back to base screen" (18 Nov 20:55 UTC): the pong's `page` showed CAF's `touch-controls` element on top at the screen's centre, while our page drew the board underneath. The body also holds `cast-media-player` and an SDK `div`. `body > :not(#app)` is now `display: none` (7239b3ca), and the centre is our board again. Unconfirmed that this was what KO saw. If it recurs, read `page` and `lifecycle` in a pong.
-- `theme.brightness` (`dim` | `normal` | `bright`, default normal): normal is a step brighter than the old palette, dim is the old palette, and bright is a step above normal. Only text shades 100–700 move. Screenshot: `docs/screens/brightness.png`.
-- Keeping the TV awake (af663fdd, 18 Nov): `src/receiver/awake.ts` holds a Screen Wake Lock; the pong reports `awake: "lock held"`. A silent looping `<video>` fallback (448e0434) froze the Streamer's screen on the waiting clock while the page drew the board underneath (pong `drawn: 3`), so it's gone. Don't add a video back. Still to see: whether the lock alone stops the screensaver over a long stretch. Pongs also carry `drawn` and `errors` for checking a TV we can't inspect.
-- Releasing the TV: only Back and the arrows lose their default; page `visibilitychange` to hidden or `pagehide` calls `ctx.stop()`. Unconfirmed: whether Home, an input switch, the screensaver and the Google Home stop button each end the session. The pong's `lifecycle` lists what fired (page visibility, CAF visible/standby/shutdown, UTC). If the screensaver turns out to hide the page, stopping on hidden kills the board and needs rethinking.
-- `@khalido/home`'s `send` doesn't read replies, so chota gets no acks, pongs or keys until the home repo adds a reader (its cast `send` is fire-and-forget).
+- `docs/tv-app.md`: Capacitor 8.6.2 (move to 9 when it ships), a third Vite entry `app.html` in `cast/`, a Cloudflare link service (Worker plus Durable Object), KO's personal Play account (12 testers for 14 days), 13 build slices with the closed test from slice 4 (Snake alone), a ranked list of 10 play-and-learn games in a 480×270 pixel look.
+- `docs/how-things-work.md`: about 12 machines from the Anatomy community gallery (MIT, no network, most animate on their own), each in a sandboxed frame with its author shown. First test: the flush toilet and pop-up toaster inside the slice 1 spike.
+- `docs/tv-app-mock.html`: the mock.
+- **Open decisions for KO** (`tv-app.md` § Open decisions): 1 link service, 2 space and On this day, 5 kids filter, 6 Play audience, 7 TV only, 8 name, 9 gallery machines or our own.
 
 ## Decisions
 
